@@ -263,44 +263,38 @@ namespace CheckmateRPG.Units
             }
 
             _currentTarget = null;
-            target = FindNearestTarget(out targetCell);
+            target = FindNearestTargetInRange(Movement.GridPosition, out targetCell);
             _currentTarget = target;
             return target != null;
         }
 
-        private GameObject FindNearestTarget(out Vector2Int targetCell)
+        private GameObject FindNearestTargetInRange(Vector2Int origin, out Vector2Int targetCell)
         {
             targetCell = default;
 
-            if (GridSystem.Instance == null || Movement == null)
+            if (GridSystem.Instance == null)
                 return null;
 
-            Vector2Int origin = Movement.GridPosition;
-            if (!GridSystem.Instance.IsValidCell(origin))
-                return null;
+            int searchRange = (GridSystem.GridWidth - 1) + (GridSystem.GridHeight - 1);
+            List<GameObject> candidates = GridSystem.Instance.GetUnitsInRange(origin, searchRange);
 
             int bestDistance = int.MaxValue;
             GameObject bestTarget = null;
 
-            for (int x = 0; x < GridSystem.GridWidth; x++)
+            foreach (GameObject candidate in candidates)
             {
-                for (int y = 0; y < GridSystem.GridHeight; y++)
+                if (!IsValidTarget(candidate))
+                    continue;
+
+                if (!TryGetTargetCell(candidate, out Vector2Int candidateCell))
+                    continue;
+
+                int distance = ManhattanDistance(origin, candidateCell);
+                if (distance < bestDistance)
                 {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    GameObject occupant = GridSystem.Instance.GetOccupant(cell);
-                    if (occupant == null)
-                        continue;
-
-                    if (!IsValidTarget(occupant))
-                        continue;
-
-                    int distance = ManhattanDistance(origin, cell);
-                    if (distance < bestDistance)
-                    {
-                        bestDistance = distance;
-                        bestTarget = occupant;
-                        targetCell = cell;
-                    }
+                    bestDistance = distance;
+                    bestTarget = candidate;
+                    targetCell = candidateCell;
                 }
             }
 

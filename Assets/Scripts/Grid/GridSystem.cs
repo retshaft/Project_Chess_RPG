@@ -177,5 +177,32 @@ namespace CheckmateRPG.Grid
 
             _occupancy[cell.x, cell.y] = null;
         }
+
+        /// <summary>
+        /// Returns all units within the given Manhattan distance of <paramref name="center"/>.
+        /// </summary>
+        public System.Collections.Generic.List<GameObject> GetUnitsInRange(Vector2Int center, int range)
+        {
+            var results = new System.Collections.Generic.List<GameObject>(_unitToCell.Count);
+
+            if (range < 0 || !IsValidCell(center))
+                return results;
+
+            foreach (var entry in _unitToCell)
+            {
+                if (entry.Key == null)
+                    continue;
+
+                Vector2Int cell = entry.Value;
+                if (!IsValidCell(cell))
+                    continue;
+
+                int distance = Mathf.Abs(cell.x - center.x) + Mathf.Abs(cell.y - center.y);
+                if (distance <= range)
+                    results.Add(entry.Key);
+            }
+
+            return results;
+        }
     }
 }
