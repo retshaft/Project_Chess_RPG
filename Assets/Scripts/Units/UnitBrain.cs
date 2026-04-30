@@ -51,6 +51,7 @@ namespace CheckmateRPG.Units
         /// <summary>Current decision made by the unit's brain.</summary>
         public UnitDecision CurrentDecision { get; private set; } = UnitDecision.Idle;
 
+        private const float WorldRangeMultiplier = 1.5f;
         private bool _isInitialised;
 
         public enum UnitDecision
@@ -173,7 +174,7 @@ namespace CheckmateRPG.Units
 
             if (Movement.IsMoving)
             {
-                CurrentDecision = UnitDecision.Idle;
+                CurrentDecision = UnitDecision.Move;
                 return;
             }
 
@@ -224,7 +225,7 @@ namespace CheckmateRPG.Units
                 return distance <= _unitData.AttackRange;
             }
 
-            float worldRange = _unitData.AttackRange * 1.5f;
+            float worldRange = _unitData.AttackRange * WorldRangeMultiplier;
             return Vector3.Distance(transform.position, target.transform.position) <= worldRange;
         }
 
@@ -280,7 +281,7 @@ namespace CheckmateRPG.Units
                 return false;
 
             targetCell = GridSystem.Instance.WorldToGrid(target.transform.position);
-            return targetCell.x >= 0 && targetCell.y >= 0;
+            return GridSystem.Instance.IsValidCell(targetCell);
         }
 
         private static int ChebyshevDistance(Vector2Int a, Vector2Int b)
