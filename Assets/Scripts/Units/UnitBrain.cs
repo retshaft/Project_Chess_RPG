@@ -287,6 +287,9 @@ namespace CheckmateRPG.Units
                 {
                     Vector2Int cell = new Vector2Int(x, y);
                     GameObject occupant = GridSystem.Instance.GetOccupant(cell);
+                    if (occupant == null)
+                        continue;
+
                     if (!IsValidTarget(occupant))
                         continue;
 
