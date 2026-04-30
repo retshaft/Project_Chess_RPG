@@ -51,6 +51,7 @@ namespace CheckmateRPG.Units
         /// <summary>Current decision made by the unit's brain.</summary>
         public UnitDecision CurrentDecision { get; private set; } = UnitDecision.Idle;
 
+        // Matches CombatComponent's world-space fallback range (≈ √2 allowance for diagonals).
         private const float WorldRangeMultiplier = 1.5f;
         private bool _isInitialised;
 
@@ -245,7 +246,10 @@ namespace CheckmateRPG.Units
                 return false;
 
             int moveRange = Mathf.Max(1, _unitData.MoveRange);
+            // 8-directional step toward the target (components clamped to -1/0/1).
             Vector2Int direction = new Vector2Int(Mathf.Clamp(delta.x, -1, 1), Mathf.Clamp(delta.y, -1, 1));
+            if (direction == Vector2Int.zero)
+                return false;
             Vector2Int clampedDelta = new Vector2Int(Mathf.Clamp(delta.x, -moveRange, moveRange),
                                                      Mathf.Clamp(delta.y, -moveRange, moveRange));
 
