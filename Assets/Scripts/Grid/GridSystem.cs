@@ -183,10 +183,10 @@ namespace CheckmateRPG.Grid
         /// </summary>
         public System.Collections.Generic.List<GameObject> GetUnitsInRange(Vector2Int center, int range)
         {
-            var results = new System.Collections.Generic.List<GameObject>(_unitToCell.Count);
-
             if (range < 0 || !IsValidCell(center))
-                return results;
+                return new System.Collections.Generic.List<GameObject>();
+
+            var results = new System.Collections.Generic.List<GameObject>();
 
             foreach (var entry in _unitToCell)
             {
