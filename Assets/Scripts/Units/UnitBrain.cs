@@ -57,6 +57,7 @@ namespace CheckmateRPG.Units
 
         // Matches CombatComponent's world-space fallback range (≈ √2 allowance for diagonals).
         private const float WorldRangeMultiplier = 1.5f;
+        private const float DefaultKillValue = 10f;
         private bool _isInitialised;
 
         public enum UnitDecision
@@ -292,7 +293,7 @@ namespace CheckmateRPG.Units
             if (!TryGetTargetCell(target, out Vector2Int targetCell))
                 return false;
 
-            float bestScore = float.NegativeInfinity;
+            float bestScore = 0f;
             bool hasDecision = false;
 
             if (Combat.CanAttack && IsTargetInAttackRange(target))
@@ -375,8 +376,10 @@ namespace CheckmateRPG.Units
             int newDistance = ChebyshevDistance(destination, targetCell);
             int distanceImprovement = currentDistance - newDistance;
 
-            float attackRangeBonus = newDistance <= _unitData.AttackRange ? _unitData.AttackRange : 0f;
-            float safetyBonus = targetRange > 0 && newDistance > targetRange ? targetRange : 0f;
+            float attackRangeBonus = newDistance <= _unitData.AttackRange ? _unitData.AttackDamage : 0f;
+            float safetyBonus = targetRange > 0 && newDistance > targetRange
+                ? (Health != null ? Health.CurrentHealth : _unitData.MaxHealth)
+                : 0f;
 
             return distanceImprovement + attackRangeBonus + safetyBonus;
         }
@@ -463,7 +466,7 @@ namespace CheckmateRPG.Units
             if (target != null && target.TryGetComponent(out UnitBrain targetBrain) && targetBrain.UnitData != null)
                 return Mathf.Max(0f, targetBrain.UnitData.KillValue);
 
-            return 10f;
+            return DefaultKillValue;
         }
 
         private bool TryGetTargetCell(GameObject target, out Vector2Int targetCell)
