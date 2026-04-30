@@ -368,6 +368,9 @@ namespace CheckmateRPG.Units
             return GridSystem.Instance.IsValidCell(targetCell);
         }
 
+        /// <summary>
+        /// Manhattan (diamond) distance between two grid cells.
+        /// </summary>
         private static int ManhattanDistance(Vector2Int a, Vector2Int b)
         {
             return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
