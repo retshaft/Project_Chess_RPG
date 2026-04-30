@@ -4,7 +4,7 @@
 // and exposes a simple command API (Move, Attack) consumed by player input
 // or an AI decision system.
 
-using System;
+using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
@@ -71,7 +71,6 @@ namespace CheckmateRPG.Units
             public UnitDecision Decision;
             public GameObject Target;
             public Vector2Int Destination;
-            public float Score;
         }
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
@@ -256,8 +255,7 @@ namespace CheckmateRPG.Units
             decision = new DecisionCandidate
             {
                 Decision = UnitDecision.Attack,
-                Target = target,
-                Score = float.MaxValue
+                Target = target
             };
             return true;
         }
@@ -282,8 +280,7 @@ namespace CheckmateRPG.Units
             decision = new DecisionCandidate
             {
                 Decision = UnitDecision.Move,
-                Destination = safeCell,
-                Score = targetRange
+                Destination = safeCell
             };
             return true;
         }
@@ -307,8 +304,7 @@ namespace CheckmateRPG.Units
                     decision = new DecisionCandidate
                     {
                         Decision = UnitDecision.Attack,
-                        Target = target,
-                        Score = attackScore
+                        Target = target
                     };
                     hasDecision = true;
                 }
@@ -324,8 +320,7 @@ namespace CheckmateRPG.Units
                     decision = new DecisionCandidate
                     {
                         Decision = UnitDecision.Move,
-                        Destination = destination,
-                        Score = moveScore
+                        Destination = destination
                     };
                     hasDecision = true;
                 }
@@ -409,7 +404,7 @@ namespace CheckmateRPG.Units
             return hasCandidate;
         }
 
-        private System.Collections.Generic.IEnumerable<Vector2Int> EnumerateReachableCells()
+        private IEnumerable<Vector2Int> EnumerateReachableCells()
         {
             if (_unitData == null || Movement == null || GridSystem.Instance == null)
                 yield break;
@@ -422,9 +417,6 @@ namespace CheckmateRPG.Units
                 for (int dy = -moveRange; dy <= moveRange; dy++)
                 {
                     if (dx == 0 && dy == 0)
-                        continue;
-
-                    if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy)) > moveRange)
                         continue;
 
                     Vector2Int candidate = new Vector2Int(origin.x + dx, origin.y + dy);
@@ -469,15 +461,7 @@ namespace CheckmateRPG.Units
         private float GetKillValue(GameObject target)
         {
             if (target != null && target.TryGetComponent(out UnitBrain targetBrain) && targetBrain.UnitData != null)
-            {
-                string unitName = targetBrain.UnitData.UnitName ?? string.Empty;
-                if (unitName.IndexOf("King", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return 1000f;
-                if (unitName.IndexOf("Queen", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return 50f;
-                if (unitName.IndexOf("Pawn", StringComparison.OrdinalIgnoreCase) >= 0)
-                    return 10f;
-            }
+                return Mathf.Max(0f, targetBrain.UnitData.KillValue);
 
             return 10f;
         }
