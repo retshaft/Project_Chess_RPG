@@ -4,6 +4,7 @@
 // and exposes a simple command API (Move, Attack) consumed by player input
 // or an AI decision system.
 
+using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
@@ -43,6 +44,9 @@ namespace CheckmateRPG.Units
         /// <summary>Read-only access to this unit's combat state.</summary>
         public CombatComponent   Combat   { get; private set; }
 
+        /// <summary>Read-only access to the assigned unit data.</summary>
+        public UnitData UnitData => _unitData;
+
         // ─── State ────────────────────────────────────────────────────────────────
 
         /// <summary>True once the unit has been killed.</summary>
@@ -53,6 +57,7 @@ namespace CheckmateRPG.Units
 
         // Matches CombatComponent's world-space fallback range (≈ √2 allowance for diagonals).
         private const float WorldRangeMultiplier = 1.5f;
+        private const float DefaultKillValue = 10f;
         private bool _isInitialised;
 
         public enum UnitDecision
@@ -60,6 +65,13 @@ namespace CheckmateRPG.Units
             Idle,
             Move,
             Attack
+        }
+
+        private struct DecisionCandidate
+        {
+            public UnitDecision Decision;
+            public GameObject Target;
+            public Vector2Int Destination;
         }
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
@@ -167,7 +179,7 @@ namespace CheckmateRPG.Units
 
         private void EvaluateDecision()
         {
-            if (Movement == null || Combat == null)
+            if (Movement == null || Combat == null || _unitData == null)
             {
                 CurrentDecision = UnitDecision.Idle;
                 return;
@@ -185,22 +197,137 @@ namespace CheckmateRPG.Units
                 return;
             }
 
-            bool inRange = IsTargetInAttackRange(_currentTarget);
-            if (inRange && Combat.CanAttack)
+            if (TryGetOverrideDecision(_currentTarget, out DecisionCandidate overrideDecision))
             {
-                CurrentDecision = UnitDecision.Attack;
-                Attack(_currentTarget);
+                ExecuteDecision(overrideDecision);
                 return;
             }
 
-            if (!inRange && TryGetMoveDestination(_currentTarget, out Vector2Int destination))
+            if (TryGetBestScoredDecision(_currentTarget, out DecisionCandidate scoredDecision))
             {
-                CurrentDecision = UnitDecision.Move;
-                Move(destination);
+                ExecuteDecision(scoredDecision);
                 return;
             }
 
             CurrentDecision = UnitDecision.Idle;
+        }
+
+        private void ExecuteDecision(DecisionCandidate decision)
+        {
+            CurrentDecision = decision.Decision;
+
+            switch (decision.Decision)
+            {
+                case UnitDecision.Attack:
+                    if (decision.Target != null)
+                        Attack(decision.Target);
+                    break;
+                case UnitDecision.Move:
+                    Move(decision.Destination);
+                    break;
+            }
+        }
+
+        private bool TryGetOverrideDecision(GameObject target, out DecisionCandidate decision)
+        {
+            if (TryGetCheckmateDecision(target, out decision))
+                return true;
+
+            if (TryGetDangerDecision(target, out decision))
+                return true;
+
+            decision = default;
+            return false;
+        }
+
+        private bool TryGetCheckmateDecision(GameObject target, out DecisionCandidate decision)
+        {
+            decision = default;
+
+            if (!Combat.CanAttack || !IsTargetInAttackRange(target))
+                return false;
+
+            if (!TryGetTargetHealth(target, out HealthComponent targetHealth))
+                return false;
+
+            if (targetHealth.CurrentHealth > _unitData.AttackDamage)
+                return false;
+
+            decision = new DecisionCandidate
+            {
+                Decision = UnitDecision.Attack,
+                Target = target
+            };
+            return true;
+        }
+
+        private bool TryGetDangerDecision(GameObject target, out DecisionCandidate decision)
+        {
+            decision = default;
+
+            if (!TryGetTargetCell(target, out Vector2Int targetCell))
+                return false;
+
+            if (!TryGetTargetAttackRange(target, out int targetRange) || targetRange <= 0)
+                return false;
+
+            int currentDistance = ChebyshevDistance(Movement.GridPosition, targetCell);
+            if (currentDistance > targetRange)
+                return false;
+
+            if (!TryGetSafestDestination(targetCell, targetRange, out Vector2Int safeCell))
+                return false;
+
+            decision = new DecisionCandidate
+            {
+                Decision = UnitDecision.Move,
+                Destination = safeCell
+            };
+            return true;
+        }
+
+        private bool TryGetBestScoredDecision(GameObject target, out DecisionCandidate decision)
+        {
+            decision = default;
+
+            if (!TryGetTargetCell(target, out Vector2Int targetCell))
+                return false;
+
+            float bestScore = 0f;
+            bool hasDecision = false;
+
+            if (Combat.CanAttack && IsTargetInAttackRange(target))
+            {
+                float attackScore = ScoreAttackCandidate(target);
+                if (attackScore > bestScore)
+                {
+                    bestScore = attackScore;
+                    decision = new DecisionCandidate
+                    {
+                        Decision = UnitDecision.Attack,
+                        Target = target
+                    };
+                    hasDecision = true;
+                }
+            }
+
+            int targetRange = TryGetTargetAttackRange(target, out int range) ? range : 0;
+            foreach (Vector2Int destination in EnumerateReachableCells())
+            {
+                float moveScore = ScoreMoveCandidate(destination, targetCell, targetRange);
+                if (moveScore > bestScore)
+                {
+                    bestScore = moveScore;
+                    decision = new DecisionCandidate
+                    {
+                        Decision = UnitDecision.Move,
+                        Destination = destination
+                    };
+                    hasDecision = true;
+                }
+            }
+
+            return hasDecision;
         }
 
         private bool IsValidTarget(GameObject target)
@@ -230,42 +357,116 @@ namespace CheckmateRPG.Units
             return Vector3.Distance(transform.position, target.transform.position) <= worldRange;
         }
 
-        private bool TryGetMoveDestination(GameObject target, out Vector2Int destination)
+        private float ScoreAttackCandidate(GameObject target)
+        {
+            float score = _unitData.AttackDamage;
+
+            if (TryGetTargetHealth(target, out HealthComponent targetHealth) &&
+                targetHealth.CurrentHealth <= _unitData.AttackDamage)
+            {
+                score += GetKillValue(target);
+            }
+
+            return score;
+        }
+
+        private float ScoreMoveCandidate(Vector2Int destination, Vector2Int targetCell, int targetRange)
+        {
+            int currentDistance = ChebyshevDistance(Movement.GridPosition, targetCell);
+            int newDistance = ChebyshevDistance(destination, targetCell);
+            int distanceImprovement = currentDistance - newDistance;
+
+            float attackRangeBonus = newDistance <= _unitData.AttackRange ? _unitData.AttackDamage : 0f;
+            float safetyBonus = targetRange > 0 && newDistance > targetRange
+                ? (Health != null ? Health.CurrentHealth : _unitData.MaxHealth)
+                : 0f;
+
+            return distanceImprovement + attackRangeBonus + safetyBonus;
+        }
+
+        private bool TryGetSafestDestination(Vector2Int targetCell, int targetRange, out Vector2Int destination)
         {
             destination = default;
+            bool hasCandidate = false;
+            int bestDistance = int.MinValue;
 
+            foreach (Vector2Int candidate in EnumerateReachableCells())
+            {
+                int distance = ChebyshevDistance(candidate, targetCell);
+                if (distance <= targetRange)
+                    continue;
+
+                if (!hasCandidate || distance > bestDistance)
+                {
+                    bestDistance = distance;
+                    destination = candidate;
+                    hasCandidate = true;
+                }
+            }
+
+            return hasCandidate;
+        }
+
+        private IEnumerable<Vector2Int> EnumerateReachableCells()
+        {
             if (_unitData == null || Movement == null || GridSystem.Instance == null)
-                return false;
-
-            if (!TryGetTargetCell(target, out Vector2Int targetCell))
-                return false;
-
-            Vector2Int currentCell = Movement.GridPosition;
-            Vector2Int delta = targetCell - currentCell;
-            if (delta == Vector2Int.zero)
-                return false;
+                yield break;
 
             int moveRange = Mathf.Max(1, _unitData.MoveRange);
-            // 8-directional step toward the target (components clamped to -1/0/1).
-            Vector2Int direction = new Vector2Int(Mathf.Clamp(delta.x, -1, 1), Mathf.Clamp(delta.y, -1, 1));
-            if (direction == Vector2Int.zero)
-                return false;
-            Vector2Int clampedDelta = new Vector2Int(Mathf.Clamp(delta.x, -moveRange, moveRange),
-                                                     Mathf.Clamp(delta.y, -moveRange, moveRange));
+            Vector2Int origin = Movement.GridPosition;
 
-            Vector2Int candidate = currentCell + clampedDelta;
-            while (candidate != currentCell)
+            for (int dx = -moveRange; dx <= moveRange; dx++)
             {
-                if (GridSystem.Instance.IsValidCell(candidate) && GridSystem.Instance.IsCellFree(candidate))
+                for (int dy = -moveRange; dy <= moveRange; dy++)
                 {
-                    destination = candidate;
-                    return true;
-                }
+                    if (dx == 0 && dy == 0)
+                        continue;
 
-                candidate -= direction;
+                    Vector2Int candidate = new Vector2Int(origin.x + dx, origin.y + dy);
+                    if (GridSystem.Instance.IsValidCell(candidate) && GridSystem.Instance.IsCellFree(candidate))
+                        yield return candidate;
+                }
+            }
+        }
+
+        private bool TryGetTargetAttackRange(GameObject target, out int attackRange)
+        {
+            attackRange = 0;
+
+            if (target == null)
+                return false;
+
+            if (target.TryGetComponent(out UnitBrain targetBrain) && targetBrain.UnitData != null)
+            {
+                attackRange = Mathf.Max(0, targetBrain.UnitData.AttackRange);
+                return true;
             }
 
             return false;
+        }
+
+        private bool TryGetTargetHealth(GameObject target, out HealthComponent health)
+        {
+            health = null;
+
+            if (target == null)
+                return false;
+
+            if (target.TryGetComponent(out HealthComponent targetHealth))
+            {
+                health = targetHealth;
+                return true;
+            }
+
+            return false;
+        }
+
+        private float GetKillValue(GameObject target)
+        {
+            if (target != null && target.TryGetComponent(out UnitBrain targetBrain) && targetBrain.UnitData != null)
+                return Mathf.Max(0f, targetBrain.UnitData.KillValue);
+
+            return DefaultKillValue;
         }
 
         private bool TryGetTargetCell(GameObject target, out Vector2Int targetCell)
