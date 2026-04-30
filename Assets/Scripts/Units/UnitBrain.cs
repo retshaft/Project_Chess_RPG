@@ -262,6 +262,7 @@ namespace CheckmateRPG.Units
                 return true;
             }
 
+            _currentTarget = null;
             target = FindNearestTarget(out targetCell);
             _currentTarget = target;
             return target != null;
