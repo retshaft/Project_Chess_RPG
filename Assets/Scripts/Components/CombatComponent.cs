@@ -25,7 +25,8 @@ namespace CheckmateRPG.Components
         // ─── IAttackable ──────────────────────────────────────────────────────────
 
         /// <summary>True when the cooldown has expired and the unit is alive.</summary>
-        public bool CanAttack => _cooldownRemaining <= 0f && !_isDead;
+        public bool CanAttack => _cooldownRemaining <= 0f && !_isDead &&
+                                 (_statusEffects == null || _statusEffects.CanAttack);
 
         // ─── Private State ────────────────────────────────────────────────────────
 
