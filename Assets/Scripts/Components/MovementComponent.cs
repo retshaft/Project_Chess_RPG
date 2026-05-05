@@ -213,7 +213,7 @@ namespace CheckmateRPG.Components
             Vector2Int delta = sourceCell - GridPosition;
             Vector2Int direction;
 
-            if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
+            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
                 direction = new Vector2Int(Mathf.Clamp(delta.x, -1, 1), 0);
             else
                 direction = new Vector2Int(0, Mathf.Clamp(delta.y, -1, 1));

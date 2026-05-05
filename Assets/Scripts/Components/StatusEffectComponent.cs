@@ -213,7 +213,11 @@ namespace CheckmateRPG.Components
             }
 
             if (element == ElementType.Lightning && HasStatus(StatusEffectType.Superconduct))
+            {
                 ApplyStatusEffect(StatusEffectType.Stagger, _staggerDuration);
+                _activeEffects.Remove(StatusEffectType.Superconduct);
+                RecalculateModifiers();
+            }
 
             if (_currentAura == ElementType.None)
             {
@@ -427,7 +431,9 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            float weightFactor = _movement != null ? Mathf.Max(0.5f, _movement.Weight) : 1f;
+            float weightFactor = 1f;
+            if (_movement != null)
+                weightFactor = _movement.Weight <= 0 ? 0.5f : _movement.Weight;
             float duration = _freezeDuration / weightFactor;
             ApplyStatusEffect(StatusEffectType.Freeze, duration);
         }
