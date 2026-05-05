@@ -28,6 +28,7 @@ namespace CheckmateRPG.Components
 
         public Vector2Int GridPosition { get; private set; }
         public bool       IsMoving     { get; private set; }
+        public float      CurrentMoveCostMultiplier { get; private set; } = 1f;
 
         // ─── Private State ────────────────────────────────────────────────────────
 
@@ -49,6 +50,9 @@ namespace CheckmateRPG.Components
             // Register occupancy and snap transform
             GridSystem.Instance.SetOccupant(startCell, gameObject);
             transform.position = GridSystem.Instance.GridToWorld(startCell);
+
+            CurrentMoveCostMultiplier = GridSystem.Instance.GetMoveCostMultiplier(startCell);
+            GridSystem.Instance.ApplyTileEffects(gameObject, startCell);
         }
 
         // ─── IMovable Implementation ──────────────────────────────────────────────
@@ -98,10 +102,14 @@ namespace CheckmateRPG.Components
             GridSystem.Instance.SetOccupant(destination, gameObject);
             GridPosition = destination;
 
+            CurrentMoveCostMultiplier = GridSystem.Instance.GetMoveCostMultiplier(destination);
+            GridSystem.Instance.ApplyTileEffects(gameObject, destination);
+
             Vector3 startPos  = transform.position;
             Vector3 targetPos = GridSystem.Instance.GridToWorld(destination);
             float   elapsed   = 0f;
-            float   duration  = Vector3.Distance(startPos, targetPos) / _moveSpeed;
+            float   speed     = Mathf.Max(0.1f, _moveSpeed + GridSystem.Instance.GetMoveSpeedModifier(destination));
+            float   duration  = Vector3.Distance(startPos, targetPos) / speed;
 
             while (elapsed < duration)
             {

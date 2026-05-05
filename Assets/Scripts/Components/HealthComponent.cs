@@ -29,12 +29,18 @@ namespace CheckmateRPG.Components
         private float _currentHealth;
         private float _maxHealth;
         private bool  _isDead;
+        private float _damageTakenMultiplier = 1f;
 
         // ─── IDamageable ──────────────────────────────────────────────────────────
 
         public float CurrentHealth => _currentHealth;
         public float MaxHealth     => _maxHealth;
         public bool  IsDead        => _isDead;
+
+        public void SetDamageTakenMultiplier(float multiplier)
+        {
+            _damageTakenMultiplier = Mathf.Max(0f, multiplier);
+        }
 
         // ─── Initialisation ───────────────────────────────────────────────────────
 
@@ -51,6 +57,22 @@ namespace CheckmateRPG.Components
         // ─── IDamageable Implementation ───────────────────────────────────────────
 
         /// <summary>
+        /// Applies damage that ignores the normal damage-taken multiplier.
+        /// </summary>
+        public void ApplyTrueDamage(float amount)
+        {
+            if (_isDead) return;
+
+            amount = Mathf.Max(0f, amount);
+            _currentHealth = Mathf.Max(0f, _currentHealth - amount);
+
+            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+
+            if (_currentHealth <= 0f)
+                Die();
+        }
+
+        /// <summary>
         /// Reduce health by <paramref name="amount"/>. Clamps to [0, MaxHealth].
         /// Triggers <see cref="OnDeath"/> if health reaches 0.
         /// </summary>
@@ -59,6 +81,7 @@ namespace CheckmateRPG.Components
             if (_isDead) return;
 
             amount = Mathf.Max(0f, amount);
+            amount *= _damageTakenMultiplier;
             _currentHealth = Mathf.Max(0f, _currentHealth - amount);
 
             OnHealthChanged?.Invoke(_currentHealth, _maxHealth);

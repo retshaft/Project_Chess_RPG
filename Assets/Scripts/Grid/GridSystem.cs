@@ -4,6 +4,7 @@
 // Place a single instance in the scene (singleton pattern via static accessor).
 
 using UnityEngine;
+using CheckmateRPG.Components;
 
 namespace CheckmateRPG.Grid
 {
@@ -176,6 +177,19 @@ namespace CheckmateRPG.Grid
                 _unitToCell.Remove(occupant);
 
             _occupancy[cell.x, cell.y] = null;
+        }
+
+        private void ApplySpikeDamage(GameObject unit)
+        {
+            if (unit == null)
+                return;
+
+            if (!unit.TryGetComponent(out HealthComponent health))
+                return;
+
+            float damage = health.CurrentHealth * 0.05f;
+            if (damage > 0f)
+                health.ApplyTrueDamage(damage);
         }
     }
 }

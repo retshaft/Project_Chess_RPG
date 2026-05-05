@@ -71,6 +71,14 @@ namespace CheckmateRPG.Units
             public Vector2Int Destination;
         }
 
+        private static readonly Vector2Int[] AdjacentOffsets =
+        {
+            new Vector2Int(1, 0),
+            new Vector2Int(-1, 0),
+            new Vector2Int(0, 1),
+            new Vector2Int(0, -1)
+        };
+
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
 
         private void Awake()
@@ -310,11 +318,24 @@ namespace CheckmateRPG.Units
         private bool TryGetChaseDestination(Vector2Int targetCell, out Vector2Int destination)
         {
             destination = default;
-            bool hasCandidate = false;
-            int bestDistance = int.MaxValue;
 
-            foreach (Vector2Int candidate in EnumerateReachableCells())
+            if (GridSystem.Instance == null || Movement == null)
+                return false;
+
+            Vector2Int origin = Movement.GridPosition;
+            int bestDistance = int.MaxValue;
+            bool hasCandidate = false;
+
+            foreach (Vector2Int offset in AdjacentOffsets)
             {
+                Vector2Int candidate = origin + offset;
+
+                if (!GridSystem.Instance.IsValidCell(candidate))
+                    continue;
+
+                if (!GridSystem.Instance.IsCellFree(candidate))
+                    continue;
+
                 int distance = ManhattanDistance(candidate, targetCell);
                 if (!hasCandidate || distance < bestDistance)
                 {
