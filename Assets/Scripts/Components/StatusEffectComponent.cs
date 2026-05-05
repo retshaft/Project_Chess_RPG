@@ -97,7 +97,7 @@ namespace CheckmateRPG.Components
 
         public void Initialise(UnitData data)
         {
-            _maxSp = data != null ? Mathf.Max(0f, data.MaxSP) : 0f;
+            _maxSp = Mathf.Max(0f, data.MaxSP);
             _currentSp = _maxSp;
         }
 
@@ -427,7 +427,7 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            float weightFactor = _movement != null ? Mathf.Max(1f, _movement.Weight + 1f) : 1f;
+            float weightFactor = _movement != null ? Mathf.Max(0.5f, _movement.Weight) : 1f;
             float duration = _freezeDuration / weightFactor;
             ApplyStatusEffect(StatusEffectType.Freeze, duration);
         }

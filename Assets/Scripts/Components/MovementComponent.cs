@@ -130,7 +130,8 @@ namespace CheckmateRPG.Components
             Vector3 targetPos = GridSystem.Instance.GridToWorld(destination);
             float   elapsed   = 0f;
             float   actionSpeed = GetActionSpeedMultiplier();
-            float   speed     = Mathf.Max(0.1f, _moveSpeed * actionSpeed + GridSystem.Instance.GetMoveSpeedModifier(destination));
+            float   baseSpeed = _moveSpeed + GridSystem.Instance.GetMoveSpeedModifier(destination);
+            float   speed     = Mathf.Max(0.1f, baseSpeed * actionSpeed);
             float   duration  = Vector3.Distance(startPos, targetPos) / speed;
 
             while (elapsed < duration)
@@ -209,8 +210,13 @@ namespace CheckmateRPG.Components
 
         public void ApplyGrab(Vector2Int sourceCell, int force)
         {
-            Vector2Int direction = sourceCell - GridPosition;
-            direction = new Vector2Int(Mathf.Clamp(direction.x, -1, 1), Mathf.Clamp(direction.y, -1, 1));
+            Vector2Int delta = sourceCell - GridPosition;
+            Vector2Int direction;
+
+            if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
+                direction = new Vector2Int(Mathf.Clamp(delta.x, -1, 1), 0);
+            else
+                direction = new Vector2Int(0, Mathf.Clamp(delta.y, -1, 1));
 
             if (direction == Vector2Int.zero)
                 return;
