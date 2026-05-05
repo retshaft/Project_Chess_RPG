@@ -30,6 +30,14 @@ namespace CheckmateRPG.Components
         private float _maxHealth;
         private bool  _isDead;
         private float _damageTakenMultiplier = 1f;
+        private float _defense;
+        private float _resistance;
+        private StatusEffectComponent _statusEffects;
+
+        private void Awake()
+        {
+            _statusEffects = GetComponent<StatusEffectComponent>();
+        }
 
         // ─── IDamageable ──────────────────────────────────────────────────────────
 
@@ -52,6 +60,8 @@ namespace CheckmateRPG.Components
             _maxHealth     = data.MaxHealth;
             _currentHealth = _maxHealth;
             _isDead        = false;
+            _defense       = Mathf.Clamp01(data.Defense);
+            _resistance    = Mathf.Clamp01(data.Resistance);
         }
 
         // ─── IDamageable Implementation ───────────────────────────────────────────
@@ -61,15 +71,7 @@ namespace CheckmateRPG.Components
         /// </summary>
         public void ApplyTrueDamage(float amount)
         {
-            if (_isDead) return;
-
-            amount = Mathf.Max(0f, amount);
-            _currentHealth = Mathf.Max(0f, _currentHealth - amount);
-
-            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
-
-            if (_currentHealth <= 0f)
-                Die();
+            ApplyDamageInternal(amount, DamageType.True, ignoreDefense: true, ignoreDamageMultiplier: true, ignoreStatusModifiers: true);
         }
 
         /// <summary>
@@ -78,16 +80,17 @@ namespace CheckmateRPG.Components
         /// </summary>
         public void TakeDamage(float amount)
         {
-            if (_isDead) return;
+            ApplyDamageInternal(amount, DamageType.Physical);
+        }
 
-            amount = Mathf.Max(0f, amount);
-            amount *= _damageTakenMultiplier;
-            _currentHealth = Mathf.Max(0f, _currentHealth - amount);
+        public void ApplyMagicDamage(float amount)
+        {
+            ApplyDamageInternal(amount, DamageType.Magical);
+        }
 
-            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
-
-            if (_currentHealth <= 0f)
-                Die();
+        public void ApplyDamage(float amount, DamageType damageType)
+        {
+            ApplyDamageInternal(amount, damageType);
         }
 
         /// <summary>
@@ -98,6 +101,8 @@ namespace CheckmateRPG.Components
             if (_isDead) return;
 
             amount = Mathf.Max(0f, amount);
+            if (_statusEffects != null)
+                amount *= _statusEffects.HealReceivedMultiplier;
             _currentHealth = Mathf.Min(_maxHealth, _currentHealth + amount);
 
             OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
@@ -109,6 +114,42 @@ namespace CheckmateRPG.Components
         {
             _isDead = true;
             OnDeath?.Invoke();
+        }
+
+        private void ApplyDamageInternal(float amount, DamageType damageType, bool ignoreDefense = false, bool ignoreDamageMultiplier = false, bool ignoreStatusModifiers = false)
+        {
+            if (_isDead) return;
+
+            amount = Mathf.Max(0f, amount);
+
+            if (!ignoreStatusModifiers && _statusEffects != null)
+                amount = _statusEffects.ModifyIncomingDamage(amount, damageType);
+
+            if (!ignoreDefense)
+                amount = ApplyDefense(amount, damageType);
+
+            if (!ignoreDamageMultiplier)
+                amount *= _damageTakenMultiplier;
+
+            _currentHealth = Mathf.Max(0f, _currentHealth - amount);
+
+            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+
+            if (_currentHealth <= 0f)
+                Die();
+        }
+
+        private float ApplyDefense(float amount, DamageType damageType)
+        {
+            if (damageType == DamageType.True)
+                return amount;
+
+            float reduction = damageType == DamageType.Physical ? _defense : _resistance;
+            if (_statusEffects != null)
+                reduction *= damageType == DamageType.Physical ? _statusEffects.DefenseMultiplier : _statusEffects.ResistanceMultiplier;
+
+            reduction = Mathf.Clamp01(reduction);
+            return amount * (1f - reduction);
         }
     }
 }
