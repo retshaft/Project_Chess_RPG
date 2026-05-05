@@ -326,7 +326,7 @@ namespace CheckmateRPG.Components
                 _activeEffects[StatusEffectType.Bleed] = instance;
             }
 
-            instance.Stacks += Mathf.Max(1, stacks);
+            instance.Stacks += stacks;
             UpdateWoundState();
         }
 
@@ -431,9 +431,7 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            float weightFactor = 1f;
-            if (_movement != null)
-                weightFactor = _movement.Weight <= 0 ? 0.5f : _movement.Weight;
+            float weightFactor = _movement != null ? Mathf.Max(1f, _movement.Weight + 1f) : 1f;
             float duration = _freezeDuration / weightFactor;
             ApplyStatusEffect(StatusEffectType.Freeze, duration);
         }
@@ -523,9 +521,6 @@ namespace CheckmateRPG.Components
                     continue;
 
                 if (!occupant.TryGetComponent(out MovementComponent targetMovement))
-                    continue;
-
-                if (targetMovement.Weight > 1)
                     continue;
 
                 targetMovement.ApplyKnockback(offset, _explosionKnockbackForce, applySplatDamage: false);
