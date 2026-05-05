@@ -186,14 +186,16 @@ namespace CheckmateRPG.Grid
         /// </summary>
         public float GetMoveCostMultiplier(Vector2Int cell)
         {
+            if (!IsValidCell(cell)) return 1f;
             return 1f;
         }
 
         /// <summary>
-        /// Returns a movement speed modifier applied when entering the specified cell.
+        /// Returns an additive movement speed modifier applied when entering the specified cell.
         /// </summary>
         public float GetMoveSpeedModifier(Vector2Int cell)
         {
+            if (!IsValidCell(cell)) return 0f;
             return 0f;
         }
 
@@ -202,6 +204,7 @@ namespace CheckmateRPG.Grid
         /// </summary>
         public void ApplyTileEffects(GameObject unit, Vector2Int cell)
         {
+            if (!IsValidCell(cell)) return;
         }
 
         private void ApplySpikeDamage(GameObject unit)
