@@ -20,6 +20,7 @@ namespace CheckmateRPG.Units
     [RequireComponent(typeof(HealthComponent))]
     [RequireComponent(typeof(MovementComponent))]
     [RequireComponent(typeof(CombatComponent))]
+    [RequireComponent(typeof(StatusEffectComponent))]
     public class UnitBrain : MonoBehaviour
     {
         // ─── Serialized Fields ────────────────────────────────────────────────────
@@ -43,6 +44,9 @@ namespace CheckmateRPG.Units
 
         /// <summary>Read-only access to this unit's combat state.</summary>
         public CombatComponent   Combat   { get; private set; }
+
+        /// <summary>Read-only access to this unit's status effect state.</summary>
+        public StatusEffectComponent StatusEffects { get; private set; }
 
         /// <summary>Read-only access to the assigned unit data.</summary>
         public UnitData UnitData => _unitData;
@@ -86,6 +90,7 @@ namespace CheckmateRPG.Units
             Health   = GetComponent<HealthComponent>();
             Movement = GetComponent<MovementComponent>();
             Combat   = GetComponent<CombatComponent>();
+            StatusEffects = GetComponent<StatusEffectComponent>();
         }
 
         private void Start()
@@ -100,6 +105,7 @@ namespace CheckmateRPG.Units
             Health.Initialise(_unitData);
             Movement.Initialise(_unitData, _startCell);
             Combat.Initialise(_unitData);
+            StatusEffects.Initialise(_unitData);
 
             // Wire death notification to combat so attacks stop after death
             Health.OnDeath += HandleDeath;

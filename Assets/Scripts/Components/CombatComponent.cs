@@ -34,6 +34,12 @@ namespace CheckmateRPG.Components
         private int   _attackRange;
         private float _cooldownRemaining;
         private bool  _isDead;
+        private StatusEffectComponent _statusEffects;
+
+        private void Awake()
+        {
+            _statusEffects = GetComponent<StatusEffectComponent>();
+        }
 
         // ─── Initialisation ───────────────────────────────────────────────────────
 
@@ -72,6 +78,12 @@ namespace CheckmateRPG.Components
                 return;
             }
 
+            if (_statusEffects != null && !_statusEffects.CanAttack)
+            {
+                Debug.Log($"[CombatComponent] {gameObject.name} is unable to attack due to status effects.");
+                return;
+            }
+
             if (target == null)
             {
                 Debug.LogWarning("[CombatComponent] Attack called with null target.");
@@ -91,10 +103,21 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            damageable.TakeDamage(_attackDamage);
-            _cooldownRemaining = _attackCooldown;
+            float damage = _attackDamage;
+            if (_statusEffects != null)
+                damage *= _statusEffects.AttackMultiplier;
+
+            if (target.TryGetComponent(out HealthComponent health))
+                health.ApplyDamage(damage, DamageType.Physical);
+            else
+                damageable.TakeDamage(damage);
+
+            float actionSpeed = _statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f;
+            _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
 
             OnAttackPerformed?.Invoke(target);
+
+            _statusEffects?.NotifyAction(UnitActionType.Attack);
         }
 
         // ─── Public Helpers ───────────────────────────────────────────────────────
