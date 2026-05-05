@@ -179,6 +179,34 @@ namespace CheckmateRPG.Grid
             _occupancy[cell.x, cell.y] = null;
         }
 
+        // ─── Tile Effects ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns the AP cost multiplier for moving onto the specified cell.
+        /// </summary>
+        public float GetMoveCostMultiplier(Vector2Int cell)
+        {
+            if (!IsValidCell(cell)) return 1f;
+            return 1f;
+        }
+
+        /// <summary>
+        /// Returns an additive movement speed modifier applied when entering the specified cell.
+        /// </summary>
+        public float GetMoveSpeedModifier(Vector2Int cell)
+        {
+            if (!IsValidCell(cell)) return 0f;
+            return 0f;
+        }
+
+        /// <summary>
+        /// Applies any tile-based effects (damage, buffs) to the unit on the cell.
+        /// </summary>
+        public void ApplyTileEffects(GameObject unit, Vector2Int cell)
+        {
+            if (!IsValidCell(cell)) return;
+        }
+
         private void ApplySpikeDamage(GameObject unit)
         {
             if (unit == null)
