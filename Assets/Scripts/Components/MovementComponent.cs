@@ -56,6 +56,20 @@ namespace CheckmateRPG.Components
         /// </summary>
         public void Initialise(UnitData data, Vector2Int startCell)
         {
+            if (data == null)
+            {
+                Debug.LogError($"[MovementComponent] Initialise called with null UnitData on {gameObject.name}.");
+                enabled = false;
+                return;
+            }
+
+            if (GridSystem.Instance == null)
+            {
+                Debug.LogError($"[MovementComponent] GridSystem.Instance is null during Initialise on {gameObject.name}.");
+                enabled = false;
+                return;
+            }
+
             _moveRange = data.MoveRange;
             _moveSpeed = data.MoveSpeed;
             _moveAPCost = Mathf.Max(0f, data.MoveAPCost);
@@ -82,6 +96,12 @@ namespace CheckmateRPG.Components
             if (IsMoving)
             {
                 Debug.LogWarning($"[MovementComponent] {gameObject.name} is already moving.");
+                return;
+            }
+
+            if (GridSystem.Instance == null)
+            {
+                Debug.LogWarning($"[MovementComponent] GridSystem.Instance is null. Move cancelled for {gameObject.name}.");
                 return;
             }
 
@@ -139,6 +159,16 @@ namespace CheckmateRPG.Components
             float   baseSpeed = _moveSpeed + GridSystem.Instance.GetMoveSpeedModifier(destination);
             float   speed     = Mathf.Max(0.1f, baseSpeed * actionSpeed);
             float   duration  = Vector3.Distance(startPos, targetPos) / speed;
+
+            // Avoid NaN/Infinity if speed is extremely small or positions are identical.
+            if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration))
+            {
+                transform.position = targetPos;
+                IsMoving = false;
+                OnMoveCompleted?.Invoke(destination);
+                _statusEffects?.NotifyAction(UnitActionType.Move);
+                yield break;
+            }
 
             while (elapsed < duration)
             {
@@ -249,6 +279,14 @@ namespace CheckmateRPG.Components
             Vector3 targetPos = GridSystem.Instance.GridToWorld(destination);
             float elapsed = 0f;
             float duration = Vector3.Distance(startPos, targetPos) / Mathf.Max(0.1f, speed);
+
+            if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration))
+            {
+                transform.position = targetPos;
+                IsMoving = false;
+                OnMoveCompleted?.Invoke(destination);
+                yield break;
+            }
 
             while (elapsed < duration)
             {
