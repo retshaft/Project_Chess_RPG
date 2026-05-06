@@ -52,6 +52,15 @@ namespace CheckmateRPG.Data
         [Tooltip("Maximum SP (used for elemental and skill interactions).")]
         [Min(0f)] public float MaxSP = 100f;
 
+        // ─── Action Costs ────────────────────────────────────────────────────────
+
+        [Header("Action Costs")]
+        [Tooltip("AP cost to perform one move action (before multipliers).")]
+        [Min(0f)] public float MoveAPCost = 4f;
+
+        [Tooltip("AP cost to perform one attack action (before multipliers).")]
+        [Min(0f)] public float AttackAPCost = 6f;
+
         // ─── Movement ─────────────────────────────────────────────────────────────
 
         [Header("Movement")]
@@ -71,7 +80,7 @@ namespace CheckmateRPG.Data
         public bool IsBoss = false;
 
         // ─── Future Extensions ────────────────────────────────────────────────────
-        // AP cost, faction, visual prefab reference, etc. can be added here
-        // without touching runtime component code.
+        // faction, visual prefab reference, etc. can be added here without touching
+        // runtime component code.
     }
 }

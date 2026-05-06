@@ -11,6 +11,7 @@
 
 using UnityEngine;
 using CheckmateRPG.Components;
+using CheckmateRPG.Core;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
@@ -39,6 +40,7 @@ namespace CheckmateRPG.Testing
         private void Awake()
         {
             EnsureGridSystem();
+            EnsureAPManager();
             SpawnAllUnits();
         }
 
@@ -78,11 +80,23 @@ namespace CheckmateRPG.Testing
             data.AttackRange    = 1;
             data.KillValue      = 10f;
             data.MaxSP          = 100f;
+            data.MoveAPCost     = 4f;
+            data.AttackAPCost   = 6f;
             data.MoveRange      = 3;
             data.MoveSpeed      = 5f;
             data.Weight         = 1;
             data.IsBoss         = false;
             return data;
+        }
+
+        private static void EnsureAPManager()
+        {
+            if (APManager.Instance != null)
+                return;
+
+            var apGO = new GameObject("APManager");
+            apGO.AddComponent<APManager>();
+            Debug.Log("[BattleTestBootstrapper] APManager created.");
         }
 
         private static void SpawnUnit(string unitName, Vector2Int cell, UnitData data, bool isEnemy)
