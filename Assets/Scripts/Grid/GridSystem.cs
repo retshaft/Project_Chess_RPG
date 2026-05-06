@@ -340,7 +340,7 @@ namespace CheckmateRPG.Grid
             if (unit.TryGetComponent(out TeamComponent team))
                 return team.IsPlayer;
 
-            return true;
+            return false;
         }
     }
 }
