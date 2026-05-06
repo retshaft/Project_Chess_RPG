@@ -99,7 +99,7 @@ namespace CheckmateRPG.Core
                 return true;
             }
 
-            float missing = Mathf.Max(0f, cost.Amount - CurrentAP);
+            float missing = cost.Amount - CurrentAP;
             OnInsufficientAP?.Invoke(cost.Amount, CurrentAP, missing, cost.Reason);
             return false;
         }

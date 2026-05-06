@@ -24,7 +24,7 @@ namespace CheckmateRPG.Testing
     public class BattleTestBootstrapper : MonoBehaviour
     {
         [Header("Debug")]
-        [SerializeField] private bool _enableAPDebugLogging = true;
+        [SerializeField] private bool _enableAPDebugLogger = true;
 
         // ─── Spawn Table ──────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ namespace CheckmateRPG.Testing
         private void Awake()
         {
             EnsureGridSystem();
-            EnsureAPManager(_enableAPDebugLogging);
+            EnsureAPManager(_enableAPDebugLogger);
             SpawnAllUnits();
         }
 
