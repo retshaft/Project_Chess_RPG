@@ -28,6 +28,7 @@ namespace CheckmateRPG.Core
         [Header("Debug UI")]
         [SerializeField] private bool _createDebugUI = true;
 
+        [SerializeField] private Font _debugFont;
         [SerializeField] private Vector2 _apTextOffset = new Vector2(0f, 45f);
         [SerializeField] private Vector2 _warningTextOffset = new Vector2(0f, 80f);
         [SerializeField] private Color _warningColor = new Color(1f, 0.25f, 0.25f);
@@ -143,7 +144,7 @@ namespace CheckmateRPG.Core
 
             canvasGO.AddComponent<GraphicRaycaster>();
 
-            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            Font font = _debugFont != null ? _debugFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
             _apText = CreateText("APValueText", canvasGO.transform, font, _apTextOffset, 24, Color.white);
             _warningText = CreateText("APWarningText", canvasGO.transform, font, _warningTextOffset, 22, _warningColor);
             _warningText.text = _warningMessage;
