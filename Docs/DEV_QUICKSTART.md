@@ -34,7 +34,7 @@
 | **GridSystem** (created at runtime) | Singleton available; 8 × 8 occupancy grid active |
 | **Player units** (blue, cells 1-0, 3-0, 5-0) | Spawned, registered in grid, auto-chase nearest enemy |
 | **Enemy units** (red, cells 2-7, 4-7, 6-7) | Same as above, targeting player units |
-| **Camera** | Positioned above the grid, angled 60 ° down to show all 8 columns |
+| **Camera** | Positioned above the grid, angled 60° down to show all 8 columns |
 | **Console** | No errors; bootstrapper logs six "Spawned … at (x, y)" messages |
 
 The `BattleTestBootstrapper` MonoBehaviour creates everything at runtime from scratch — no
