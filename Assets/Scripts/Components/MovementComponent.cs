@@ -41,6 +41,7 @@ namespace CheckmateRPG.Components
         private int   _moveRange;
         private float _moveSpeed;
         private float _moveAPCost;
+        private float _actionSpeed = 1f;
         private StatusEffectComponent _statusEffects;
         private Coroutine _movementRoutine;
 
@@ -72,7 +73,8 @@ namespace CheckmateRPG.Components
 
             _moveRange = data.MoveRange;
             _moveSpeed = data.MoveSpeed;
-            _moveAPCost = Mathf.Max(0f, data.MoveAPCost);
+            _moveAPCost = Mathf.Max(0f, data.MoveCostAP);
+            _actionSpeed = Mathf.Max(0.1f, data.ActionSpeed);
             Weight = Mathf.Clamp(data.Weight, 0, 4);
             IsBoss = data.IsBoss;
 
@@ -318,7 +320,8 @@ namespace CheckmateRPG.Components
 
         private float GetActionSpeedMultiplier()
         {
-            return _statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f;
+            float statusMultiplier = _statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f;
+            return _actionSpeed * statusMultiplier;
         }
 
         private float GetMoveAPCost(Vector2Int targetCell)

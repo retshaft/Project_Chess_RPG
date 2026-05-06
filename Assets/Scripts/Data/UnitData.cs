@@ -4,6 +4,7 @@
 // Units reference this asset at runtime to avoid hardcoded values.
 
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace CheckmateRPG.Data
 {
@@ -56,10 +57,15 @@ namespace CheckmateRPG.Data
 
         [Header("Action Costs")]
         [Tooltip("AP cost to perform one move action (before multipliers).")]
-        [Min(0f)] public float MoveAPCost = 4f;
+        [FormerlySerializedAs("MoveAPCost")]
+        [Min(0f)] public float MoveCostAP = 4f;
 
         [Tooltip("AP cost to perform one attack action (before multipliers).")]
-        [Min(0f)] public float AttackAPCost = 6f;
+        [FormerlySerializedAs("AttackAPCost")]
+        [Min(0f)] public float AttackCostAP = 6f;
+
+        [Tooltip("Base action speed multiplier for movement and attack cooldowns.")]
+        [Min(0.1f)] public float ActionSpeed = 1f;
 
         // ─── Movement ─────────────────────────────────────────────────────────────
 

@@ -34,6 +34,7 @@ namespace CheckmateRPG.Components
         private float _attackCooldown;
         private int   _attackRange;
         private float _attackAPCost;
+        private float _actionSpeed = 1f;
         private float _cooldownRemaining;
         private bool  _isDead;
         private StatusEffectComponent _statusEffects;
@@ -53,7 +54,8 @@ namespace CheckmateRPG.Components
             _attackDamage    = data.AttackDamage;
             _attackCooldown  = data.AttackCooldown;
             _attackRange     = data.AttackRange;
-            _attackAPCost    = Mathf.Max(0f, data.AttackAPCost);
+            _attackAPCost    = Mathf.Max(0f, data.AttackCostAP);
+            _actionSpeed     = Mathf.Max(0.1f, data.ActionSpeed);
             _cooldownRemaining = 0f;
             _isDead          = false;
         }
@@ -119,7 +121,7 @@ namespace CheckmateRPG.Components
             else
                 damageable.TakeDamage(damage);
 
-            float actionSpeed = _statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f;
+            float actionSpeed = _actionSpeed * (_statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f);
             _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
 
             OnAttackPerformed?.Invoke(target);
