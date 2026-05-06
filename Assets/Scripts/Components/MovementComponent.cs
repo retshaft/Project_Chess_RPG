@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using CheckmateRPG.Core;
+using CheckmateRPG.Components;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 
@@ -41,12 +42,12 @@ namespace CheckmateRPG.Components
         private int   _moveRange;
         private float _moveSpeed;
         private float _moveAPCost;
-        private global::CheckmateRPG.Components.StatusEffectComponent _statusEffects;
+        private StatusEffectComponent _statusEffects;
         private Coroutine _movementRoutine;
 
         private void Awake()
         {
-            _statusEffects = GetComponent<global::CheckmateRPG.Components.StatusEffectComponent>();
+            _statusEffects = GetComponent<StatusEffectComponent>();
         }
 
         // ─── Initialisation ───────────────────────────────────────────────────────
@@ -166,7 +167,7 @@ namespace CheckmateRPG.Components
                 transform.position = targetPos;
                 IsMoving = false;
                 OnMoveCompleted?.Invoke(destination);
-                _statusEffects?.NotifyAction(global::CheckmateRPG.Core.UnitActionType.Move);
+                _statusEffects?.NotifyAction(UnitActionType.Move);
                 yield break;
             }
 
@@ -182,7 +183,7 @@ namespace CheckmateRPG.Components
 
             OnMoveCompleted?.Invoke(destination);
 
-            _statusEffects?.NotifyAction(global::CheckmateRPG.Core.UnitActionType.Move);
+            _statusEffects?.NotifyAction(UnitActionType.Move);
         }
 
         public void ApplyKnockback(Vector2Int direction, int force, bool applySplatDamage = true)
@@ -196,8 +197,7 @@ namespace CheckmateRPG.Components
             direction = new Vector2Int(Mathf.Clamp(direction.x, -1, 1), Mathf.Clamp(direction.y, -1, 1));
 
             int effectiveWeight = Weight;
-            if (_statusEffects != null &&
-                _statusEffects.HasStatus(global::CheckmateRPG.Core.StatusEffectType.Stagger) && !IsBoss)
+            if (_statusEffects != null && _statusEffects.HasStatus(StatusEffectType.Stagger) && !IsBoss)
                 effectiveWeight = Mathf.Max(0, effectiveWeight - 1);
 
             int distance = Mathf.Max(0, force - effectiveWeight);
@@ -260,8 +260,7 @@ namespace CheckmateRPG.Components
 
             ApplyKnockback(direction, force);
 
-            if (_statusEffects != null &&
-                _statusEffects.HasStatus(global::CheckmateRPG.Core.StatusEffectType.Stagger))
+            if (_statusEffects != null && _statusEffects.HasStatus(StatusEffectType.Stagger))
                 _statusEffects.ApplyGrabVulnerability();
         }
 
@@ -337,17 +336,13 @@ namespace CheckmateRPG.Components
             if (cost <= 0f)
                 return true;
 
-            if (global::CheckmateRPG.Core.APManager.Instance == null)
+            if (APManager.Instance == null)
             {
                 Debug.LogWarning("[MovementComponent] APManager not found. Move cancelled.");
                 return false;
             }
 
-            if (!global::CheckmateRPG.Core.APManager.Instance.TrySpend(
-                    new global::CheckmateRPG.Core.ActionPointCost(
-                        cost,
-                        global::CheckmateRPG.Core.APActionReason.Move),
-                    out _))
+            if (!APManager.Instance.TrySpend(new ActionPointCost(cost, APActionReason.Move), out _))
                 return false;
 
             return true;
