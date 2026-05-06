@@ -143,6 +143,8 @@ namespace CheckmateRPG.Testing
             go.AddComponent<MovementComponent>();
             go.AddComponent<CombatComponent>();
             go.AddComponent<StatusEffectComponent>();
+            var team = go.AddComponent<TeamComponent>();
+            team.SetIsEnemy(isEnemy);
 
             // UnitBrain.Awake() runs here and caches the components added above
             var brain = go.AddComponent<UnitBrain>();

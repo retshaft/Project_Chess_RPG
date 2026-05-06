@@ -32,6 +32,7 @@ namespace CheckmateRPG.Components
         private float _damageTakenMultiplier = 1f;
         private float _defense;
         private float _resistance;
+        private float _defenseBonus;
         private StatusEffectComponent _statusEffects;
 
         private void Awake()
@@ -50,6 +51,11 @@ namespace CheckmateRPG.Components
             _damageTakenMultiplier = Mathf.Max(0f, multiplier);
         }
 
+        public void SetDefenseBonus(float bonus)
+        {
+            _defenseBonus = Mathf.Max(0f, bonus);
+        }
+
         // ─── Initialisation ───────────────────────────────────────────────────────
 
         /// <summary>
@@ -62,6 +68,7 @@ namespace CheckmateRPG.Components
             _isDead        = false;
             _defense       = Mathf.Clamp01(data.Defense);
             _resistance    = Mathf.Clamp01(data.Resistance);
+            _defenseBonus  = 0f;
         }
 
         // ─── IDamageable Implementation ───────────────────────────────────────────
@@ -144,7 +151,9 @@ namespace CheckmateRPG.Components
             if (damageType == DamageType.True)
                 return amount;
 
-            float reduction = damageType == DamageType.Physical ? _defense : _resistance;
+            float reduction = damageType == DamageType.Physical
+                ? Mathf.Clamp01(_defense + _defenseBonus)
+                : _resistance;
             if (_statusEffects != null)
                 reduction *= damageType == DamageType.Physical ? _statusEffects.DefenseMultiplier : _statusEffects.ResistanceMultiplier;
 

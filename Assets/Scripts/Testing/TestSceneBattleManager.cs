@@ -224,6 +224,8 @@ namespace CheckmateRPG.Testing
             go.AddComponent<MovementComponent>();
             go.AddComponent<CombatComponent>();
             go.AddComponent<StatusEffectComponent>();
+            var teamComponent = go.AddComponent<TeamComponent>();
+            teamComponent.SetIsEnemy(team == Team.Red);
 
             var brain = go.AddComponent<UnitBrain>();
             brain.Prepare(data, cell);

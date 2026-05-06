@@ -17,6 +17,10 @@ namespace CheckmateRPG.Grid
 
         public const int GridWidth  = 8;
         public const int GridHeight = 8;
+        private const float SwampMoveCostMultiplier = 2f;
+        private const float SpikeDamagePercentPerSecond = 0.03f;
+        private const float SanctuaryHealPercentPerSecond = 0.02f;
+        private const float SanctuaryDefenseBonus = 0.15f;
 
         // ─── Serialized Fields ────────────────────────────────────────────────────
 
@@ -25,6 +29,9 @@ namespace CheckmateRPG.Grid
 
         [Tooltip("World-space position of the bottom-left corner of tile (0,0).")]
         [SerializeField] private Vector3 _originWorldPosition = Vector3.zero;
+
+        [Tooltip("Seconds between tile effect ticks (damage/heal over time).")]
+        [SerializeField] private float _tileEffectTickInterval = 1f;
 
         // ─── Singleton ────────────────────────────────────────────────────────────
 
@@ -46,6 +53,9 @@ namespace CheckmateRPG.Grid
         /// </summary>
         private System.Collections.Generic.Dictionary<GameObject, Vector2Int> _unitToCell;
 
+        private TileType[,] _tileMap;
+        private float _tileEffectTimer;
+
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
 
         private void Awake()
@@ -60,6 +70,21 @@ namespace CheckmateRPG.Grid
             Instance = this;
             _occupancy  = new GameObject[GridWidth, GridHeight];
             _unitToCell = new System.Collections.Generic.Dictionary<GameObject, Vector2Int>();
+            _tileMap = new TileType[GridWidth, GridHeight];
+            InitialiseTileMap();
+        }
+
+        private void Update()
+        {
+            if (_tileEffectTickInterval <= 0f)
+                return;
+
+            _tileEffectTimer += Time.deltaTime;
+            while (_tileEffectTimer >= _tileEffectTickInterval)
+            {
+                _tileEffectTimer -= _tileEffectTickInterval;
+                ApplyTileEffectTick();
+            }
         }
 
         // ─── Coordinate Conversion ────────────────────────────────────────────────
@@ -187,7 +212,7 @@ namespace CheckmateRPG.Grid
         public float GetMoveCostMultiplier(Vector2Int cell)
         {
             if (!IsValidCell(cell)) return 1f;
-            return 1f;
+            return GetTileType(cell) == TileType.Swamp ? SwampMoveCostMultiplier : 1f;
         }
 
         /// <summary>
@@ -204,7 +229,14 @@ namespace CheckmateRPG.Grid
         /// </summary>
         public void ApplyTileEffects(GameObject unit, Vector2Int cell)
         {
-            if (!IsValidCell(cell)) return;
+            if (!IsValidCell(cell) || unit == null) return;
+
+            if (!unit.TryGetComponent(out HealthComponent health))
+                return;
+
+            TileType tileType = GetTileType(cell);
+            bool applySanctuary = tileType == TileType.Sanctuary && IsSanctuaryAlly(unit);
+            health.SetDefenseBonus(applySanctuary ? SanctuaryDefenseBonus : 0f);
         }
 
         private void ApplySpikeDamage(GameObject unit)
@@ -215,9 +247,100 @@ namespace CheckmateRPG.Grid
             if (!unit.TryGetComponent(out HealthComponent health))
                 return;
 
-            float damage = health.CurrentHealth * 0.05f;
+            if (health.IsDead)
+                return;
+
+            float damage = health.MaxHealth * SpikeDamagePercentPerSecond;
             if (damage > 0f)
                 health.ApplyTrueDamage(damage);
+        }
+
+        private void ApplySanctuaryRegen(GameObject unit)
+        {
+            if (unit == null)
+                return;
+
+            if (!unit.TryGetComponent(out HealthComponent health) || health.IsDead)
+                return;
+
+            float heal = health.MaxHealth * SanctuaryHealPercentPerSecond;
+            if (heal > 0f)
+                health.Heal(heal);
+        }
+
+        private void ApplyTileEffectTick()
+        {
+            for (int x = 0; x < GridWidth; x++)
+            {
+                for (int y = 0; y < GridHeight; y++)
+                {
+                    GameObject occupant = _occupancy[x, y];
+                    if (occupant == null)
+                        continue;
+
+                    TileType tileType = _tileMap[x, y];
+                    switch (tileType)
+                    {
+                        case TileType.Spikes:
+                            ApplySpikeDamage(occupant);
+                            break;
+                        case TileType.Sanctuary:
+                            if (IsSanctuaryAlly(occupant))
+                                ApplySanctuaryRegen(occupant);
+                            break;
+                    }
+                }
+            }
+        }
+
+        public TileType GetTileType(Vector2Int cell)
+        {
+            if (!IsValidCell(cell))
+                return TileType.Normal;
+
+            return _tileMap[cell.x, cell.y];
+        }
+
+        private void SetTileType(Vector2Int cell, TileType type)
+        {
+            if (!IsValidCell(cell))
+                return;
+
+            _tileMap[cell.x, cell.y] = type;
+        }
+
+        private void InitialiseTileMap()
+        {
+            for (int x = 0; x < GridWidth; x++)
+            {
+                for (int y = 0; y < GridHeight; y++)
+                    _tileMap[x, y] = TileType.Normal;
+            }
+
+            SetTileType(new Vector2Int(1, 0), TileType.Sanctuary);
+            SetTileType(new Vector2Int(3, 0), TileType.Sanctuary);
+            SetTileType(new Vector2Int(5, 0), TileType.Sanctuary);
+
+            SetTileType(new Vector2Int(2, 3), TileType.Swamp);
+            SetTileType(new Vector2Int(3, 3), TileType.Swamp);
+            SetTileType(new Vector2Int(4, 3), TileType.Swamp);
+            SetTileType(new Vector2Int(5, 3), TileType.Swamp);
+
+            SetTileType(new Vector2Int(2, 4), TileType.Spikes);
+            SetTileType(new Vector2Int(3, 4), TileType.Spikes);
+            SetTileType(new Vector2Int(4, 4), TileType.Spikes);
+            SetTileType(new Vector2Int(5, 4), TileType.Spikes);
+        }
+
+        private bool IsSanctuaryAlly(GameObject unit)
+        {
+            if (unit == null)
+                return false;
+
+            if (unit.TryGetComponent(out TeamComponent team))
+                return team.IsPlayer;
+
+            return true;
         }
     }
 }
