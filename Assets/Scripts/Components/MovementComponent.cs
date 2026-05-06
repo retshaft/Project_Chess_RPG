@@ -5,16 +5,16 @@
 using System;
 using System.Collections;
 using UnityEngine;
-using CheckmateRPG.Core;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
+using Core = CheckmateRPG.Core;
 
 namespace CheckmateRPG.Components
 {
     /// <summary>
     /// Moves a unit from one grid cell to another using a coroutine-driven lerp.
     /// </summary>
-    public class MovementComponent : MonoBehaviour, IMovable
+    public class MovementComponent : MonoBehaviour, Core.IMovable
     {
         // ─── Events ───────────────────────────────────────────────────────────────
 
@@ -166,7 +166,7 @@ namespace CheckmateRPG.Components
                 transform.position = targetPos;
                 IsMoving = false;
                 OnMoveCompleted?.Invoke(destination);
-                _statusEffects?.NotifyAction(UnitActionType.Move);
+                _statusEffects?.NotifyAction(Core.UnitActionType.Move);
                 yield break;
             }
 
@@ -182,7 +182,7 @@ namespace CheckmateRPG.Components
 
             OnMoveCompleted?.Invoke(destination);
 
-            _statusEffects?.NotifyAction(UnitActionType.Move);
+            _statusEffects?.NotifyAction(Core.UnitActionType.Move);
         }
 
         public void ApplyKnockback(Vector2Int direction, int force, bool applySplatDamage = true)
@@ -196,7 +196,7 @@ namespace CheckmateRPG.Components
             direction = new Vector2Int(Mathf.Clamp(direction.x, -1, 1), Mathf.Clamp(direction.y, -1, 1));
 
             int effectiveWeight = Weight;
-            if (_statusEffects != null && _statusEffects.HasStatus(StatusEffectType.Stagger) && !IsBoss)
+            if (_statusEffects != null && _statusEffects.HasStatus(Core.StatusEffectType.Stagger) && !IsBoss)
                 effectiveWeight = Mathf.Max(0, effectiveWeight - 1);
 
             int distance = Mathf.Max(0, force - effectiveWeight);
@@ -259,7 +259,7 @@ namespace CheckmateRPG.Components
 
             ApplyKnockback(direction, force);
 
-            if (_statusEffects != null && _statusEffects.HasStatus(StatusEffectType.Stagger))
+            if (_statusEffects != null && _statusEffects.HasStatus(Core.StatusEffectType.Stagger))
                 _statusEffects.ApplyGrabVulnerability();
         }
 
@@ -335,13 +335,13 @@ namespace CheckmateRPG.Components
             if (cost <= 0f)
                 return true;
 
-            if (APManager.Instance == null)
+            if (Core.APManager.Instance == null)
             {
                 Debug.LogWarning("[MovementComponent] APManager not found. Move cancelled.");
                 return false;
             }
 
-            if (!APManager.Instance.TrySpend(new ActionPointCost(cost, APActionReason.Move), out _))
+            if (!Core.APManager.Instance.TrySpend(new Core.ActionPointCost(cost, Core.APActionReason.Move), out _))
                 return false;
 
             return true;
