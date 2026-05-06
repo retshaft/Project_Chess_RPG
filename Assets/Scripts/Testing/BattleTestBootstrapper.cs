@@ -23,6 +23,9 @@ namespace CheckmateRPG.Testing
     /// </summary>
     public class BattleTestBootstrapper : MonoBehaviour
     {
+        [Header("Debug")]
+        [SerializeField] private bool _enableAPDebugLogging = true;
+
         // ─── Spawn Table ──────────────────────────────────────────────────────────
 
         private static readonly (string UnitName, Vector2Int Cell, bool IsEnemy)[] SpawnTable =
@@ -40,7 +43,7 @@ namespace CheckmateRPG.Testing
         private void Awake()
         {
             EnsureGridSystem();
-            EnsureAPManager();
+            EnsureAPManager(_enableAPDebugLogging);
             SpawnAllUnits();
         }
 
@@ -89,14 +92,19 @@ namespace CheckmateRPG.Testing
             return data;
         }
 
-        private static void EnsureAPManager()
+        private static APManager EnsureAPManager(bool enableDebugLogging)
         {
             if (APManager.Instance != null)
-                return;
+                return APManager.Instance;
 
             var apGO = new GameObject("APManager");
-            apGO.AddComponent<APManager>();
+            var manager = apGO.AddComponent<APManager>();
+
+            if (enableDebugLogging)
+                apGO.AddComponent<APDebugLogger>();
+
             Debug.Log("[BattleTestBootstrapper] APManager created.");
+            return manager;
         }
 
         private static void SpawnUnit(string unitName, Vector2Int cell, UnitData data, bool isEnemy)
