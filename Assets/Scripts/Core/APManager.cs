@@ -33,6 +33,7 @@ namespace CheckmateRPG.Core
         [SerializeField] private Color _warningColor = new Color(1f, 0.25f, 0.25f);
         [SerializeField] private float _warningFlashDuration = 1.25f;
         [SerializeField] private float _warningFlashSpeed = 6f;
+        [SerializeField] private string _warningMessage = "AP 부족!";
 
         // ─── State ───────────────────────────────────────────────────────────────
 
@@ -58,7 +59,8 @@ namespace CheckmateRPG.Core
             }
 
             Instance = this;
-            CurrentAP = Mathf.Clamp(_maxAP, 0f, _maxAP);
+            _maxAP = Mathf.Max(0f, _maxAP);
+            CurrentAP = _maxAP;
 
             if (_createDebugUI)
                 BuildDebugUI();
@@ -144,7 +146,7 @@ namespace CheckmateRPG.Core
             Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             _apText = CreateText("APValueText", canvasGO.transform, font, _apTextOffset, 24, Color.white);
             _warningText = CreateText("APWarningText", canvasGO.transform, font, _warningTextOffset, 22, _warningColor);
-            _warningText.text = "AP 부족!";
+            _warningText.text = _warningMessage;
             _warningText.gameObject.SetActive(false);
         }
 

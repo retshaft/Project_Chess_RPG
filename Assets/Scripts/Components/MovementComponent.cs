@@ -40,7 +40,7 @@ namespace CheckmateRPG.Components
 
         private int   _moveRange;
         private float _moveSpeed;
-        private float _moveApCost;
+        private float _moveAPCost;
         private StatusEffectComponent _statusEffects;
         private Coroutine _movementRoutine;
 
@@ -58,7 +58,7 @@ namespace CheckmateRPG.Components
         {
             _moveRange = data.MoveRange;
             _moveSpeed = data.MoveSpeed;
-            _moveApCost = Mathf.Max(0f, data.MoveAPCost);
+            _moveAPCost = Mathf.Max(0f, data.MoveAPCost);
             Weight = Mathf.Clamp(data.Weight, 0, 4);
             IsBoss = data.IsBoss;
 
@@ -289,7 +289,7 @@ namespace CheckmateRPG.Components
             if (GridSystem.Instance != null)
                 multiplier *= GridSystem.Instance.GetMoveCostMultiplier(targetCell);
             multiplier *= GetActionCostMultiplier();
-            return Mathf.Max(0f, _moveApCost * multiplier);
+            return Mathf.Max(0f, _moveAPCost * multiplier);
         }
 
         private bool TrySpendAP(float cost)

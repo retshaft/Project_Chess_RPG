@@ -33,7 +33,7 @@ namespace CheckmateRPG.Components
         private float _attackDamage;
         private float _attackCooldown;
         private int   _attackRange;
-        private float _attackApCost;
+        private float _attackAPCost;
         private float _cooldownRemaining;
         private bool  _isDead;
         private StatusEffectComponent _statusEffects;
@@ -53,7 +53,7 @@ namespace CheckmateRPG.Components
             _attackDamage    = data.AttackDamage;
             _attackCooldown  = data.AttackCooldown;
             _attackRange     = data.AttackRange;
-            _attackApCost    = Mathf.Max(0f, data.AttackAPCost);
+            _attackAPCost    = Mathf.Max(0f, data.AttackAPCost);
             _cooldownRemaining = 0f;
             _isDead          = false;
         }
@@ -171,7 +171,7 @@ namespace CheckmateRPG.Components
         private float GetAttackApCost()
         {
             float multiplier = _statusEffects != null ? _statusEffects.ActionCostMultiplier : 1f;
-            return Mathf.Max(0f, _attackApCost * multiplier);
+            return Mathf.Max(0f, _attackAPCost * multiplier);
         }
 
         private bool TrySpendAP(float cost)
