@@ -146,10 +146,7 @@ namespace CheckmateRPG.Core
 
         private void Regenerate(float deltaTime)
         {
-            if (_regenPaused || _regenPerSecond <= 0f || _maxAP <= 0f || CurrentAP >= _maxAP)
-                return;
-
-            if (deltaTime <= 0f)
+            if (_regenPaused || _regenPerSecond <= 0f || _maxAP <= 0f || CurrentAP >= _maxAP || deltaTime <= 0f)
                 return;
 
             AddAP(_regenPerSecond * deltaTime, APSource.Regen);

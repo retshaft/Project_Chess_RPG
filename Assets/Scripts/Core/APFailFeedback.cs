@@ -14,7 +14,7 @@ namespace CheckmateRPG.Core
         private void Awake()
         {
             _apManager = APManager.Instance ?? GetComponent<APManager>();
-            _apUI = GetComponentInChildren<IAPUI>();
+            _apUI = GetComponent<IAPUI>() ?? GetComponentInChildren<IAPUI>();
         }
 
         private void OnEnable()
