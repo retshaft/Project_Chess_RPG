@@ -110,7 +110,7 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            float apCost = GetMoveApCost(targetGridPosition);
+            float apCost = GetMoveAPCost(targetGridPosition);
             if (!TrySpendAP(apCost))
                 return;
 
@@ -283,7 +283,7 @@ namespace CheckmateRPG.Components
             return _statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f;
         }
 
-        private float GetMoveApCost(Vector2Int targetCell)
+        private float GetMoveAPCost(Vector2Int targetCell)
         {
             float multiplier = 1f;
             if (GridSystem.Instance != null)

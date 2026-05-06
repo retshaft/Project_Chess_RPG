@@ -106,7 +106,7 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            float apCost = GetAttackApCost();
+            float apCost = GetAttackAPCost();
             if (!TrySpendAP(apCost))
                 return;
 
@@ -168,7 +168,7 @@ namespace CheckmateRPG.Components
             return Mathf.Max(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
         }
 
-        private float GetAttackApCost()
+        private float GetAttackAPCost()
         {
             float multiplier = _statusEffects != null ? _statusEffects.ActionCostMultiplier : 1f;
             return Mathf.Max(0f, _attackAPCost * multiplier);
