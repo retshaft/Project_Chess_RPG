@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
+  m_Name: PawnUnitData
+  m_EditorClassIdentifier: 
+  UnitName: Pawn
+  MaxHealth: 80
+  Defense: 0.05
+  Resistance: 0.05
+  AttackDamage: 8
+  AttackCooldown: 1
+  AttackRange: 1
+  KillValue: 8
+  MaxSP: 50
+  MoveAPCost: 4
+  AttackAPCost: 6
+  MoveRange: 2
+  MoveSpeed: 4.5
+  Weight: 1
+  IsBoss: 0
