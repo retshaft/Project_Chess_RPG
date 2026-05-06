@@ -80,7 +80,7 @@ namespace CheckmateRPG.Grid
                 return;
 
             _tileEffectTimer += Time.deltaTime;
-            while (_tileEffectTimer >= _tileEffectTickInterval)
+            if (_tileEffectTimer >= _tileEffectTickInterval)
             {
                 _tileEffectTimer -= _tileEffectTickInterval;
                 ApplyTileEffectTick();
@@ -231,10 +231,17 @@ namespace CheckmateRPG.Grid
         {
             if (!IsValidCell(cell) || unit == null) return;
 
+            UpdateSanctuaryDefense(unit, GetTileType(cell));
+        }
+
+        private void UpdateSanctuaryDefense(GameObject unit, TileType tileType)
+        {
+            if (unit == null)
+                return;
+
             if (!unit.TryGetComponent(out HealthComponent health))
                 return;
 
-            TileType tileType = GetTileType(cell);
             bool applySanctuary = tileType == TileType.Sanctuary && IsSanctuaryAlly(unit);
             health.SetDefenseBonus(applySanctuary ? SanctuaryDefenseBonus : 0f);
         }
@@ -279,6 +286,7 @@ namespace CheckmateRPG.Grid
                         continue;
 
                     TileType tileType = _tileMap[x, y];
+                    UpdateSanctuaryDefense(occupant, tileType);
                     switch (tileType)
                     {
                         case TileType.Spikes:
