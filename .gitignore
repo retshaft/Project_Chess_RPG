@@ -78,6 +78,9 @@ StyleCopReport.xml
 *_h.h
 *.ilk
 *.meta
+# Unity .meta files inside Assets must be tracked for script GUIDs to remain stable.
+# The above pattern excludes VS build artefacts ending in .meta; un-ignore Unity assets.
+!Assets/**/*.meta
 *.obj
 *.iobj
 *.pch

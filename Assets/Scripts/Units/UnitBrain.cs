@@ -131,6 +131,17 @@ namespace CheckmateRPG.Units
         // ─── Public Command API ───────────────────────────────────────────────────
 
         /// <summary>
+        /// Set data before Start() runs. Call this from a spawner during its Awake()
+        /// immediately after AddComponent&lt;UnitBrain&gt;(), so that Start() finds the fields
+        /// already populated when it initialises the components.
+        /// </summary>
+        public void Prepare(UnitData data, Vector2Int startCell)
+        {
+            _unitData  = data;
+            _startCell = startCell;
+        }
+
+        /// <summary>
         /// Order the unit to move to <paramref name="targetCell"/>.
         /// The MovementComponent validates range and occupancy.
         /// </summary>
