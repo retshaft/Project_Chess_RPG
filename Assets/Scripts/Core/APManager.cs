@@ -111,7 +111,7 @@ namespace CheckmateRPG.Core
 
             float previous = CurrentAP;
             float next = Mathf.Min(_maxAP, CurrentAP + amount);
-            CurrentAP = Mathf.Max(0f, next);
+            CurrentAP = next;
             float added = CurrentAP - previous;
             if (!Mathf.Approximately(added, 0f))
                 RaiseAPChanged(added, ToChangeReason(source));
