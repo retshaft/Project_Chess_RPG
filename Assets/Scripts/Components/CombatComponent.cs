@@ -33,6 +33,7 @@ namespace CheckmateRPG.Components
         private float _attackDamage;
         private float _attackCooldown;
         private int   _attackRange;
+        private float _attackAPCost;
         private float _cooldownRemaining;
         private bool  _isDead;
         private StatusEffectComponent _statusEffects;
@@ -52,6 +53,7 @@ namespace CheckmateRPG.Components
             _attackDamage    = data.AttackDamage;
             _attackCooldown  = data.AttackCooldown;
             _attackRange     = data.AttackRange;
+            _attackAPCost    = Mathf.Max(0f, data.AttackAPCost);
             _cooldownRemaining = 0f;
             _isDead          = false;
         }
@@ -103,6 +105,10 @@ namespace CheckmateRPG.Components
                 Debug.LogWarning($"[CombatComponent] {target.name} does not implement IDamageable.");
                 return;
             }
+
+            float apCost = GetAttackAPCost();
+            if (!TrySpendAP(apCost))
+                return;
 
             float damage = _attackDamage;
             if (_statusEffects != null)
@@ -160,6 +166,32 @@ namespace CheckmateRPG.Components
         private static int ChebyshevDistance(Vector2Int a, Vector2Int b)
         {
             return Mathf.Max(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
+        }
+
+        private float GetAttackAPCost()
+        {
+            float multiplier = _statusEffects != null ? _statusEffects.ActionCostMultiplier : 1f;
+            return Mathf.Max(0f, _attackAPCost * multiplier);
+        }
+
+        private bool TrySpendAP(float cost)
+        {
+            if (cost <= 0f)
+                return true;
+
+            if (APManager.Instance == null)
+            {
+                Debug.LogWarning("[CombatComponent] APManager not found. Attack cancelled.");
+                return false;
+            }
+
+            if (!APManager.Instance.TrySpend(cost))
+            {
+                Debug.LogWarning($"[CombatComponent] {gameObject.name} has insufficient AP to attack.");
+                return false;
+            }
+
+            return true;
         }
     }
 }

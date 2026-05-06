@@ -40,6 +40,7 @@ namespace CheckmateRPG.Components
 
         private int   _moveRange;
         private float _moveSpeed;
+        private float _moveAPCost;
         private StatusEffectComponent _statusEffects;
         private Coroutine _movementRoutine;
 
@@ -57,6 +58,7 @@ namespace CheckmateRPG.Components
         {
             _moveRange = data.MoveRange;
             _moveSpeed = data.MoveSpeed;
+            _moveAPCost = Mathf.Max(0f, data.MoveAPCost);
             Weight = Mathf.Clamp(data.Weight, 0, 4);
             IsBoss = data.IsBoss;
 
@@ -107,6 +109,10 @@ namespace CheckmateRPG.Components
                 Debug.LogWarning($"[MovementComponent] Target cell is {distance} steps away, move range is {_moveRange}.");
                 return;
             }
+
+            float apCost = GetMoveAPCost(targetGridPosition);
+            if (!TrySpendAP(apCost))
+                return;
 
             StartMovementCoroutine(MoveCoroutine(targetGridPosition));
         }
@@ -275,6 +281,35 @@ namespace CheckmateRPG.Components
         private float GetActionSpeedMultiplier()
         {
             return _statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f;
+        }
+
+        private float GetMoveAPCost(Vector2Int targetCell)
+        {
+            float multiplier = 1f;
+            if (GridSystem.Instance != null)
+                multiplier *= GridSystem.Instance.GetMoveCostMultiplier(targetCell);
+            multiplier *= GetActionCostMultiplier();
+            return Mathf.Max(0f, _moveAPCost * multiplier);
+        }
+
+        private bool TrySpendAP(float cost)
+        {
+            if (cost <= 0f)
+                return true;
+
+            if (APManager.Instance == null)
+            {
+                Debug.LogWarning("[MovementComponent] APManager not found. Move cancelled.");
+                return false;
+            }
+
+            if (!APManager.Instance.TrySpend(cost))
+            {
+                Debug.LogWarning($"[MovementComponent] {gameObject.name} has insufficient AP to move.");
+                return false;
+            }
+
+            return true;
         }
 
         private static void ApplySplatDamage(GameObject target, float percent)
