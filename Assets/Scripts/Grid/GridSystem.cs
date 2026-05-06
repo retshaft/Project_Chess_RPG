@@ -225,7 +225,8 @@ namespace CheckmateRPG.Grid
         }
 
         /// <summary>
-        /// Applies any tile-based effects (damage, buffs) to the unit on the cell.
+        /// Applies entry-time tile effects (e.g. sanctuary defense) to the unit on the cell.
+        /// Ongoing damage/heal ticks are handled by the grid tick loop.
         /// </summary>
         public void ApplyTileEffects(GameObject unit, Vector2Int cell)
         {
