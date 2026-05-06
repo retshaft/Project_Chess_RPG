@@ -303,11 +303,8 @@ namespace CheckmateRPG.Components
                 return false;
             }
 
-            if (!APManager.Instance.TrySpend(cost))
-            {
-                Debug.LogWarning($"[MovementComponent] {gameObject.name} has insufficient AP to move.");
+            if (!APManager.Instance.TrySpend(new ActionPointCost(cost, APActionReason.Move), out _))
                 return false;
-            }
 
             return true;
         }

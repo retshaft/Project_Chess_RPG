@@ -185,11 +185,8 @@ namespace CheckmateRPG.Components
                 return false;
             }
 
-            if (!APManager.Instance.TrySpend(cost))
-            {
-                Debug.LogWarning($"[CombatComponent] {gameObject.name} has insufficient AP to attack.");
+            if (!APManager.Instance.TrySpend(new ActionPointCost(cost, APActionReason.Attack), out _))
                 return false;
-            }
 
             return true;
         }
