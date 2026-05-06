@@ -100,7 +100,13 @@ namespace CheckmateRPG.Core
             }
 
             float missing = cost.Amount - CurrentAP;
+            bool hasListeners = OnInsufficientAP != null;
             OnInsufficientAP?.Invoke(cost.Amount, CurrentAP, missing, cost.Reason);
+            if (!hasListeners)
+            {
+                Debug.LogWarning($"[APManager] AP 부족 ({cost.Reason}) 요청 {cost.Amount:0.0}, " +
+                                 $"보유 {CurrentAP:0.0}, 부족 {missing:0.0}");
+            }
             return false;
         }
 

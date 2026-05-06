@@ -83,8 +83,9 @@ namespace CheckmateRPG.Testing
             data.AttackRange    = 1;
             data.KillValue      = 10f;
             data.MaxSP          = 100f;
-            data.MoveAPCost     = 4f;
-            data.AttackAPCost   = 6f;
+            data.MoveCostAP     = 4f;
+            data.AttackCostAP   = 6f;
+            data.ActionSpeed    = 1f;
             data.MoveRange      = 3;
             data.MoveSpeed      = 5f;
             data.Weight         = 1;
