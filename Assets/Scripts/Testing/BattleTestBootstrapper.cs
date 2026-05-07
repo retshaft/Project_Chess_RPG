@@ -219,6 +219,7 @@ namespace CheckmateRPG.Testing
         [SerializeField] private float _overlayWidth = 0.06f;
 
         private readonly List<GameObject> _overlayTiles = new();
+        private readonly List<UnitBrain> _playerUnits = new();
         private Camera _mainCamera;
         private Material _overlayMaterial;
         private UnitBrain _selectedUnit;
@@ -227,6 +228,7 @@ namespace CheckmateRPG.Testing
         private void Start()
         {
             _mainCamera = Camera.main;
+            RefreshPlayerUnits();
             SelectFirstPlayerUnit();
             RebuildOverlay();
         }
@@ -292,9 +294,10 @@ namespace CheckmateRPG.Testing
 
         private void SelectFirstPlayerUnit()
         {
-            foreach (UnitBrain brain in FindObjectsByType<UnitBrain>(FindObjectsSortMode.None))
+            RefreshPlayerUnits();
+            foreach (UnitBrain brain in _playerUnits)
             {
-                if (brain != null && !brain.IsDead && brain.TryGetComponent(out TeamComponent team) && team.IsPlayer)
+                if (brain != null && !brain.IsDead)
                 {
                     SelectUnit(brain);
                     return;
@@ -306,14 +309,9 @@ namespace CheckmateRPG.Testing
 
         private void SelectNextPlayerUnit()
         {
-            var playerUnits = new List<UnitBrain>();
-            foreach (UnitBrain brain in FindObjectsByType<UnitBrain>(FindObjectsSortMode.None))
-            {
-                if (brain != null && !brain.IsDead && brain.TryGetComponent(out TeamComponent team) && team.IsPlayer)
-                    playerUnits.Add(brain);
-            }
+            RefreshPlayerUnits();
 
-            if (playerUnits.Count == 0)
+            if (_playerUnits.Count == 0)
             {
                 SelectUnit(null);
                 return;
@@ -321,13 +319,13 @@ namespace CheckmateRPG.Testing
 
             if (_selectedUnit == null)
             {
-                SelectUnit(playerUnits[0]);
+                SelectUnit(_playerUnits[0]);
                 return;
             }
 
-            int currentIndex = playerUnits.IndexOf(_selectedUnit);
-            int nextIndex = currentIndex >= 0 ? (currentIndex + 1) % playerUnits.Count : 0;
-            SelectUnit(playerUnits[nextIndex]);
+            int currentIndex = _playerUnits.IndexOf(_selectedUnit);
+            int nextIndex = currentIndex >= 0 ? (currentIndex + 1) % _playerUnits.Count : 0;
+            SelectUnit(_playerUnits[nextIndex]);
         }
 
         private void SelectUnit(UnitBrain unit)
@@ -369,8 +367,8 @@ namespace CheckmateRPG.Testing
 
             var line = tile.AddComponent<LineRenderer>();
             line.useWorldSpace = true;
-            line.loop = false;
-            line.positionCount = 5;
+            line.loop = true;
+            line.positionCount = 4;
             line.widthMultiplier = _overlayWidth;
             line.numCapVertices = 2;
             line.numCornerVertices = 2;
@@ -393,7 +391,6 @@ namespace CheckmateRPG.Testing
             line.SetPosition(1, topLeft);
             line.SetPosition(2, topRight);
             line.SetPosition(3, bottomRight);
-            line.SetPosition(4, bottomLeft);
 
             return tile;
         }
@@ -412,6 +409,20 @@ namespace CheckmateRPG.Testing
             _overlayMaterial = new Material(shader);
             _overlayMaterial.color = _overlayColor;
             return _overlayMaterial;
+        }
+
+        private void RefreshPlayerUnits()
+        {
+            _playerUnits.RemoveAll(unit => unit == null || unit.IsDead || !unit.TryGetComponent(out TeamComponent team) || !team.IsPlayer);
+
+            if (_playerUnits.Count > 0)
+                return;
+
+            foreach (UnitBrain brain in FindObjectsByType<UnitBrain>(FindObjectsSortMode.None))
+            {
+                if (brain != null && !brain.IsDead && brain.TryGetComponent(out TeamComponent team) && team.IsPlayer)
+                    _playerUnits.Add(brain);
+            }
         }
     }
 }

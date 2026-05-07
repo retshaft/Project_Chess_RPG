@@ -75,6 +75,12 @@ namespace CheckmateRPG.Units
             public float Score;
         }
 
+        private struct TargetCandidate
+        {
+            public UnitBrain Brain;
+            public Vector2Int Cell;
+        }
+
         private const float KillValueWeight = 24f;
         private const float MoveKillValueWeight = 10f;
         private const float LethalBonus = 150f;
@@ -261,7 +267,7 @@ namespace CheckmateRPG.Units
             if (target.GetComponent<IDamageable>() == null)
                 return false;
 
-            if (_team != null && target.TryGetComponent(out TeamComponent targetTeam) && targetTeam.IsEnemy == _team.IsEnemy)
+            if (AreAllies(target))
                 return false;
 
             return true;
@@ -372,51 +378,71 @@ namespace CheckmateRPG.Units
 
             bool hasCandidate = false;
             var reachableCells = Movement.GetReachableCells();
+            var potentialTargets = GetPotentialTargets();
+
+            foreach (TargetCandidate target in potentialTargets)
+            {
+                if (Combat != null && Combat.CanAttack && IsAttackRange(Movement.GridPosition, target.Cell))
+                {
+                    float attackScore = ScoreAttackTarget(target.Brain, target.Cell);
+                    if (!hasCandidate || attackScore > bestDecision.Score)
+                    {
+                        bestDecision = new DecisionCandidate
+                        {
+                            Decision = UnitDecision.Attack,
+                            Target = target.Brain.gameObject,
+                            Score = attackScore
+                        };
+                        hasCandidate = true;
+                    }
+                }
+            }
+
+            foreach (Vector2Int cell in reachableCells)
+            {
+                foreach (TargetCandidate target in potentialTargets)
+                {
+                    float moveScore = ScoreMoveTarget(cell, target.Brain, target.Cell);
+                    if (!hasCandidate || moveScore > bestDecision.Score)
+                    {
+                        bestDecision = new DecisionCandidate
+                        {
+                            Decision = UnitDecision.Move,
+                            Destination = cell,
+                            Target = target.Brain.gameObject,
+                            Score = moveScore
+                        };
+                        hasCandidate = true;
+                    }
+                }
+            }
+
+            return hasCandidate;
+        }
+
+        private System.Collections.Generic.List<TargetCandidate> GetPotentialTargets()
+        {
+            var targets = new System.Collections.Generic.List<TargetCandidate>();
+            if (GridSystem.Instance == null)
+                return targets;
 
             for (int x = 0; x < GridSystem.GridWidth; x++)
             {
                 for (int y = 0; y < GridSystem.GridHeight; y++)
                 {
                     GameObject occupant = GridSystem.Instance.GetOccupant(x, y);
-                    if (!TryGetTargetBrain(occupant, out UnitBrain targetBrain))
-                        continue;
-
-                    Vector2Int targetCell = targetBrain.Movement.GridPosition;
-
-                    if (Combat != null && Combat.CanAttack && IsAttackRange(Movement.GridPosition, targetCell))
+                    if (TryGetTargetBrain(occupant, out UnitBrain targetBrain))
                     {
-                        float attackScore = ScoreAttackTarget(targetBrain, targetCell);
-                        if (!hasCandidate || attackScore > bestDecision.Score)
+                        targets.Add(new TargetCandidate
                         {
-                            bestDecision = new DecisionCandidate
-                            {
-                                Decision = UnitDecision.Attack,
-                                Target = targetBrain.gameObject,
-                                Score = attackScore
-                            };
-                            hasCandidate = true;
-                        }
-                    }
-
-                    foreach (Vector2Int cell in reachableCells)
-                    {
-                        float moveScore = ScoreMoveTarget(cell, targetBrain, targetCell);
-                        if (!hasCandidate || moveScore > bestDecision.Score)
-                        {
-                            bestDecision = new DecisionCandidate
-                            {
-                                Decision = UnitDecision.Move,
-                                Destination = cell,
-                                Target = targetBrain.gameObject,
-                                Score = moveScore
-                            };
-                            hasCandidate = true;
-                        }
+                            Brain = targetBrain,
+                            Cell = targetBrain.Movement.GridPosition
+                        });
                     }
                 }
             }
 
-            return hasCandidate;
+            return targets;
         }
 
         private bool TryGetTargetBrain(GameObject target, out UnitBrain targetBrain)
@@ -518,6 +544,14 @@ namespace CheckmateRPG.Units
             float defense = Mathf.Clamp01(targetBrain.UnitData.Defense);
             float estimatedDamage = Mathf.Max(0f, _unitData.AttackDamage * (1f - defense));
             return estimatedDamage >= targetBrain.Health.CurrentHealth;
+        }
+
+        private bool AreAllies(GameObject target)
+        {
+            if (_team == null || target == null || !target.TryGetComponent(out TeamComponent targetTeam))
+                return false;
+
+            return targetTeam.IsEnemy == _team.IsEnemy;
         }
 
         private bool IsAttackRange(Vector2Int origin, Vector2Int targetCell)

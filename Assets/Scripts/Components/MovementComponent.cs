@@ -260,6 +260,9 @@ namespace CheckmateRPG.Components
                 return false;
             }
 
+            if (targetGridPosition == GridPosition)
+                return false;
+
             if (_statusEffects != null && !_statusEffects.CanMove)
             {
                 if (logFailures)
@@ -273,9 +276,6 @@ namespace CheckmateRPG.Components
                     Debug.LogWarning($"[MovementComponent] Target cell {targetGridPosition} is out of bounds.");
                 return false;
             }
-
-            if (targetGridPosition == GridPosition)
-                return false;
 
             if (!GridSystem.Instance.IsCellFree(targetGridPosition))
             {
