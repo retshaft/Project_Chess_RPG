@@ -68,6 +68,7 @@ Assets/
 │       └── BattleTestBootstrapper.cs – Runtime scene builder for BattleTest.unity
 └── Docs/
     ├── MILESTONES.md            – Full milestone plan (M0 → M7)
+    ├── ACTION_TIMELINE.md       – Action speed tick formula + timing field definitions
     └── DEV_QUICKSTART.md        ← YOU ARE HERE
 ```
 
