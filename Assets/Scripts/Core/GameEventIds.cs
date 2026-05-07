@@ -22,7 +22,8 @@ namespace CheckmateRPG.Core
         public const string OnTakeDamage = nameof(OnTakeDamage);
         public const string BeforeTakeDamage = nameof(BeforeTakeDamage);
         public const string AfterTakeDamage = nameof(AfterTakeDamage);
-        public const string OnPromotion = nameof(OnPromotion);
-        public const string OnPromotioned = nameof(OnPromotioned);
+        public const string Promoted = nameof(Promoted);
+        public const string OnPromotion = Promoted;
+        public const string OnPromotioned = Promoted;
     }
 }
