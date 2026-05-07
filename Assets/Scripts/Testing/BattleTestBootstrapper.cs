@@ -214,6 +214,8 @@ namespace CheckmateRPG.Testing
 
     public class BattleSelectionOverlayController : MonoBehaviour
     {
+        private static readonly Vector2Int InvalidCell = new Vector2Int(-1, -1);
+
         [SerializeField] private Color _overlayColor = new Color(0.15f, 0.75f, 1f, 0.95f);
         [SerializeField] private float _overlayHeight = 0.035f;
         [SerializeField] private float _overlayWidth = 0.06f;
@@ -223,7 +225,7 @@ namespace CheckmateRPG.Testing
         private Camera _mainCamera;
         private Material _overlayMaterial;
         private UnitBrain _selectedUnit;
-        private Vector2Int _lastOverlayCell = new Vector2Int(-1, -1);
+        private Vector2Int _lastOverlayCell = InvalidCell;
 
         private void Start()
         {
@@ -331,7 +333,7 @@ namespace CheckmateRPG.Testing
         private void SelectUnit(UnitBrain unit)
         {
             _selectedUnit = unit;
-            _lastOverlayCell = unit != null && unit.Movement != null ? unit.Movement.GridPosition : new Vector2Int(-1, -1);
+            _lastOverlayCell = unit != null && unit.Movement != null ? unit.Movement.GridPosition : InvalidCell;
             RebuildOverlay();
         }
 
