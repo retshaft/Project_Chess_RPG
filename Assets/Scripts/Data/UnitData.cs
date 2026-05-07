@@ -8,14 +8,44 @@ using UnityEngine.Serialization;
 
 namespace CheckmateRPG.Data
 {
+    public enum ChessPieceType
+    {
+        Pawn,
+        Knight,
+        Bishop,
+        Rook,
+        Queen,
+        King
+    }
+
+    public enum MovePatternType
+    {
+        Pawn,
+        Knight,
+        King,
+        SlidingOrthogonal,
+        SlidingDiagonal,
+        SlidingOmni
+    }
+
     [CreateAssetMenu(menuName = "CheckmateRPG/Unit Data", fileName = "NewUnitData")]
     public class UnitData : ScriptableObject
     {
         // ─── Identity ─────────────────────────────────────────────────────────────
 
         [Header("Identity")]
-        [Tooltip("Display name of the unit archetype (e.g. \"Knight\", \"Archer\").")]
+        [Tooltip("Display name of the unit archetype (e.g. "Knight", "Archer").")]
         public string UnitName = "Unit";
+
+        [Header("Chess")]
+        [Tooltip("Chess piece archetype used for role defaults and promotion checks.")]
+        public ChessPieceType PieceType = ChessPieceType.Pawn;
+
+        [Tooltip("Injected move pattern type resolved by MovementComponent at runtime.")]
+        public MovePatternType MovePattern = MovePatternType.Pawn;
+
+        [Tooltip("Default class role for this chess piece.")]
+        public string BaseRole = "척후대";
 
         // ─── Health ───────────────────────────────────────────────────────────────
 
@@ -84,6 +114,45 @@ namespace CheckmateRPG.Data
 
         [Tooltip("Bosses ignore weight reduction from stagger and resist freeze.")]
         public bool IsBoss = false;
+
+        public void SyncDefaultChessMetadata()
+        {
+            BaseRole = GetDefaultRole(PieceType);
+            MovePattern = GetDefaultMovePattern(PieceType);
+        }
+
+        public static string GetDefaultRole(ChessPieceType pieceType)
+        {
+            return pieceType switch
+            {
+                ChessPieceType.Pawn => "척후대",
+                ChessPieceType.Knight => "돌격기사",
+                ChessPieceType.Bishop => "대주교",
+                ChessPieceType.Rook => "포트리스",
+                ChessPieceType.Queen => "대왕",
+                ChessPieceType.King => "군주",
+                _ => "병력"
+            };
+        }
+
+        public static MovePatternType GetDefaultMovePattern(ChessPieceType pieceType)
+        {
+            return pieceType switch
+            {
+                ChessPieceType.Pawn => MovePatternType.Pawn,
+                ChessPieceType.Knight => MovePatternType.Knight,
+                ChessPieceType.Bishop => MovePatternType.SlidingDiagonal,
+                ChessPieceType.Rook => MovePatternType.SlidingOrthogonal,
+                ChessPieceType.Queen => MovePatternType.SlidingOmni,
+                ChessPieceType.King => MovePatternType.King,
+                _ => MovePatternType.Pawn
+            };
+        }
+
+        private void OnValidate()
+        {
+            SyncDefaultChessMetadata();
+        }
 
         // ─── Future Extensions ────────────────────────────────────────────────────
         // faction, visual prefab reference, etc. can be added here without touching
