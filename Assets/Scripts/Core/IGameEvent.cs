@@ -1,15 +1,27 @@
 using System;
-using System.Collections.Generic;
 
 namespace CheckmateRPG.Core
 {
     public interface IGameEvent
     {
-        string EventId { get; }
         DateTime Timestamp { get; }
-        object Source { get; }
-        object Target { get; }
-        IReadOnlyCollection<string> Tags { get; }
-        object Payload { get; }
+    }
+
+    public interface IResolvableGameEvent : IGameEvent
+    {
+        EventPhase Phase { get; }
+        EventCategory Category { get; }
+        string Source { get; }
+        string Target { get; }
+        int EventDepth { get; }
+        long QueueOrder { get; }
+
+        IResolvableGameEvent WithPhase(EventPhase phase);
+        IResolvableGameEvent WithQueueMetadata(int eventDepth, long queueOrder);
+    }
+
+    public interface IGameEvent<out TPayload> : IResolvableGameEvent
+    {
+        TPayload Payload { get; }
     }
 }
