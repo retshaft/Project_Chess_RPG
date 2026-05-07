@@ -70,11 +70,14 @@ namespace CheckmateRPG.Progression
             List<EdictData> sorted = new List<EdictData>(loadout.ActiveEdicts);
             sorted.Sort((a, b) =>
             {
-                EdictKind aKind = a != null ? a.Kind : EdictKind.General;
-                EdictKind bKind = b != null ? b.Kind : EdictKind.General;
-                if (aKind == bKind)
-                    return 0;
-                return aKind == EdictKind.Absolute ? -1 : 1;
+                int GetPriority(EdictData edict)
+                {
+                    if (edict == null)
+                        return 1;
+                    return edict.Kind == EdictKind.Absolute ? 0 : 1;
+                }
+
+                return GetPriority(a).CompareTo(GetPriority(b));
             });
 
             for (int i = 0; i < sorted.Count; i++)
