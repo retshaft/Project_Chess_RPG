@@ -6,6 +6,7 @@
 //   1. Creates a GridSystem instance if none exists yet.
 //   2. Spawns 6 chess units (3 blue / 3 red) on the grid and registers their occupancy.
 
+using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
@@ -42,6 +43,7 @@ namespace CheckmateRPG.Testing
             EnsureGridSystem();
             EnsureAPManager(_enableAPDebugLogger);
             SpawnAllUnits();
+            EnsureSelectionOverlay();
         }
 
         // ─── Setup Helpers ────────────────────────────────────────────────────────
@@ -114,7 +116,16 @@ namespace CheckmateRPG.Testing
 
             data.AttackCooldown = 1.1f;
             data.AttackRange = 1;
-            data.KillValue = 10f;
+            data.KillValue = pieceType switch
+            {
+                ChessPieceType.Pawn => 1f,
+                ChessPieceType.Knight => 3f,
+                ChessPieceType.Bishop => 3f,
+                ChessPieceType.Rook => 5f,
+                ChessPieceType.Queen => 9f,
+                ChessPieceType.King => 20f,
+                _ => 1f
+            };
             data.MaxSP = 100f;
             data.MoveCostAP = 4f;
             data.AttackCostAP = 6f;
@@ -180,6 +191,10 @@ namespace CheckmateRPG.Testing
             go.AddComponent<StatusEffectComponent>();
             var team = go.AddComponent<TeamComponent>();
             team.SetIsEnemy(isEnemy);
+            var collider = go.AddComponent<CapsuleCollider>();
+            collider.center = new Vector3(0f, 0.8f, 0f);
+            collider.height = 1.6f;
+            collider.radius = 0.4f;
 
             // UnitBrain.Awake() runs here and caches the components added above
             var brain = go.AddComponent<UnitBrain>();
@@ -188,6 +203,228 @@ namespace CheckmateRPG.Testing
             brain.Prepare(data, cell);
 
             Debug.Log($"[BattleTestBootstrapper] Spawned {unitName} ({data.BaseRole}) at {cell}.");
+        }
+
+        private void EnsureSelectionOverlay()
+        {
+            if (!TryGetComponent(out BattleSelectionOverlayController _))
+                gameObject.AddComponent<BattleSelectionOverlayController>();
+        }
+    }
+
+    public class BattleSelectionOverlayController : MonoBehaviour
+    {
+        private static readonly Vector2Int InvalidCell = new Vector2Int(-1, -1);
+
+        [SerializeField] private Color _overlayColor = new Color(0.15f, 0.75f, 1f, 0.95f);
+        [SerializeField] private float _overlayHeight = 0.035f;
+        [SerializeField] private float _overlayWidth = 0.06f;
+
+        private readonly List<GameObject> _overlayTiles = new();
+        private readonly List<UnitBrain> _playerUnits = new();
+        private Camera _mainCamera;
+        private Material _overlayMaterial;
+        private UnitBrain _selectedUnit;
+        private Vector2Int _lastOverlayCell = InvalidCell;
+
+        private void Start()
+        {
+            _mainCamera = Camera.main;
+            RefreshPlayerUnits();
+            SelectFirstPlayerUnit();
+            RebuildOverlay();
+        }
+
+        private void Update()
+        {
+            HandleSelectionInput();
+            RefreshSelectionState();
+        }
+
+        private void OnDestroy()
+        {
+            ClearOverlay();
+
+            if (_overlayMaterial != null)
+                Destroy(_overlayMaterial);
+        }
+
+        private void HandleSelectionInput()
+        {
+            if (Input.GetMouseButtonDown(0))
+                TrySelectFromMouse();
+
+            if (Input.GetKeyDown(KeyCode.Tab))
+                SelectNextPlayerUnit();
+        }
+
+        private void RefreshSelectionState()
+        {
+            if (_selectedUnit == null || _selectedUnit.IsDead || _selectedUnit.Movement == null)
+            {
+                SelectFirstPlayerUnit();
+                RebuildOverlay();
+                return;
+            }
+
+            Vector2Int currentCell = _selectedUnit.Movement.GridPosition;
+            if (currentCell != _lastOverlayCell)
+                RebuildOverlay();
+        }
+
+        private void TrySelectFromMouse()
+        {
+            if (_mainCamera == null)
+                _mainCamera = Camera.main;
+
+            if (_mainCamera == null)
+                return;
+
+            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+            if (!Physics.Raycast(ray, out RaycastHit hit))
+                return;
+
+            UnitBrain candidate = hit.collider.GetComponent<UnitBrain>() ?? hit.collider.GetComponentInParent<UnitBrain>();
+            if (candidate == null || candidate.IsDead)
+                return;
+
+            if (!candidate.TryGetComponent(out TeamComponent team) || !team.IsPlayer)
+                return;
+
+            SelectUnit(candidate);
+        }
+
+        private void SelectFirstPlayerUnit()
+        {
+            RefreshPlayerUnits();
+            foreach (UnitBrain brain in _playerUnits)
+            {
+                if (brain != null && !brain.IsDead)
+                {
+                    SelectUnit(brain);
+                    return;
+                }
+            }
+
+            SelectUnit(null);
+        }
+
+        private void SelectNextPlayerUnit()
+        {
+            RefreshPlayerUnits();
+
+            if (_playerUnits.Count == 0)
+            {
+                SelectUnit(null);
+                return;
+            }
+
+            if (_selectedUnit == null)
+            {
+                SelectUnit(_playerUnits[0]);
+                return;
+            }
+
+            int currentIndex = _playerUnits.IndexOf(_selectedUnit);
+            int nextIndex = currentIndex >= 0 ? (currentIndex + 1) % _playerUnits.Count : 0;
+            SelectUnit(_playerUnits[nextIndex]);
+        }
+
+        private void SelectUnit(UnitBrain unit)
+        {
+            _selectedUnit = unit;
+            _lastOverlayCell = unit != null && unit.Movement != null ? unit.Movement.GridPosition : InvalidCell;
+            RebuildOverlay();
+        }
+
+        private void RebuildOverlay()
+        {
+            ClearOverlay();
+
+            if (_selectedUnit == null || _selectedUnit.IsDead || _selectedUnit.Movement == null || GridSystem.Instance == null)
+                return;
+
+            _lastOverlayCell = _selectedUnit.Movement.GridPosition;
+            foreach (Vector2Int cell in _selectedUnit.Movement.GetReachableCells())
+            {
+                _overlayTiles.Add(CreateTileOutline(cell));
+            }
+        }
+
+        private void ClearOverlay()
+        {
+            foreach (GameObject tile in _overlayTiles)
+            {
+                if (tile != null)
+                    Destroy(tile);
+            }
+
+            _overlayTiles.Clear();
+        }
+
+        private GameObject CreateTileOutline(Vector2Int cell)
+        {
+            var tile = new GameObject($"MoveOverlay_{cell.x}_{cell.y}");
+            tile.transform.SetParent(transform, false);
+
+            var line = tile.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.loop = true;
+            line.positionCount = 4;
+            line.widthMultiplier = _overlayWidth;
+            line.numCapVertices = 2;
+            line.numCornerVertices = 2;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.alignment = LineAlignment.View;
+            line.material = GetOverlayMaterial();
+            line.startColor = _overlayColor;
+            line.endColor = _overlayColor;
+
+            float halfSize = GridSystem.Instance.TileSize * 0.5f;
+            Vector3 center = GridSystem.Instance.GridToWorld(cell);
+            float y = center.y + _overlayHeight;
+            Vector3 bottomLeft = new Vector3(center.x - halfSize, y, center.z - halfSize);
+            Vector3 topLeft = new Vector3(center.x - halfSize, y, center.z + halfSize);
+            Vector3 topRight = new Vector3(center.x + halfSize, y, center.z + halfSize);
+            Vector3 bottomRight = new Vector3(center.x + halfSize, y, center.z - halfSize);
+
+            line.SetPosition(0, bottomLeft);
+            line.SetPosition(1, topLeft);
+            line.SetPosition(2, topRight);
+            line.SetPosition(3, bottomRight);
+
+            return tile;
+        }
+
+        private Material GetOverlayMaterial()
+        {
+            if (_overlayMaterial != null)
+                return _overlayMaterial;
+
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+                shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+                shader = Shader.Find("Hidden/Internal-Colored");
+
+            _overlayMaterial = new Material(shader);
+            _overlayMaterial.color = _overlayColor;
+            return _overlayMaterial;
+        }
+
+        private void RefreshPlayerUnits()
+        {
+            _playerUnits.RemoveAll(unit => unit == null || unit.IsDead || !unit.TryGetComponent(out TeamComponent team) || !team.IsPlayer);
+
+            if (_playerUnits.Count > 0)
+                return;
+
+            foreach (UnitBrain brain in FindObjectsByType<UnitBrain>(FindObjectsSortMode.None))
+            {
+                if (brain != null && !brain.IsDead && brain.TryGetComponent(out TeamComponent team) && team.IsPlayer)
+                    _playerUnits.Add(brain);
+            }
         }
     }
 }

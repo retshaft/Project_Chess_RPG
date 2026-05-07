@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
@@ -112,41 +113,8 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            if (_statusEffects != null && !_statusEffects.CanMove)
-            {
-                Debug.LogWarning($"[MovementComponent] {gameObject.name} cannot move due to status effects.");
+            if (!CanReachCell(targetGridPosition, logFailures: true))
                 return;
-            }
-
-            if (!GridSystem.Instance.IsValidCell(targetGridPosition))
-            {
-                Debug.LogWarning($"[MovementComponent] Target cell {targetGridPosition} is out of bounds.");
-                return;
-            }
-
-            if (!GridSystem.Instance.IsCellFree(targetGridPosition))
-            {
-                Debug.LogWarning($"[MovementComponent] Target cell {targetGridPosition} is occupied.");
-                return;
-            }
-
-            if (_movePattern != null)
-            {
-                if (!_movePattern.CanMove(GridPosition, targetGridPosition, gameObject))
-                {
-                    Debug.LogWarning($"[MovementComponent] Move pattern blocked move from {GridPosition} to {targetGridPosition}.");
-                    return;
-                }
-            }
-            else
-            {
-                int distance = ChebyshevDistance(GridPosition, targetGridPosition);
-                if (distance > _moveRange)
-                {
-                    Debug.LogWarning($"[MovementComponent] Target cell is {distance} steps away, move range is {_moveRange}.");
-                    return;
-                }
-            }
 
             float apCost = GetMoveAPCost(targetGridPosition);
             if (!TrySpendAP(apCost))
@@ -281,6 +249,79 @@ namespace CheckmateRPG.Components
 
             if (_statusEffects != null && _statusEffects.HasStatus(Core.StatusEffectType.Stagger))
                 _statusEffects.ApplyGrabVulnerability();
+        }
+
+        public bool CanReachCell(Vector2Int targetGridPosition, bool logFailures = false)
+        {
+            if (GridSystem.Instance == null)
+            {
+                if (logFailures)
+                    Debug.LogWarning($"[MovementComponent] GridSystem.Instance is null. Move cancelled for {gameObject.name}.");
+                return false;
+            }
+
+            if (targetGridPosition == GridPosition)
+                return false;
+
+            if (_statusEffects != null && !_statusEffects.CanMove)
+            {
+                if (logFailures)
+                    Debug.LogWarning($"[MovementComponent] {gameObject.name} cannot move due to status effects.");
+                return false;
+            }
+
+            if (!GridSystem.Instance.IsValidCell(targetGridPosition))
+            {
+                if (logFailures)
+                    Debug.LogWarning($"[MovementComponent] Target cell {targetGridPosition} is out of bounds.");
+                return false;
+            }
+
+            if (!GridSystem.Instance.IsCellFree(targetGridPosition))
+            {
+                if (logFailures)
+                    Debug.LogWarning($"[MovementComponent] Target cell {targetGridPosition} is occupied.");
+                return false;
+            }
+
+            if (_movePattern != null)
+            {
+                bool canMove = _movePattern.CanMove(GridPosition, targetGridPosition, gameObject);
+                if (!canMove && logFailures)
+                {
+                    Debug.LogWarning($"[MovementComponent] Move pattern blocked move from {GridPosition} to {targetGridPosition}.");
+                }
+
+                return canMove;
+            }
+
+            int distance = ChebyshevDistance(GridPosition, targetGridPosition);
+            bool inRange = distance <= _moveRange;
+            if (!inRange && logFailures)
+            {
+                Debug.LogWarning($"[MovementComponent] Target cell is {distance} steps away, move range is {_moveRange}.");
+            }
+
+            return inRange;
+        }
+
+        public List<Vector2Int> GetReachableCells()
+        {
+            var reachableCells = new List<Vector2Int>();
+            if (GridSystem.Instance == null)
+                return reachableCells;
+
+            for (int x = 0; x < GridSystem.GridWidth; x++)
+            {
+                for (int y = 0; y < GridSystem.GridHeight; y++)
+                {
+                    Vector2Int candidate = new Vector2Int(x, y);
+                    if (CanReachCell(candidate))
+                        reachableCells.Add(candidate);
+                }
+            }
+
+            return reachableCells;
         }
 
         private IEnumerator ForcedMoveCoroutine(Vector2Int destination, float speed)
