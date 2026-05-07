@@ -40,6 +40,8 @@ namespace CheckmateRPG.Grid
         /// </summary>
         public static GridSystem Instance { get; private set; }
 
+        public float TileSize => _tileSize;
+
         // ─── Internal State ───────────────────────────────────────────────────────
 
         /// <summary>

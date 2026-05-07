@@ -4,7 +4,6 @@
 // and exposes a simple command API (Move, Attack) consumed by player input
 // or an AI decision system.
 
-using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
@@ -73,15 +72,19 @@ namespace CheckmateRPG.Units
             public UnitDecision Decision;
             public GameObject Target;
             public Vector2Int Destination;
+            public float Score;
         }
 
-        private static readonly Vector2Int[] AdjacentOffsets =
-        {
-            new Vector2Int(1, 0),
-            new Vector2Int(-1, 0),
-            new Vector2Int(0, 1),
-            new Vector2Int(0, -1)
-        };
+        private const float KillValueWeight = 24f;
+        private const float MoveKillValueWeight = 10f;
+        private const float LethalBonus = 150f;
+        private const float KingTargetBonus = 60f;
+        private const float SetupKillBonus = 30f;
+        private const float WoundedTargetBonus = 24f;
+        private const float DistancePenalty = 7f;
+        private const float ThreatPenalty = 45f;
+
+        private TeamComponent _team;
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
 
@@ -91,6 +94,7 @@ namespace CheckmateRPG.Units
             Movement = GetComponent<MovementComponent>();
             Combat   = GetComponent<CombatComponent>();
             StatusEffects = GetComponent<StatusEffectComponent>();
+            _team = GetComponent<TeamComponent>();
         }
 
         private void Start()
@@ -213,30 +217,15 @@ namespace CheckmateRPG.Units
                 return;
             }
 
-            if (!TryAcquireTarget(out GameObject target, out Vector2Int targetCell))
+            if (TryGetOverrideDecision(out DecisionCandidate overrideDecision))
             {
-                CurrentDecision = UnitDecision.Idle;
+                ExecuteDecision(overrideDecision);
                 return;
             }
 
-            int distance = ManhattanDistance(Movement.GridPosition, targetCell);
-            if (distance <= _unitData.AttackRange)
+            if (TryGetBestDecision(out DecisionCandidate bestDecision))
             {
-                ExecuteDecision(new DecisionCandidate
-                {
-                    Decision = UnitDecision.Attack,
-                    Target = target
-                });
-                return;
-            }
-
-            if (TryGetChaseDestination(targetCell, out Vector2Int destination))
-            {
-                ExecuteDecision(new DecisionCandidate
-                {
-                    Decision = UnitDecision.Move,
-                    Destination = destination
-                });
+                ExecuteDecision(bestDecision);
                 return;
             }
 
@@ -246,6 +235,8 @@ namespace CheckmateRPG.Units
         private void ExecuteDecision(DecisionCandidate decision)
         {
             CurrentDecision = decision.Decision;
+            if (decision.Target != null)
+                _currentTarget = decision.Target;
 
             switch (decision.Decision)
             {
@@ -267,97 +258,104 @@ namespace CheckmateRPG.Units
             if (target.TryGetComponent(out HealthComponent health) && health.IsDead)
                 return false;
 
-            return target.GetComponent<IDamageable>() != null;
+            if (target.GetComponent<IDamageable>() == null)
+                return false;
+
+            if (_team != null && target.TryGetComponent(out TeamComponent targetTeam) && targetTeam.IsEnemy == _team.IsEnemy)
+                return false;
+
+            return true;
         }
 
-        private bool TryAcquireTarget(out GameObject target, out Vector2Int targetCell)
+        private bool TryGetOverrideDecision(out DecisionCandidate decision)
         {
-            target = null;
-            targetCell = default;
+            decision = default;
 
-            if (GridSystem.Instance == null || Movement == null)
-                return false;
-
-            if (!GridSystem.Instance.IsValidCell(Movement.GridPosition))
-                return false;
-
-            if (IsValidTarget(_currentTarget) && TryGetTargetCell(_currentTarget, out targetCell))
-            {
-                target = _currentTarget;
+            if (TryGetCheckmateDecision(out decision))
                 return true;
-            }
 
-            _currentTarget = null;
-            target = FindNearestTarget(out targetCell);
-            _currentTarget = target;
-            return target != null;
+            return TryGetDangerDecision(out decision);
         }
 
-        private GameObject FindNearestTarget(out Vector2Int targetCell)
+        private bool TryGetCheckmateDecision(out DecisionCandidate decision)
         {
-            targetCell = default;
+            decision = default;
 
-            if (GridSystem.Instance == null || Movement == null)
-                return null;
+            if (GridSystem.Instance == null || Movement == null || Combat == null || !Combat.CanAttack)
+                return false;
 
-            Vector2Int origin = Movement.GridPosition;
-            if (!GridSystem.Instance.IsValidCell(origin))
-                return null;
-
-            int bestDistance = int.MaxValue;
-            GameObject bestTarget = null;
+            float bestScore = float.MinValue;
+            bool hasCandidate = false;
 
             for (int x = 0; x < GridSystem.GridWidth; x++)
             {
                 for (int y = 0; y < GridSystem.GridHeight; y++)
                 {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    GameObject occupant = GridSystem.Instance.GetOccupant(cell);
-                    if (occupant == null)
+                    GameObject occupant = GridSystem.Instance.GetOccupant(x, y);
+                    if (!TryGetTargetBrain(occupant, out UnitBrain targetBrain))
                         continue;
 
-                    if (!IsValidTarget(occupant))
+                    if (targetBrain.UnitData == null || targetBrain.UnitData.PieceType != ChessPieceType.King)
                         continue;
 
-                    int distance = ManhattanDistance(origin, cell);
-                    if (distance < bestDistance)
+                    Vector2Int targetCell = targetBrain.Movement.GridPosition;
+                    if (!IsAttackRange(Movement.GridPosition, targetCell))
+                        continue;
+
+                    if (!CanEliminateTarget(targetBrain))
+                        continue;
+
+                    float score = ScoreAttackTarget(targetBrain, targetCell) + LethalBonus + KingTargetBonus;
+                    if (!hasCandidate || score > bestScore)
                     {
-                        bestDistance = distance;
-                        bestTarget = occupant;
-                        targetCell = cell;
+                        bestScore = score;
+                        decision = new DecisionCandidate
+                        {
+                            Decision = UnitDecision.Attack,
+                            Target = targetBrain.gameObject,
+                            Score = score
+                        };
+                        hasCandidate = true;
                     }
                 }
             }
 
-            return bestTarget;
+            return hasCandidate;
         }
 
-        private bool TryGetChaseDestination(Vector2Int targetCell, out Vector2Int destination)
+        private bool TryGetDangerDecision(out DecisionCandidate decision)
         {
-            destination = default;
+            decision = default;
+
+            if (_unitData == null || _unitData.PieceType != ChessPieceType.King || Movement == null)
+                return false;
 
             if (GridSystem.Instance == null || Movement == null)
                 return false;
 
-            Vector2Int origin = Movement.GridPosition;
-            int bestDistance = int.MaxValue;
+            int currentThreat = CountThreatsAgainstCell(Movement.GridPosition);
+            if (currentThreat <= 0)
+                return false;
+
+            float bestScore = float.MinValue;
             bool hasCandidate = false;
 
-            foreach (Vector2Int offset in AdjacentOffsets)
+            foreach (Vector2Int candidate in Movement.GetReachableCells())
             {
-                Vector2Int candidate = origin + offset;
-
-                if (!GridSystem.Instance.IsValidCell(candidate))
+                int threatCount = CountThreatsAgainstCell(candidate);
+                if (threatCount >= currentThreat)
                     continue;
 
-                if (!GridSystem.Instance.IsCellFree(candidate))
-                    continue;
-
-                int distance = ManhattanDistance(candidate, targetCell);
-                if (!hasCandidate || distance < bestDistance)
+                float score = (currentThreat - threatCount) * ThreatPenalty + ScoreBoardControl(candidate);
+                if (!hasCandidate || score > bestScore)
                 {
-                    bestDistance = distance;
-                    destination = candidate;
+                    bestScore = score;
+                    decision = new DecisionCandidate
+                    {
+                        Decision = UnitDecision.Move,
+                        Destination = candidate,
+                        Score = score
+                    };
                     hasCandidate = true;
                 }
             }
@@ -365,26 +363,173 @@ namespace CheckmateRPG.Units
             return hasCandidate;
         }
 
-        private IEnumerable<Vector2Int> EnumerateReachableCells()
+        private bool TryGetBestDecision(out DecisionCandidate bestDecision)
         {
-            if (_unitData == null || Movement == null || GridSystem.Instance == null)
-                yield break;
+            bestDecision = default;
 
-            int moveRange = Mathf.Max(1, _unitData.MoveRange);
-            Vector2Int origin = Movement.GridPosition;
+            if (GridSystem.Instance == null || Movement == null || _unitData == null)
+                return false;
 
-            for (int dx = -moveRange; dx <= moveRange; dx++)
+            bool hasCandidate = false;
+            var reachableCells = Movement.GetReachableCells();
+
+            for (int x = 0; x < GridSystem.GridWidth; x++)
             {
-                for (int dy = -moveRange; dy <= moveRange; dy++)
+                for (int y = 0; y < GridSystem.GridHeight; y++)
                 {
-                    if (dx == 0 && dy == 0)
+                    GameObject occupant = GridSystem.Instance.GetOccupant(x, y);
+                    if (!TryGetTargetBrain(occupant, out UnitBrain targetBrain))
                         continue;
 
-                    Vector2Int candidate = new Vector2Int(origin.x + dx, origin.y + dy);
-                    if (GridSystem.Instance.IsValidCell(candidate) && GridSystem.Instance.IsCellFree(candidate))
-                        yield return candidate;
+                    Vector2Int targetCell = targetBrain.Movement.GridPosition;
+
+                    if (Combat != null && Combat.CanAttack && IsAttackRange(Movement.GridPosition, targetCell))
+                    {
+                        float attackScore = ScoreAttackTarget(targetBrain, targetCell);
+                        if (!hasCandidate || attackScore > bestDecision.Score)
+                        {
+                            bestDecision = new DecisionCandidate
+                            {
+                                Decision = UnitDecision.Attack,
+                                Target = targetBrain.gameObject,
+                                Score = attackScore
+                            };
+                            hasCandidate = true;
+                        }
+                    }
+
+                    foreach (Vector2Int cell in reachableCells)
+                    {
+                        float moveScore = ScoreMoveTarget(cell, targetBrain, targetCell);
+                        if (!hasCandidate || moveScore > bestDecision.Score)
+                        {
+                            bestDecision = new DecisionCandidate
+                            {
+                                Decision = UnitDecision.Move,
+                                Destination = cell,
+                                Target = targetBrain.gameObject,
+                                Score = moveScore
+                            };
+                            hasCandidate = true;
+                        }
+                    }
                 }
             }
+
+            return hasCandidate;
+        }
+
+        private bool TryGetTargetBrain(GameObject target, out UnitBrain targetBrain)
+        {
+            targetBrain = null;
+            if (!IsValidTarget(target))
+                return false;
+
+            targetBrain = target.GetComponent<UnitBrain>();
+            return targetBrain != null && targetBrain.Movement != null;
+        }
+
+        private float ScoreAttackTarget(UnitBrain targetBrain, Vector2Int targetCell)
+        {
+            float score = 0f;
+
+            if (targetBrain.UnitData != null)
+            {
+                score += targetBrain.UnitData.KillValue * KillValueWeight;
+                if (targetBrain.UnitData.PieceType == ChessPieceType.King)
+                    score += KingTargetBonus;
+            }
+
+            if (targetBrain.Health != null && targetBrain.Health.MaxHealth > 0f)
+            {
+                float missingRatio = 1f - (targetBrain.Health.CurrentHealth / targetBrain.Health.MaxHealth);
+                score += missingRatio * WoundedTargetBonus;
+            }
+
+            if (CanEliminateTarget(targetBrain))
+                score += LethalBonus;
+
+            score -= ManhattanDistance(Movement.GridPosition, targetCell) * DistancePenalty;
+            return score;
+        }
+
+        private float ScoreMoveTarget(Vector2Int candidateCell, UnitBrain targetBrain, Vector2Int targetCell)
+        {
+            float score = 0f;
+
+            if (targetBrain.UnitData != null)
+            {
+                score += targetBrain.UnitData.KillValue * MoveKillValueWeight;
+                if (targetBrain.UnitData.PieceType == ChessPieceType.King)
+                    score += KingTargetBonus * 0.5f;
+            }
+
+            int distance = ManhattanDistance(candidateCell, targetCell);
+            score -= distance * DistancePenalty;
+            score += ScoreBoardControl(candidateCell);
+
+            if (IsAttackRange(candidateCell, targetCell))
+                score += SetupKillBonus;
+
+            if (_unitData.PieceType == ChessPieceType.King)
+                score -= CountThreatsAgainstCell(candidateCell) * ThreatPenalty;
+
+            return score;
+        }
+
+        private float ScoreBoardControl(Vector2Int cell)
+        {
+            Vector2 center = new Vector2((GridSystem.GridWidth - 1) * 0.5f, (GridSystem.GridHeight - 1) * 0.5f);
+            float centerDistance = Mathf.Abs(cell.x - center.x) + Mathf.Abs(cell.y - center.y);
+            return 8f - centerDistance;
+        }
+
+        private int CountThreatsAgainstCell(Vector2Int cell)
+        {
+            if (GridSystem.Instance == null)
+                return 0;
+
+            int threatCount = 0;
+
+            for (int x = 0; x < GridSystem.GridWidth; x++)
+            {
+                for (int y = 0; y < GridSystem.GridHeight; y++)
+                {
+                    GameObject occupant = GridSystem.Instance.GetOccupant(x, y);
+                    if (!TryGetTargetBrain(occupant, out UnitBrain enemyBrain))
+                        continue;
+
+                    if (enemyBrain.UnitData == null)
+                        continue;
+
+                    if (IsAttackRange(enemyBrain.Movement.GridPosition, cell, enemyBrain.UnitData.AttackRange))
+                        threatCount++;
+                }
+            }
+
+            return threatCount;
+        }
+
+        private bool CanEliminateTarget(UnitBrain targetBrain)
+        {
+            if (targetBrain == null || targetBrain.Health == null || targetBrain.UnitData == null || _unitData == null)
+                return false;
+
+            float defense = Mathf.Clamp01(targetBrain.UnitData.Defense);
+            float estimatedDamage = Mathf.Max(0f, _unitData.AttackDamage * (1f - defense));
+            return estimatedDamage >= targetBrain.Health.CurrentHealth;
+        }
+
+        private bool IsAttackRange(Vector2Int origin, Vector2Int targetCell)
+        {
+            return IsAttackRange(origin, targetCell, _unitData != null ? _unitData.AttackRange : 1);
+        }
+
+        private static bool IsAttackRange(Vector2Int origin, Vector2Int targetCell, int attackRange)
+        {
+            int dx = Mathf.Abs(origin.x - targetCell.x);
+            int dy = Mathf.Abs(origin.y - targetCell.y);
+            return Mathf.Max(dx, dy) <= Mathf.Max(1, attackRange);
         }
 
         private bool TryGetTargetCell(GameObject target, out Vector2Int targetCell)
