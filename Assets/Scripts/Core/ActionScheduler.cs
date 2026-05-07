@@ -109,7 +109,7 @@ namespace CheckmateRPG.Core
             if (CurrentTick >= action.RecoveryEndTick)
                 return TransitionState(action, ActionCommandState.Completed);
 
-            if (CurrentTick >= action.ResolveTick)
+            if (CurrentTick > action.ResolveTick)
                 return TransitionState(action, ActionCommandState.Recovery);
 
             return action;
