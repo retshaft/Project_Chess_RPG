@@ -121,7 +121,7 @@ namespace CheckmateRPG.Core
 
             foreach ((string actionId, IActionCommand action) in _actions)
             {
-                if (action.State is ActionCommandState.Completed or ActionCommandState.Cancelled)
+                if (action.State is ActionCommandState.Completed or ActionCommandState.Cancelled or ActionCommandState.Interrupted)
                     _removalBuffer.Add(actionId);
             }
 
@@ -136,7 +136,7 @@ namespace CheckmateRPG.Core
 
             if (command.StartTick < CurrentTick)
                 throw new ArgumentException(
-                    $"StartTick ({command.StartTick}) must be greater than or equal to scheduler tick ({CurrentTick}).",
+                    $"StartTick ({command.StartTick}) must not be less than scheduler tick ({CurrentTick}).",
                     nameof(command));
 
             if (command.ResolveTick < command.StartTick)
