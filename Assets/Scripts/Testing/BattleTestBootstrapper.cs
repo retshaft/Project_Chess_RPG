@@ -4,10 +4,7 @@
 // Attach this MonoBehaviour to the "BattleTestBootstrapper" GameObject in the scene.
 // On Awake it:
 //   1. Creates a GridSystem instance if none exists yet.
-//   2. Spawns 6 units (3 blue / 3 red) on the grid and registers their occupancy.
-//
-// No prefabs or ScriptableObject assets are required – everything is built at runtime
-// so the scene works immediately after a fresh clone.
+//   2. Spawns 6 chess units (3 blue / 3 red) on the grid and registers their occupancy.
 
 using UnityEngine;
 using CheckmateRPG.Components;
@@ -28,14 +25,14 @@ namespace CheckmateRPG.Testing
 
         // ─── Spawn Table ──────────────────────────────────────────────────────────
 
-        private static readonly (string UnitName, Vector2Int Cell, bool IsEnemy)[] SpawnTable =
+        private static readonly (ChessPieceType PieceType, Vector2Int Cell, bool IsEnemy)[] SpawnTable =
         {
-            ("Player_Warrior", new Vector2Int(1, 0), false),
-            ("Player_Archer",  new Vector2Int(3, 0), false),
-            ("Player_Knight",  new Vector2Int(5, 0), false),
-            ("Enemy_Warrior",  new Vector2Int(2, 7), true),
-            ("Enemy_Archer",   new Vector2Int(4, 7), true),
-            ("Enemy_Knight",   new Vector2Int(6, 7), true),
+            (ChessPieceType.Pawn,   new Vector2Int(0, 1), false),
+            (ChessPieceType.Knight, new Vector2Int(2, 1), false),
+            (ChessPieceType.Bishop, new Vector2Int(4, 1), false),
+            (ChessPieceType.Rook,   new Vector2Int(0, 6), true),
+            (ChessPieceType.Queen,  new Vector2Int(2, 6), true),
+            (ChessPieceType.King,   new Vector2Int(4, 6), true),
         };
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
@@ -61,35 +58,71 @@ namespace CheckmateRPG.Testing
 
         private static void SpawnAllUnits()
         {
-            foreach (var (unitName, cell, isEnemy) in SpawnTable)
+            foreach (var (pieceType, cell, isEnemy) in SpawnTable)
             {
-                UnitData data = CreateUnitData(unitName, isEnemy);
-                SpawnUnit(unitName, cell, data, isEnemy);
+                UnitData data = CreateUnitData(pieceType, isEnemy);
+                SpawnUnit(pieceType, cell, data, isEnemy);
             }
 
-            Debug.Log("[BattleTestBootstrapper] All 6 units spawned and registered on grid.");
+            Debug.Log("[BattleTestBootstrapper] Chess piece units spawned and registered on grid.");
         }
 
-        private static UnitData CreateUnitData(string unitName, bool isEnemy)
+        private static UnitData CreateUnitData(ChessPieceType pieceType, bool isEnemy)
         {
-            var data       = ScriptableObject.CreateInstance<UnitData>();
-            data.name      = unitName + "_Data";
-            data.UnitName  = unitName.Replace("_", " ");
-            data.MaxHealth = isEnemy ? 80f : 100f;
-            data.Defense   = 0.1f;
-            data.Resistance = 0.1f;
-            data.AttackDamage   = isEnemy ? 12f : 15f;
-            data.AttackCooldown = 1.2f;
-            data.AttackRange    = 1;
-            data.KillValue      = 10f;
-            data.MaxSP          = 100f;
-            data.MoveCostAP     = 4f;
-            data.AttackCostAP   = 6f;
-            data.ActionSpeed    = 1f;
-            data.MoveRange      = 3;
-            data.MoveSpeed      = 5f;
-            data.Weight         = 1;
-            data.IsBoss         = false;
+            var data = ScriptableObject.CreateInstance<UnitData>();
+            data.name = pieceType + "_Data";
+            data.UnitName = (isEnemy ? "Enemy " : "Player ") + pieceType;
+            data.PieceType = pieceType;
+            data.SyncDefaultChessMetadata();
+
+            data.MaxHealth = pieceType switch
+            {
+                ChessPieceType.Pawn => 80f,
+                ChessPieceType.Knight => 110f,
+                ChessPieceType.Bishop => 95f,
+                ChessPieceType.Rook => 130f,
+                ChessPieceType.Queen => 150f,
+                ChessPieceType.King => 170f,
+                _ => 100f
+            };
+
+            data.Defense = pieceType switch
+            {
+                ChessPieceType.Pawn => 0.05f,
+                ChessPieceType.Rook => 0.2f,
+                ChessPieceType.King => 0.2f,
+                _ => 0.1f
+            };
+
+            data.Resistance = pieceType switch
+            {
+                ChessPieceType.Bishop => 0.2f,
+                ChessPieceType.Queen => 0.15f,
+                _ => 0.1f
+            };
+
+            data.AttackDamage = pieceType switch
+            {
+                ChessPieceType.Pawn => 8f,
+                ChessPieceType.Knight => 14f,
+                ChessPieceType.Bishop => 13f,
+                ChessPieceType.Rook => 16f,
+                ChessPieceType.Queen => 20f,
+                ChessPieceType.King => 18f,
+                _ => 10f
+            };
+
+            data.AttackCooldown = 1.1f;
+            data.AttackRange = 1;
+            data.KillValue = 10f;
+            data.MaxSP = 100f;
+            data.MoveCostAP = 4f;
+            data.AttackCostAP = 6f;
+            data.ActionSpeed = 1f;
+            data.MoveRange = 7;
+            data.MoveSpeed = 5f;
+            data.Weight = pieceType is ChessPieceType.Rook or ChessPieceType.King ? 3 : 1;
+            data.IsBoss = false;
             return data;
         }
 
@@ -108,8 +141,10 @@ namespace CheckmateRPG.Testing
             return manager;
         }
 
-        private static void SpawnUnit(string unitName, Vector2Int cell, UnitData data, bool isEnemy)
+        private static void SpawnUnit(ChessPieceType pieceType, Vector2Int cell, UnitData data, bool isEnemy)
         {
+            string unitName = (isEnemy ? "Enemy_" : "Player_") + pieceType;
+
             // Parent GameObject – holds game-logic components
             var go = new GameObject(unitName);
 
@@ -118,7 +153,7 @@ namespace CheckmateRPG.Testing
             visual.name = "Visual";
             visual.transform.SetParent(go.transform, false);
             visual.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-            visual.transform.localScale    = new Vector3(0.65f, 0.5f, 0.65f);
+            visual.transform.localScale = new Vector3(0.65f, 0.5f, 0.65f);
 
             // Remove the collider – physics are grid-based, not physics-engine-based
             Destroy(visual.GetComponent<Collider>());
@@ -127,7 +162,7 @@ namespace CheckmateRPG.Testing
             var rend = visual.GetComponent<Renderer>();
             if (rend != null)
             {
-                var mat   = new Material(rend.sharedMaterial);
+                var mat = new Material(rend.sharedMaterial);
                 var color = isEnemy
                     ? new Color(0.90f, 0.20f, 0.20f)
                     : new Color(0.20f, 0.45f, 0.90f);
@@ -152,7 +187,7 @@ namespace CheckmateRPG.Testing
             // Set data fields before Start() runs and initialises the components
             brain.Prepare(data, cell);
 
-            Debug.Log($"[BattleTestBootstrapper] Spawned {unitName} at {cell}.");
+            Debug.Log($"[BattleTestBootstrapper] Spawned {unitName} ({data.BaseRole}) at {cell}.");
         }
     }
 }

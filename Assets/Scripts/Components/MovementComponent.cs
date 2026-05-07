@@ -7,6 +7,7 @@ using System.Collections;
 using UnityEngine;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
+using CheckmateRPG.MovementPatterns;
 using Core = CheckmateRPG.Core;
 
 namespace CheckmateRPG.Components
@@ -44,6 +45,8 @@ namespace CheckmateRPG.Components
         private float _actionSpeed = 1f;
         private StatusEffectComponent _statusEffects;
         private Coroutine _movementRoutine;
+        private UnitData _unitData;
+        private IMovePattern _movePattern;
 
         private void Awake()
         {
@@ -71,6 +74,8 @@ namespace CheckmateRPG.Components
                 return;
             }
 
+            _unitData = data;
+            _movePattern = MovePatternFactory.Create(data);
             _moveRange = data.MoveRange;
             _moveSpeed = data.MoveSpeed;
             _moveAPCost = Mathf.Max(0f, data.MoveCostAP);
@@ -125,11 +130,22 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            int distance = ChebyshevDistance(GridPosition, targetGridPosition);
-            if (distance > _moveRange)
+            if (_movePattern != null)
             {
-                Debug.LogWarning($"[MovementComponent] Target cell is {distance} steps away, move range is {_moveRange}.");
-                return;
+                if (!_movePattern.CanMove(GridPosition, targetGridPosition, gameObject))
+                {
+                    Debug.LogWarning($"[MovementComponent] Move pattern blocked move from {GridPosition} to {targetGridPosition}.");
+                    return;
+                }
+            }
+            else
+            {
+                int distance = ChebyshevDistance(GridPosition, targetGridPosition);
+                if (distance > _moveRange)
+                {
+                    Debug.LogWarning($"[MovementComponent] Target cell is {distance} steps away, move range is {_moveRange}.");
+                    return;
+                }
             }
 
             float apCost = GetMoveAPCost(targetGridPosition);
@@ -167,6 +183,7 @@ namespace CheckmateRPG.Components
             {
                 transform.position = targetPos;
                 IsMoving = false;
+                TryHandlePawnPromotion(destination);
                 OnMoveCompleted?.Invoke(destination);
                 _statusEffects?.NotifyAction(Core.UnitActionType.Move);
                 yield break;
@@ -182,6 +199,7 @@ namespace CheckmateRPG.Components
             transform.position = targetPos;
             IsMoving = false;
 
+            TryHandlePawnPromotion(destination);
             OnMoveCompleted?.Invoke(destination);
 
             _statusEffects?.NotifyAction(Core.UnitActionType.Move);
@@ -286,6 +304,7 @@ namespace CheckmateRPG.Components
             {
                 transform.position = targetPos;
                 IsMoving = false;
+                TryHandlePawnPromotion(destination);
                 OnMoveCompleted?.Invoke(destination);
                 yield break;
             }
@@ -299,6 +318,7 @@ namespace CheckmateRPG.Components
 
             transform.position = targetPos;
             IsMoving = false;
+            TryHandlePawnPromotion(destination);
             OnMoveCompleted?.Invoke(destination);
         }
 
@@ -311,6 +331,22 @@ namespace CheckmateRPG.Components
             }
 
             _movementRoutine = StartCoroutine(routine);
+        }
+
+        private void TryHandlePawnPromotion(Vector2Int destination)
+        {
+            if (_unitData == null || _unitData.PieceType != ChessPieceType.Pawn)
+                return;
+
+            bool isEnemy = TryGetComponent(out TeamComponent team) && team.IsEnemy;
+            int promotionRow = isEnemy ? 0 : GridSystem.GridHeight - 1;
+            bool reachedPromotionRank = destination.y == promotionRow;
+            bool reachedEighthFile = destination.x == GridSystem.GridWidth - 1;
+
+            if (!reachedPromotionRank && !reachedEighthFile)
+                return;
+
+            Debug.Log($"[MovementComponent] Pawn promotion triggered for {gameObject.name} at {destination}. TODO: choose promotion piece.");
         }
 
         private float GetActionCostMultiplier()
