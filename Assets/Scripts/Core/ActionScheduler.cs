@@ -135,13 +135,19 @@ namespace CheckmateRPG.Core
                 throw new ArgumentException("ActionId must not be null or whitespace.", nameof(command));
 
             if (command.StartTick < CurrentTick)
-                throw new ArgumentException("StartTick must be greater than or equal to the scheduler's current tick.", nameof(command));
+                throw new ArgumentException(
+                    $"StartTick ({command.StartTick}) must be greater than or equal to scheduler tick ({CurrentTick}).",
+                    nameof(command));
 
             if (command.ResolveTick < command.StartTick)
-                throw new ArgumentException("ResolveTick must be greater than or equal to StartTick.", nameof(command));
+                throw new ArgumentException(
+                    $"ResolveTick ({command.ResolveTick}) must be greater than or equal to StartTick ({command.StartTick}).",
+                    nameof(command));
 
             if (command.RecoveryEndTick < command.ResolveTick)
-                throw new ArgumentException("RecoveryEndTick must be greater than or equal to ResolveTick.", nameof(command));
+                throw new ArgumentException(
+                    $"RecoveryEndTick ({command.RecoveryEndTick}) must be greater than or equal to ResolveTick ({command.ResolveTick}).",
+                    nameof(command));
 
         }
 
@@ -149,21 +155,6 @@ namespace CheckmateRPG.Core
         {
             return command switch
             {
-                MoveAction move => move with
-                {
-                    QueuedTick = CurrentTick,
-                    State = ActionCommandState.Queued
-                },
-                BasicAttackAction attack => attack with
-                {
-                    QueuedTick = CurrentTick,
-                    State = ActionCommandState.Queued
-                },
-                AbilityAction ability => ability with
-                {
-                    QueuedTick = CurrentTick,
-                    State = ActionCommandState.Queued
-                },
                 ActionCommandBase baseAction => baseAction with
                 {
                     QueuedTick = CurrentTick,
@@ -178,9 +169,6 @@ namespace CheckmateRPG.Core
         {
             return action switch
             {
-                MoveAction move => move with { State = newState },
-                BasicAttackAction attack => attack with { State = newState },
-                AbilityAction ability => ability with { State = newState },
                 ActionCommandBase baseAction => baseAction with { State = newState },
                 _ => throw new InvalidOperationException(
                     $"Action type '{action.GetType().Name}' is not supported by ActionScheduler state transitions.")
