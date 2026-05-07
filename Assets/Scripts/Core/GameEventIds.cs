@@ -24,6 +24,7 @@ namespace CheckmateRPG.Core
         public const string AfterTakeDamage = nameof(AfterTakeDamage);
         public const string Promoted = nameof(Promoted);
         public const string OnPromotion = Promoted;
+        // Compatibility alias retained for external references using the requested legacy id.
         public const string OnPromotioned = Promoted;
     }
 }
