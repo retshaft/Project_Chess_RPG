@@ -12,6 +12,7 @@ using CheckmateRPG.Components;
 using CheckmateRPG.Core;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
+using CheckmateRPG.Progression;
 using CheckmateRPG.Units;
 
 namespace CheckmateRPG.Testing
@@ -23,6 +24,20 @@ namespace CheckmateRPG.Testing
     {
         [Header("Debug")]
         [SerializeField] private bool _enableAPDebugLogger = true;
+
+        [Header("Meta Progression Sample")]
+        [SerializeField] private bool _applyMetaToPlayerKnight = true;
+        [SerializeField] private NotationNodeData _sampleNotationNode;
+        [SerializeField] private ResonanceProfileData _sampleResonanceProfile;
+        [SerializeField] private EdictData _sampleEdict;
+        [SerializeField] private SyncCapacityData _sampleSyncCapacity;
+        [SerializeField] [Min(0)] private int _sampleResonanceStage = 1;
+        [SerializeField] [Min(0)] private int _sampleInitialTP = 2;
+
+        private NotationNodeData _runtimeNotationNode;
+        private ResonanceProfileData _runtimeResonanceProfile;
+        private EdictData _runtimeEdict;
+        private SyncCapacityData _runtimeSyncCapacity;
 
         // ─── Spawn Table ──────────────────────────────────────────────────────────
 
@@ -58,7 +73,7 @@ namespace CheckmateRPG.Testing
             Debug.Log("[BattleTestBootstrapper] GridSystem created.");
         }
 
-        private static void SpawnAllUnits()
+        private void SpawnAllUnits()
         {
             foreach (var (pieceType, cell, isEnemy) in SpawnTable)
             {
@@ -69,7 +84,7 @@ namespace CheckmateRPG.Testing
             Debug.Log("[BattleTestBootstrapper] Chess piece units spawned and registered on grid.");
         }
 
-        private static UnitData CreateUnitData(ChessPieceType pieceType, bool isEnemy)
+        private UnitData CreateUnitData(ChessPieceType pieceType, bool isEnemy)
         {
             var data = ScriptableObject.CreateInstance<UnitData>();
             data.name = pieceType + "_Data";
@@ -134,7 +149,119 @@ namespace CheckmateRPG.Testing
             data.MoveSpeed = 5f;
             data.Weight = pieceType is ChessPieceType.Rook or ChessPieceType.King ? 3 : 1;
             data.IsBoss = false;
+
+            if (!isEnemy && pieceType == ChessPieceType.Knight && _applyMetaToPlayerKnight)
+                data = ApplyMetaSample(data);
+
             return data;
+        }
+
+        private UnitData ApplyMetaSample(UnitData source)
+        {
+            NotationNodeData notationNode = GetOrCreateNotationNode();
+            ResonanceProfileData resonance = GetOrCreateResonanceProfile();
+            EdictData edict = GetOrCreateEdict();
+            SyncCapacityData syncCapacity = GetOrCreateSyncCapacity();
+
+            var notationState = new NotationProgressState(_sampleInitialTP);
+            notationState.TryUnlock(notationNode);
+
+            var loadout = new MetaProgressionLoadout
+            {
+                ResonanceProfile = resonance,
+                ResonanceStage = Mathf.Max(0, _sampleResonanceStage),
+                SyncCapacity = syncCapacity
+            };
+
+            foreach (NotationNodeData unlocked in notationState.UnlockedNodes)
+                loadout.UnlockedNotationNodes.Add(unlocked);
+
+            loadout.ActiveEdicts.Add(edict);
+
+            UnitData modified = MetaProgressionCalculator.CreateModifiedUnitData(source, loadout);
+            if (modified != null)
+            {
+                modified.UnitName = source.UnitName + " [Meta]";
+                Debug.Log($"[BattleTestBootstrapper] Meta sample applied to {source.UnitName} -> HP {modified.MaxHealth}, ATK {modified.AttackDamage}, MoveAP {modified.MoveCostAP}");
+                return modified;
+            }
+
+            return source;
+        }
+
+        private NotationNodeData GetOrCreateNotationNode()
+        {
+            if (_sampleNotationNode != null)
+                return _sampleNotationNode;
+
+            if (_runtimeNotationNode != null)
+                return _runtimeNotationNode;
+
+            _runtimeNotationNode = ScriptableObject.CreateInstance<NotationNodeData>();
+            _runtimeNotationNode.NodeId = "Sample_Notation_01";
+            _runtimeNotationNode.TPCost = 1;
+            _runtimeNotationNode.Bonuses = new List<StatModifierEntry>
+            {
+                new StatModifierEntry { Stat = MetaStatType.MaxHealth, FlatBonus = 20f, PercentBonus = 0f },
+                new StatModifierEntry { Stat = MetaStatType.AttackDamage, FlatBonus = 2f, PercentBonus = 0f }
+            };
+            return _runtimeNotationNode;
+        }
+
+        private ResonanceProfileData GetOrCreateResonanceProfile()
+        {
+            if (_sampleResonanceProfile != null)
+                return _sampleResonanceProfile;
+
+            if (_runtimeResonanceProfile != null)
+                return _runtimeResonanceProfile;
+
+            _runtimeResonanceProfile = ScriptableObject.CreateInstance<ResonanceProfileData>();
+            _runtimeResonanceProfile.StageBonuses = new List<ResonanceStageBonus>
+            {
+                new ResonanceStageBonus
+                {
+                    Stage = 1,
+                    Bonuses = new List<StatModifierEntry>
+                    {
+                        new StatModifierEntry { Stat = MetaStatType.ActionSpeed, FlatBonus = 0f, PercentBonus = 0.1f }
+                    }
+                }
+            };
+            return _runtimeResonanceProfile;
+        }
+
+        private EdictData GetOrCreateEdict()
+        {
+            if (_sampleEdict != null)
+                return _sampleEdict;
+
+            if (_runtimeEdict != null)
+                return _runtimeEdict;
+
+            _runtimeEdict = ScriptableObject.CreateInstance<EdictData>();
+            _runtimeEdict.EdictName = "Sample Absolute Edict";
+            _runtimeEdict.Kind = EdictKind.Absolute;
+            _runtimeEdict.Polarity = PolarityType.Order;
+            _runtimeEdict.SyncCost = 1;
+            _runtimeEdict.Bonuses = new List<StatModifierEntry>
+            {
+                new StatModifierEntry { Stat = MetaStatType.MoveCostAP, FlatBonus = -1f, PercentBonus = 0f }
+            };
+            return _runtimeEdict;
+        }
+
+        private SyncCapacityData GetOrCreateSyncCapacity()
+        {
+            if (_sampleSyncCapacity != null)
+                return _sampleSyncCapacity;
+
+            if (_runtimeSyncCapacity != null)
+                return _runtimeSyncCapacity;
+
+            _runtimeSyncCapacity = ScriptableObject.CreateInstance<SyncCapacityData>();
+            _runtimeSyncCapacity.BaseCapacity = 2;
+            return _runtimeSyncCapacity;
         }
 
         private static APManager EnsureAPManager(bool enableDebugLogging)
@@ -152,7 +279,7 @@ namespace CheckmateRPG.Testing
             return manager;
         }
 
-        private static void SpawnUnit(ChessPieceType pieceType, Vector2Int cell, UnitData data, bool isEnemy)
+        private void SpawnUnit(ChessPieceType pieceType, Vector2Int cell, UnitData data, bool isEnemy)
         {
             string unitName = (isEnemy ? "Enemy_" : "Player_") + pieceType;
 
