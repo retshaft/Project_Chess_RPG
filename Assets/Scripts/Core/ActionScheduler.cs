@@ -206,7 +206,7 @@ namespace CheckmateRPG.Core
                 action.ResolveTick,
                 action.RecoveryEndTick);
 
-            string target = action.Targets.Count > 0 ? action.Targets[0] : string.Empty;
+            string target = action.Targets.Count > 0 ? string.Join(",", action.Targets) : string.Empty;
 
             switch (action.State)
             {
@@ -224,6 +224,10 @@ namespace CheckmateRPG.Core
                     break;
                 case ActionCommandState.Completed:
                     _eventBus.Publish(new ActionCompletedEvent(payload, action.ActorId, target));
+                    break;
+                case ActionCommandState.Recovery:
+                case ActionCommandState.Cancelled:
+                default:
                     break;
             }
         }
