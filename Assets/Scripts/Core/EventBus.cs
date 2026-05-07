@@ -9,7 +9,8 @@ namespace CheckmateRPG.Core
         public const int MaxEventDepth = 32;
 
         private readonly object _lock = new object();
-        private readonly Dictionary<Type, List<Delegate>> _subscribers = new Dictionary<Type, List<Delegate>>();
+        private readonly Dictionary<Type, List<Action<IGameEvent>>> _subscribers = new Dictionary<Type, List<Action<IGameEvent>>>();
+        private readonly Dictionary<Delegate, Action<IGameEvent>> _handlerWrappers = new Dictionary<Delegate, Action<IGameEvent>>();
         private readonly Dictionary<Type, List<Action<IGameEvent>>> _baseTypeSubscribers = new Dictionary<Type, List<Action<IGameEvent>>>();
         private readonly List<Action<IGameEvent>> _globalSubscribers = new List<Action<IGameEvent>>();
         private readonly Queue<IResolvableGameEvent> _eventQueue = new Queue<IResolvableGameEvent>();
@@ -99,17 +100,21 @@ namespace CheckmateRPG.Core
                 throw new ArgumentNullException(nameof(handler));
 
             Type eventType = typeof(TEvent);
+            Action<IGameEvent> wrapper = gameEvent => handler((TEvent)gameEvent);
 
             lock (_lock)
             {
-                if (!_subscribers.TryGetValue(eventType, out List<Delegate> list))
+                if (!_subscribers.TryGetValue(eventType, out List<Action<IGameEvent>> list))
                 {
-                    list = new List<Delegate>();
+                    list = new List<Action<IGameEvent>>();
                     _subscribers[eventType] = list;
                 }
 
-                if (!list.Contains(handler))
-                    list.Add(handler);
+                if (_handlerWrappers.ContainsKey(handler))
+                    return;
+
+                _handlerWrappers[handler] = wrapper;
+                list.Add(wrapper);
             }
         }
 
@@ -122,10 +127,13 @@ namespace CheckmateRPG.Core
 
             lock (_lock)
             {
-                if (!_subscribers.TryGetValue(eventType, out List<Delegate> list))
+                if (!_subscribers.TryGetValue(eventType, out List<Action<IGameEvent>> list))
+                    return;
+                if (!_handlerWrappers.TryGetValue(handler, out Action<IGameEvent> wrapper))
                     return;
 
-                list.Remove(handler);
+                list.Remove(wrapper);
+                _handlerWrappers.Remove(handler);
                 if (list.Count == 0)
                     _subscribers.Remove(eventType);
             }
@@ -194,15 +202,15 @@ namespace CheckmateRPG.Core
 
         private void Dispatch(IResolvableGameEvent gameEvent)
         {
-            Delegate[] typedHandlers = null;
+            List<Action<IGameEvent>> typedHandlers = null;
             List<Action<IGameEvent>> baseHandlers = null;
             List<Action<IGameEvent>> globalHandlers = null;
             Type eventType = gameEvent.GetType();
 
             lock (_lock)
             {
-                if (_subscribers.TryGetValue(eventType, out List<Delegate> typedList) && typedList.Count > 0)
-                    typedHandlers = typedList.ToArray();
+                if (_subscribers.TryGetValue(eventType, out List<Action<IGameEvent>> typedList) && typedList.Count > 0)
+                    typedHandlers = new List<Action<IGameEvent>>(typedList);
 
                 if (_baseTypeSubscribers.Count > 0)
                 {
@@ -222,9 +230,9 @@ namespace CheckmateRPG.Core
 
             if (typedHandlers != null)
             {
-                foreach (Delegate handler in typedHandlers)
+                foreach (Action<IGameEvent> handler in typedHandlers)
                 {
-                    handler.DynamicInvoke(gameEvent);
+                    handler.Invoke(gameEvent);
                 }
             }
 
@@ -236,12 +244,12 @@ namespace CheckmateRPG.Core
                 }
             }
 
-            if (globalHandlers == null)
-                return;
-
-            foreach (Action<IGameEvent> handler in globalHandlers)
+            if (globalHandlers != null)
             {
-                handler.Invoke(gameEvent);
+                foreach (Action<IGameEvent> handler in globalHandlers)
+                {
+                    handler.Invoke(gameEvent);
+                }
             }
         }
 

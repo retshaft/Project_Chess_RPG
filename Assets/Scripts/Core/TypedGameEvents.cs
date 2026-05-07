@@ -26,9 +26,10 @@ namespace CheckmateRPG.Core
             Category = category;
             Source = source ?? string.Empty;
             Target = target ?? string.Empty;
+            Timestamp = DateTime.UtcNow;
         }
 
-        public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+        public DateTime Timestamp { get; init; }
         public TPayload Payload { get; init; }
         public EventPhase Phase { get; init; } = EventPhase.Resolve;
         public EventCategory Category { get; init; }
