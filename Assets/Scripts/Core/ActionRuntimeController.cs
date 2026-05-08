@@ -12,6 +12,8 @@ namespace CheckmateRPG.Core
     /// </summary>
     public sealed class ActionRuntimeController : MonoBehaviour
     {
+        private const string CellEncodingPrefix = "cell:";
+
         public static ActionRuntimeController Instance { get; private set; }
 
         private readonly Dictionary<string, UnitBrain> _unitsById = new();
@@ -288,16 +290,16 @@ namespace CheckmateRPG.Core
 
         private static string EncodeCell(Vector2Int cell)
         {
-            return $"cell:{cell.x},{cell.y}";
+            return $"{CellEncodingPrefix}{cell.x},{cell.y}";
         }
 
         private static bool TryDecodeCell(string encodedCell, out Vector2Int cell)
         {
             cell = default;
-            if (string.IsNullOrWhiteSpace(encodedCell) || !encodedCell.StartsWith("cell:", StringComparison.Ordinal))
+            if (string.IsNullOrWhiteSpace(encodedCell) || !encodedCell.StartsWith(CellEncodingPrefix, StringComparison.Ordinal))
                 return false;
 
-            string[] xy = encodedCell.Substring("cell:".Length).Split(',');
+            string[] xy = encodedCell.Substring(CellEncodingPrefix.Length).Split(',');
             if (xy.Length != 2)
                 return false;
 
