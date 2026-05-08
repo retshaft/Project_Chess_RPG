@@ -8,6 +8,8 @@ namespace CheckmateRPG.Components
 {
     public class StatusEffectComponent : MonoBehaviour
     {
+        private const int PermanentDurationTicks = -1;
+
         [Header("General Durations")]
         [SerializeField] private float _elementalAuraDuration = 6f;
         [SerializeField] private float _staggerDuration = 4f;
@@ -336,7 +338,7 @@ namespace CheckmateRPG.Components
         {
             if (!_activeEffects.TryGetValue(StatusEffectType.Bleed, out StatusEffectInstance instance))
             {
-                instance = new StatusEffectInstance { DurationTicks = -1, RemainingTicks = -1 };
+                instance = new StatusEffectInstance { DurationTicks = PermanentDurationTicks, RemainingTicks = PermanentDurationTicks };
                 _activeEffects[StatusEffectType.Bleed] = instance;
             }
 
@@ -663,7 +665,7 @@ namespace CheckmateRPG.Components
             if (TryGetEffect(StatusEffectType.Paralysis, out StatusEffectInstance paralysis))
             {
                 _canAttack = false;
-                if (paralysis.RemainingTicks >= paralysis.DurationTicks / 2)
+                if (paralysis.RemainingTicks >= (paralysis.DurationTicks + 1) / 2)
                     _canMove = false;
             }
         }
