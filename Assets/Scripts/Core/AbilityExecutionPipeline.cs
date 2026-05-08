@@ -57,7 +57,7 @@ namespace CheckmateRPG.Core
                 if (string.IsNullOrWhiteSpace(targetActorId))
                     continue;
 
-                if (!unitsById.TryGetValue(targetActorId, out UnitBrain target) || target == null || target.IsDead)
+                if (!unitsById.TryGetValue(targetActorId, out UnitBrain target) || target.IsDead)
                     continue;
 
                 targets.Add(target);
@@ -87,7 +87,7 @@ namespace CheckmateRPG.Core
             _ = context;
             _ = unitsById;
 
-            if (!result.Succeeded || result.EffectIntents == null)
+            if (!result.Succeeded)
                 return;
 
             for (int i = 0; i < result.EffectIntents.Count; i++)
