@@ -19,6 +19,7 @@ namespace CheckmateRPG.Core
 
         private readonly Dictionary<string, UnitBrain> _unitsById = new();
         private readonly EventBus _eventBus = new();
+        private readonly AbilityExecutionPipeline _abilityExecutionPipeline = new();
         private ActionScheduler _scheduler;
 
         public ActionScheduler Scheduler => _scheduler;
@@ -214,6 +215,7 @@ namespace CheckmateRPG.Core
             {
                 MoveAction move => TryResolveMove(actor, move),
                 BasicAttackAction attack => TryResolveAttack(actor, attack),
+                AbilityAction ability => TryResolveAbility(actor, ability),
                 _ => false
             };
 
@@ -246,6 +248,11 @@ namespace CheckmateRPG.Core
 
             actor.Combat.Attack(target.gameObject);
             return true;
+        }
+
+        private bool TryResolveAbility(UnitBrain actor, AbilityAction action)
+        {
+            return _abilityExecutionPipeline.TryExecute(action, actor, _unitsById);
         }
 
         private void HandleActionCompleted(ActionCompletedEvent actionCompletedEvent)
