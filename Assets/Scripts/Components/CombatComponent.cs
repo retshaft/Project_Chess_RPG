@@ -27,6 +27,7 @@ namespace CheckmateRPG.Components
         /// <summary>True when the cooldown has expired and the unit is alive.</summary>
         public bool CanAttack => _cooldownRemaining <= 0f && !_isDead &&
                                  (_statusEffects == null || _statusEffects.CanAttack);
+        public AbilityRuntimeState BasicAttackRuntimeState { get; private set; } = new AbilityRuntimeState { Charges = 1 };
 
         // ─── Private State ────────────────────────────────────────────────────────
 
@@ -58,6 +59,9 @@ namespace CheckmateRPG.Components
             _actionSpeed     = Mathf.Max(0.1f, data.ActionSpeed);
             _cooldownRemaining = 0f;
             _isDead          = false;
+            BasicAttackRuntimeState.CooldownRemaining = 0;
+            BasicAttackRuntimeState.Locked = false;
+            BasicAttackRuntimeState.Charges = 1;
         }
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
@@ -66,6 +70,11 @@ namespace CheckmateRPG.Components
         {
             if (_cooldownRemaining > 0f)
                 _cooldownRemaining -= Time.deltaTime;
+            if (_cooldownRemaining < 0f)
+                _cooldownRemaining = 0f;
+
+            BasicAttackRuntimeState.CooldownRemaining = Mathf.CeilToInt(_cooldownRemaining / 0.1f);
+            BasicAttackRuntimeState.Locked = !CanAttack;
         }
 
         // ─── IAttackable Implementation ───────────────────────────────────────────
@@ -123,6 +132,8 @@ namespace CheckmateRPG.Components
 
             float actionSpeed = _actionSpeed * (_statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f);
             _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
+            BasicAttackRuntimeState.CooldownRemaining = Mathf.CeilToInt(_cooldownRemaining / 0.1f);
+            BasicAttackRuntimeState.Locked = !CanAttack;
 
             OnAttackPerformed?.Invoke(target);
 
