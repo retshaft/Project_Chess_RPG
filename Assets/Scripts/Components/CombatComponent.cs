@@ -17,8 +17,6 @@ namespace CheckmateRPG.Components
     /// </summary>
     public class CombatComponent : MonoBehaviour, IAttackable
     {
-        private const float TickDurationSeconds = ActionTimelineFormula.TickMilliseconds / 1000f;
-
         // ─── Events ───────────────────────────────────────────────────────────────
 
         /// <summary>Raised after a successful attack. Parameter: the target GameObject.</summary>
@@ -27,7 +25,7 @@ namespace CheckmateRPG.Components
         // ─── IAttackable ──────────────────────────────────────────────────────────
 
         /// <summary>True when the cooldown has expired and the unit is alive.</summary>
-        public bool CanAttack => _cooldownRemaining <= 0f && !_isDead &&
+        public bool CanAttack => _cooldownRemainingTicks <= 0 && !_isDead &&
                                  (_statusEffects == null || _statusEffects.CanAttack);
         public AbilityRuntimeState BasicAttackRuntimeState { get; private set; } = new AbilityRuntimeState { Charges = 1 };
 
@@ -38,13 +36,25 @@ namespace CheckmateRPG.Components
         private int   _attackRange;
         private float _attackAPCost;
         private float _actionSpeed = 1f;
-        private float _cooldownRemaining;
+        private int   _cooldownRemainingTicks;
         private bool  _isDead;
         private StatusEffectComponent _statusEffects;
+        private TickScheduler _tickScheduler;
+        private bool _isTickSubscribed;
 
         private void Awake()
         {
             _statusEffects = GetComponent<StatusEffectComponent>();
+        }
+
+        private void OnEnable()
+        {
+            SetTickSubscription(true);
+        }
+
+        private void OnDisable()
+        {
+            SetTickSubscription(false);
         }
 
         // ─── Initialisation ───────────────────────────────────────────────────────
@@ -59,21 +69,9 @@ namespace CheckmateRPG.Components
             _attackRange     = data.AttackRange;
             _attackAPCost    = Mathf.Max(0f, data.AttackCostAP);
             _actionSpeed     = Mathf.Max(0.1f, data.ActionSpeed);
-            _cooldownRemaining = 0f;
+            _cooldownRemainingTicks = 0;
             _isDead          = false;
             BasicAttackRuntimeState.Charges = 1;
-            UpdateAbilityRuntimeState();
-        }
-
-        // ─── Unity Lifecycle ──────────────────────────────────────────────────────
-
-        private void Update()
-        {
-            if (_cooldownRemaining > 0f)
-                _cooldownRemaining -= Time.deltaTime;
-            if (_cooldownRemaining < 0f)
-                _cooldownRemaining = 0f;
-
             UpdateAbilityRuntimeState();
         }
 
@@ -88,7 +86,7 @@ namespace CheckmateRPG.Components
             if (!CanAttack)
             {
                 Debug.Log($"[CombatComponent] {gameObject.name} cannot attack yet " +
-                          $"(cooldown: {_cooldownRemaining:F2}s).");
+                          $"(cooldown: {TickScheduler.TicksToSeconds(_cooldownRemainingTicks):F2}s).");
                 return;
             }
 
@@ -131,7 +129,7 @@ namespace CheckmateRPG.Components
                 damageable.TakeDamage(damage);
 
             float actionSpeed = _actionSpeed * (_statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f);
-            _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
+            _cooldownRemainingTicks = TickScheduler.SecondsToTicks(_attackCooldown / Mathf.Max(0.1f, actionSpeed));
             UpdateAbilityRuntimeState();
 
             OnAttackPerformed?.Invoke(target);
@@ -188,13 +186,36 @@ namespace CheckmateRPG.Components
 
         private void UpdateAbilityRuntimeState()
         {
-            BasicAttackRuntimeState.CooldownRemaining = CooldownToTicks(_cooldownRemaining);
+            BasicAttackRuntimeState.CooldownRemaining = _cooldownRemainingTicks;
             BasicAttackRuntimeState.Locked = !CanAttack;
         }
 
-        private static int CooldownToTicks(float seconds)
+        private void HandleTick(int tick)
         {
-            return Mathf.CeilToInt(Mathf.Max(0f, seconds) / TickDurationSeconds);
+            if (_cooldownRemainingTicks > 0)
+                _cooldownRemainingTicks--;
+
+            UpdateAbilityRuntimeState();
+        }
+
+        private void SetTickSubscription(bool shouldSubscribe)
+        {
+            if (shouldSubscribe)
+            {
+                if (_isTickSubscribed)
+                    return;
+
+                _tickScheduler = TickScheduler.EnsureExists();
+                _tickScheduler.OnTick += HandleTick;
+                _isTickSubscribed = true;
+                return;
+            }
+
+            if (!_isTickSubscribed || _tickScheduler == null)
+                return;
+
+            _tickScheduler.OnTick -= HandleTick;
+            _isTickSubscribed = false;
         }
 
         private bool TrySpendAP(float cost)

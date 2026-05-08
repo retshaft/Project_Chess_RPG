@@ -50,10 +50,10 @@ namespace CheckmateRPG.Components
 
         private class StatusEffectInstance
         {
-            public float Duration;
-            public float Remaining;
-            public float TickInterval;
-            public float TickTimer;
+            public int DurationTicks;
+            public int RemainingTicks;
+            public int TickIntervalTicks;
+            public int TickRemainingTicks;
             public int Stacks;
             public bool IsSecondary;
         }
@@ -64,7 +64,7 @@ namespace CheckmateRPG.Components
         private MovementComponent _movement;
 
         private ElementType _currentAura = ElementType.None;
-        private float _auraRemaining;
+        private int _auraRemainingTicks;
 
         private float _attackMultiplier = 1f;
         private float _defenseMultiplier = 1f;
@@ -77,6 +77,8 @@ namespace CheckmateRPG.Components
 
         private float _maxSp;
         private float _currentSp;
+        private TickScheduler _tickScheduler;
+        private bool _isTickSubscribed;
 
         public bool CanMove => _canMove;
         public bool CanAttack => _canAttack;
@@ -95,16 +97,26 @@ namespace CheckmateRPG.Components
             _movement = GetComponent<MovementComponent>();
         }
 
+        private void OnEnable()
+        {
+            SetTickSubscription(true);
+        }
+
+        private void OnDisable()
+        {
+            SetTickSubscription(false);
+        }
+
         public void Initialise(UnitData data)
         {
             _maxSp = Mathf.Max(0f, data.MaxSP);
             _currentSp = _maxSp;
         }
 
-        private void Update()
+        private void HandleTick(int tick)
         {
-            UpdateAura(Time.deltaTime);
-            UpdateEffects(Time.deltaTime);
+            UpdateAura();
+            UpdateEffects();
             RecalculateModifiers();
         }
 
@@ -160,8 +172,10 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            float finalDuration = duration > 0f ? duration : GetDefaultDuration(type);
-            if (finalDuration <= 0f)
+            int finalDurationTicks = duration > 0f
+                ? TickScheduler.SecondsToTicks(duration)
+                : GetDefaultDurationTicks(type);
+            if (finalDurationTicks <= 0)
                 return;
 
             if (!_activeEffects.TryGetValue(type, out StatusEffectInstance instance))
@@ -170,20 +184,20 @@ namespace CheckmateRPG.Components
                 _activeEffects[type] = instance;
             }
 
-            instance.Duration = finalDuration;
-            instance.Remaining = finalDuration;
+            instance.DurationTicks = finalDurationTicks;
+            instance.RemainingTicks = finalDurationTicks;
             instance.IsSecondary = isSecondary;
             instance.Stacks = Mathf.Max(instance.Stacks, stacks);
 
             if (type == StatusEffectType.Burn || type == StatusEffectType.Ignite || type == StatusEffectType.Poison)
             {
-                instance.TickInterval = _dotTickInterval;
-                instance.TickTimer = _dotTickInterval;
+                instance.TickIntervalTicks = Mathf.Max(1, TickScheduler.SecondsToTicks(_dotTickInterval));
+                instance.TickRemainingTicks = instance.TickIntervalTicks;
             }
             else
             {
-                instance.TickInterval = 0f;
-                instance.TickTimer = 0f;
+                instance.TickIntervalTicks = 0;
+                instance.TickRemainingTicks = 0;
             }
         }
 
@@ -222,7 +236,7 @@ namespace CheckmateRPG.Components
             if (_currentAura == ElementType.None)
             {
                 _currentAura = element;
-                _auraRemaining = _elementalAuraDuration;
+                _auraRemainingTicks = TickScheduler.SecondsToTicks(_elementalAuraDuration);
                 return;
             }
 
@@ -246,17 +260,17 @@ namespace CheckmateRPG.Components
             _currentSp = Mathf.Max(0f, _currentSp - _maxSp * percent);
         }
 
-        private void UpdateAura(float deltaTime)
+        private void UpdateAura()
         {
             if (_currentAura == ElementType.None)
                 return;
 
-            _auraRemaining -= deltaTime;
-            if (_auraRemaining <= 0f)
+            _auraRemainingTicks--;
+            if (_auraRemainingTicks <= 0)
                 _currentAura = ElementType.None;
         }
 
-        private void UpdateEffects(float deltaTime)
+        private void UpdateEffects()
         {
             if (_activeEffects.Count == 0)
                 return;
@@ -266,22 +280,22 @@ namespace CheckmateRPG.Components
             foreach (KeyValuePair<StatusEffectType, StatusEffectInstance> pair in _activeEffects)
             {
                 StatusEffectInstance instance = pair.Value;
-                if (instance.Duration <= 0f)
+                if (instance.DurationTicks <= 0)
                     continue;
 
-                instance.Remaining -= deltaTime;
+                instance.RemainingTicks--;
 
-                if (instance.TickInterval > 0f)
+                if (instance.TickIntervalTicks > 0)
                 {
-                    instance.TickTimer -= deltaTime;
-                    if (instance.TickTimer <= 0f)
+                    instance.TickRemainingTicks--;
+                    if (instance.TickRemainingTicks <= 0)
                     {
                         ApplyDotTick(pair.Key);
-                        instance.TickTimer = instance.TickInterval;
+                        instance.TickRemainingTicks = instance.TickIntervalTicks;
                     }
                 }
 
-                if (instance.Remaining <= 0f)
+                if (instance.RemainingTicks <= 0)
                 {
                     expired ??= new List<StatusEffectType>();
                     expired.Add(pair.Key);
@@ -322,7 +336,7 @@ namespace CheckmateRPG.Components
         {
             if (!_activeEffects.TryGetValue(StatusEffectType.Bleed, out StatusEffectInstance instance))
             {
-                instance = new StatusEffectInstance { Duration = -1f, Remaining = -1f };
+                instance = new StatusEffectInstance { DurationTicks = -1, RemainingTicks = -1 };
                 _activeEffects[StatusEffectType.Bleed] = instance;
             }
 
@@ -575,9 +589,9 @@ namespace CheckmateRPG.Components
             return _activeEffects.TryGetValue(type, out instance);
         }
 
-        private float GetDefaultDuration(StatusEffectType type)
+        private int GetDefaultDurationTicks(StatusEffectType type)
         {
-            return type switch
+            float durationSeconds = type switch
             {
                 StatusEffectType.Stagger => _staggerDuration,
                 StatusEffectType.Wound => _woundDuration,
@@ -595,6 +609,8 @@ namespace CheckmateRPG.Components
                 StatusEffectType.FrozenBossDebuff => _bossFreezeDebuffDuration,
                 _ => 0f
             };
+
+            return TickScheduler.SecondsToTicks(durationSeconds);
         }
 
         private void RecalculateModifiers()
@@ -647,9 +663,29 @@ namespace CheckmateRPG.Components
             if (TryGetEffect(StatusEffectType.Paralysis, out StatusEffectInstance paralysis))
             {
                 _canAttack = false;
-                if (paralysis.Remaining >= paralysis.Duration * 0.5f)
+                if (paralysis.RemainingTicks >= paralysis.DurationTicks * 0.5f)
                     _canMove = false;
             }
+        }
+
+        private void SetTickSubscription(bool shouldSubscribe)
+        {
+            if (shouldSubscribe)
+            {
+                if (_isTickSubscribed)
+                    return;
+
+                _tickScheduler = TickScheduler.EnsureExists();
+                _tickScheduler.OnTick += HandleTick;
+                _isTickSubscribed = true;
+                return;
+            }
+
+            if (!_isTickSubscribed || _tickScheduler == null)
+                return;
+
+            _tickScheduler.OnTick -= HandleTick;
+            _isTickSubscribed = false;
         }
     }
 }

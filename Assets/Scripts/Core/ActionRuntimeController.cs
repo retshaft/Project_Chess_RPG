@@ -21,6 +21,7 @@ namespace CheckmateRPG.Core
         private readonly EventBus _eventBus = new();
         private readonly AbilityExecutionPipeline _abilityExecutionPipeline = new();
         private ActionScheduler _scheduler;
+        private TickScheduler _tickScheduler;
 
         public ActionScheduler Scheduler => _scheduler;
         public IEventBus EventBus => _eventBus;
@@ -43,8 +44,10 @@ namespace CheckmateRPG.Core
             }
 
             Instance = this;
+            _tickScheduler = TickScheduler.EnsureExists();
             _scheduler = new ActionScheduler(_eventBus);
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
+            _tickScheduler.OnTick += HandleTick;
         }
 
         private void OnDestroy()
@@ -52,11 +55,13 @@ namespace CheckmateRPG.Core
             if (Instance != this)
                 return;
 
+            if (_tickScheduler != null)
+                _tickScheduler.OnTick -= HandleTick;
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             Instance = null;
         }
 
-        private void FixedUpdate()
+        private void HandleTick(int tick)
         {
             _scheduler.AdvanceTick();
             IReadOnlyList<IActionCommand> ready = _scheduler.ResolveReadyActions();

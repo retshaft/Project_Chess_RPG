@@ -39,6 +39,7 @@ namespace CheckmateRPG.Core
 
         private bool _regenPaused;
         private APRegenPauseReason _regenPauseReason = APRegenPauseReason.None;
+        private TickScheduler _tickScheduler;
 
         // ─── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -54,6 +55,8 @@ namespace CheckmateRPG.Core
             Instance = this;
             _maxAP = Mathf.Max(0f, _maxAP);
             CurrentAP = _maxAP;
+            _tickScheduler = TickScheduler.EnsureExists();
+            _tickScheduler.OnTick += HandleTick;
 
             if (_createDebugUI)
                 EnsureDebugUI();
@@ -63,13 +66,11 @@ namespace CheckmateRPG.Core
 
         private void OnDestroy()
         {
+            if (_tickScheduler != null)
+                _tickScheduler.OnTick -= HandleTick;
+
             if (Instance == this)
                 Instance = null;
-        }
-
-        private void Update()
-        {
-            Regenerate(Time.deltaTime);
         }
 
         // ─── Public API ──────────────────────────────────────────────────────────
@@ -150,12 +151,17 @@ namespace CheckmateRPG.Core
 
         // ─── Internal Logic ───────────────────────────────────────────────────────
 
-        private void Regenerate(float deltaTime)
+        private void HandleTick(int tick)
         {
-            if (_regenPaused || _regenPerSecond <= 0f || _maxAP <= 0f || CurrentAP >= _maxAP || deltaTime <= 0f)
+            Regenerate();
+        }
+
+        private void Regenerate()
+        {
+            if (_regenPaused || _regenPerSecond <= 0f || _maxAP <= 0f || CurrentAP >= _maxAP)
                 return;
 
-            AddAP(_regenPerSecond * deltaTime, APSource.Regen);
+            AddAP(_regenPerSecond * TickScheduler.TickDurationSeconds, APSource.Regen);
         }
 
         private void RaiseAPChanged(float delta, APChangeReason reason)
