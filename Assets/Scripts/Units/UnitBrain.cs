@@ -4,6 +4,7 @@
 // and exposes a simple command API (Move, Attack) consumed by player input
 // or an AI decision system.
 
+using System;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
@@ -32,6 +33,7 @@ namespace CheckmateRPG.Units
 
         [Tooltip("Optional target for the decision loop to pursue.")]
         [SerializeField] private GameObject _currentTarget;
+        [SerializeField] private string _runtimeActorId;
 
         // ─── Component References ─────────────────────────────────────────────────
 
@@ -104,7 +106,9 @@ namespace CheckmateRPG.Units
             Combat   = GetComponent<CombatComponent>();
             StatusEffects = GetComponent<StatusEffectComponent>();
             _team = GetComponent<TeamComponent>();
-            ActorId = gameObject.GetInstanceID().ToString();
+            if (string.IsNullOrWhiteSpace(_runtimeActorId))
+                _runtimeActorId = Guid.NewGuid().ToString("N");
+            ActorId = _runtimeActorId;
             RuntimeState = new UnitRuntimeState
             {
                 CurrentActionId = string.Empty,

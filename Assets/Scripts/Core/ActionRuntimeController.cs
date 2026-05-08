@@ -13,6 +13,7 @@ namespace CheckmateRPG.Core
     public sealed class ActionRuntimeController : MonoBehaviour
     {
         private const string CellEncodingPrefix = "cell:";
+        private const float DefaultActionSpeed = 1f;
 
         public static ActionRuntimeController Instance { get; private set; }
 
@@ -128,7 +129,7 @@ namespace CheckmateRPG.Core
         {
             int startTick = _scheduler.CurrentTick + 1;
             ActionTimelineDefinition timeline = BuildTimeline(actor.UnitData);
-            string actionId = Guid.NewGuid().ToString("N");
+            string actionId = CreateActionId();
             int resolveTick = startTick + timeline.ResolveTickOffset;
             int recoveryEndTick = startTick + timeline.RecoveryEndTickOffset;
             string target = EncodeCell(destination);
@@ -147,7 +148,7 @@ namespace CheckmateRPG.Core
         {
             int startTick = _scheduler.CurrentTick + 1;
             ActionTimelineDefinition timeline = BuildTimeline(actor.UnitData);
-            string actionId = Guid.NewGuid().ToString("N");
+            string actionId = CreateActionId();
             int resolveTick = startTick + timeline.ResolveTickOffset;
             int recoveryEndTick = startTick + timeline.RecoveryEndTickOffset;
             return new BasicAttackAction(
@@ -163,7 +164,7 @@ namespace CheckmateRPG.Core
 
         private ActionTimelineDefinition BuildTimeline(UnitData unitData)
         {
-            ActionSpeedTier speedTier = ToSpeedTier(unitData != null ? unitData.ActionSpeed : 1f);
+            ActionSpeedTier speedTier = ToSpeedTier(unitData != null ? unitData.ActionSpeed : DefaultActionSpeed);
             int duration = ActionTimelineFormula.ToActionDurationTicks(speedTier);
             var timeline = new ActionTimelineDefinition(
                 duration,
@@ -185,6 +186,11 @@ namespace CheckmateRPG.Core
             if (actionSpeed <= 0.85f)
                 return ActionSpeedTier.Slow;
             return ActionSpeedTier.Normal;
+        }
+
+        private static string CreateActionId()
+        {
+            return Guid.NewGuid().ToString("N");
         }
 
         private void BindQueuedAction(UnitBrain actor, IActionCommand command)
