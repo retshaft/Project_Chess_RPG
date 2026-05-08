@@ -4,6 +4,7 @@
 // and exposes a simple command API (Move, Attack) consumed by player input
 // or an AI decision system.
 
+using System;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
@@ -32,6 +33,7 @@ namespace CheckmateRPG.Units
 
         [Tooltip("Optional target for the decision loop to pursue.")]
         [SerializeField] private GameObject _currentTarget;
+        [SerializeField] private string _runtimeActorId;
 
         // ─── Component References ─────────────────────────────────────────────────
 
@@ -49,6 +51,8 @@ namespace CheckmateRPG.Units
 
         /// <summary>Read-only access to the assigned unit data.</summary>
         public UnitData UnitData => _unitData;
+        public string ActorId { get; private set; }
+        public UnitRuntimeState RuntimeState { get; private set; }
 
         // ─── State ────────────────────────────────────────────────────────────────
 
@@ -91,6 +95,7 @@ namespace CheckmateRPG.Units
         private const float ThreatPenalty = 45f;
 
         private TeamComponent _team;
+        private ActionRuntimeController _runtimeController;
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
 
@@ -101,6 +106,14 @@ namespace CheckmateRPG.Units
             Combat   = GetComponent<CombatComponent>();
             StatusEffects = GetComponent<StatusEffectComponent>();
             _team = GetComponent<TeamComponent>();
+            if (string.IsNullOrWhiteSpace(_runtimeActorId))
+                _runtimeActorId = Guid.NewGuid().ToString("N");
+            ActorId = _runtimeActorId;
+            RuntimeState = new UnitRuntimeState
+            {
+                CurrentActionId = string.Empty,
+                RecoveryUntilTick = 0
+            };
         }
 
         private void Start()
@@ -120,6 +133,10 @@ namespace CheckmateRPG.Units
             // Wire death notification to combat so attacks stop after death
             Health.OnDeath += HandleDeath;
 
+            _runtimeController = ActionRuntimeController.EnsureExists();
+            _runtimeController.RegisterUnit(this);
+            _runtimeController.SyncRuntimeState(this);
+
             _isInitialised = true;
             Debug.Log($"[UnitBrain] {_unitData.UnitName} initialised at cell {_startCell}.");
         }
@@ -128,6 +145,7 @@ namespace CheckmateRPG.Units
         {
             if (Health != null)
                 Health.OnDeath -= HandleDeath;
+            _runtimeController?.UnregisterUnit(this);
         }
 
         private void FixedUpdate()
@@ -135,6 +153,7 @@ namespace CheckmateRPG.Units
             if (!_isInitialised || IsDead)
                 return;
 
+            _runtimeController?.SyncRuntimeState(this);
             EvaluateDecision();
         }
 
@@ -152,33 +171,37 @@ namespace CheckmateRPG.Units
         }
 
         /// <summary>
-        /// Order the unit to move to <paramref name="targetCell"/>.
-        /// The MovementComponent validates range and occupancy.
+        /// Queue a move action command for scheduler-driven resolution.
         /// </summary>
-        public void Move(Vector2Int targetCell)
+        public bool QueueMoveAction(Vector2Int targetCell)
         {
             if (IsDead)
             {
                 Debug.LogWarning($"[UnitBrain] {gameObject.name} is dead and cannot move.");
-                return;
+                return false;
             }
 
-            Movement.MoveTo(targetCell);
+            if (_runtimeController == null)
+                _runtimeController = ActionRuntimeController.EnsureExists();
+
+            return _runtimeController.TryEnqueueMove(this, targetCell);
         }
 
         /// <summary>
-        /// Order the unit to attack <paramref name="target"/>.
-        /// The CombatComponent validates cooldown and range.
+        /// Queue an attack action command for scheduler-driven resolution.
         /// </summary>
-        public void Attack(GameObject target)
+        public bool QueueAttackAction(GameObject target)
         {
             if (IsDead)
             {
                 Debug.LogWarning($"[UnitBrain] {gameObject.name} is dead and cannot attack.");
-                return;
+                return false;
             }
 
-            Combat.Attack(target);
+            if (_runtimeController == null)
+                _runtimeController = ActionRuntimeController.EnsureExists();
+
+            return _runtimeController.TryEnqueueAttack(this, target);
         }
 
         /// <summary>
@@ -248,10 +271,10 @@ namespace CheckmateRPG.Units
             {
                 case UnitDecision.Attack:
                     if (decision.Target != null)
-                        Attack(decision.Target);
+                        QueueAttackAction(decision.Target);
                     break;
                 case UnitDecision.Move:
-                    Move(decision.Destination);
+                    QueueMoveAction(decision.Destination);
                     break;
             }
         }

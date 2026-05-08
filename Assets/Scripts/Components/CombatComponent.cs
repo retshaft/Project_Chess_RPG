@@ -17,6 +17,8 @@ namespace CheckmateRPG.Components
     /// </summary>
     public class CombatComponent : MonoBehaviour, IAttackable
     {
+        private const float TickDurationSeconds = ActionTimelineFormula.TickMilliseconds / 1000f;
+
         // ─── Events ───────────────────────────────────────────────────────────────
 
         /// <summary>Raised after a successful attack. Parameter: the target GameObject.</summary>
@@ -27,6 +29,7 @@ namespace CheckmateRPG.Components
         /// <summary>True when the cooldown has expired and the unit is alive.</summary>
         public bool CanAttack => _cooldownRemaining <= 0f && !_isDead &&
                                  (_statusEffects == null || _statusEffects.CanAttack);
+        public AbilityRuntimeState BasicAttackRuntimeState { get; private set; } = new AbilityRuntimeState { Charges = 1 };
 
         // ─── Private State ────────────────────────────────────────────────────────
 
@@ -58,6 +61,8 @@ namespace CheckmateRPG.Components
             _actionSpeed     = Mathf.Max(0.1f, data.ActionSpeed);
             _cooldownRemaining = 0f;
             _isDead          = false;
+            BasicAttackRuntimeState.Charges = 1;
+            UpdateAbilityRuntimeState();
         }
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
@@ -66,6 +71,10 @@ namespace CheckmateRPG.Components
         {
             if (_cooldownRemaining > 0f)
                 _cooldownRemaining -= Time.deltaTime;
+            if (_cooldownRemaining < 0f)
+                _cooldownRemaining = 0f;
+
+            UpdateAbilityRuntimeState();
         }
 
         // ─── IAttackable Implementation ───────────────────────────────────────────
@@ -123,6 +132,7 @@ namespace CheckmateRPG.Components
 
             float actionSpeed = _actionSpeed * (_statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f);
             _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
+            UpdateAbilityRuntimeState();
 
             OnAttackPerformed?.Invoke(target);
 
@@ -174,6 +184,17 @@ namespace CheckmateRPG.Components
         {
             float multiplier = _statusEffects != null ? _statusEffects.ActionCostMultiplier : 1f;
             return Mathf.Max(0f, _attackAPCost * multiplier);
+        }
+
+        private void UpdateAbilityRuntimeState()
+        {
+            BasicAttackRuntimeState.CooldownRemaining = CooldownToTicks(_cooldownRemaining);
+            BasicAttackRuntimeState.Locked = !CanAttack;
+        }
+
+        private static int CooldownToTicks(float seconds)
+        {
+            return Mathf.CeilToInt(Mathf.Max(0f, seconds) / TickDurationSeconds);
         }
 
         private bool TrySpendAP(float cost)
