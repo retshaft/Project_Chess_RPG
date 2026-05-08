@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace CheckmateRPG.Core
 {
@@ -50,6 +51,17 @@ namespace CheckmateRPG.Core
     public readonly record struct AbilityResolvedPayload(int CasterUnitId, string AbilityId, int PrimaryTargetUnitId, bool WasSuccessful);
     public readonly record struct EffectAppliedPayload(int UnitId, string EffectId, int DurationTicks, int SourceUnitId);
     public readonly record struct UnitKilledPayload(int UnitId, int KillerUnitId);
+    public readonly record struct ActionPhasePayload(
+        string ActionId,
+        string ActorId,
+        IReadOnlyList<string> Targets,
+        ActionCommandState PreviousState,
+        ActionCommandState CurrentState,
+        int SchedulerTick,
+        int QueuedTick,
+        int StartTick,
+        int ResolveTick,
+        int RecoveryEndTick);
 
     public sealed record MoveStartedEvent(MoveStartedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MoveStartedPayload>(Payload, EventCategory.Domain, Source, Target);
@@ -71,4 +83,19 @@ namespace CheckmateRPG.Core
 
     public sealed record UnitKilledEvent(UnitKilledPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<UnitKilledPayload>(Payload, EventCategory.Combat, Source, Target);
+
+    public sealed record ActionQueuedEvent(ActionPhasePayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionPhasePayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record ActionStartedEvent(ActionPhasePayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionPhasePayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record ActionResolvedEvent(ActionPhasePayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionPhasePayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record ActionInterruptedEvent(ActionPhasePayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionPhasePayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record ActionCompletedEvent(ActionPhasePayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionPhasePayload>(Payload, EventCategory.Domain, Source, Target);
 }

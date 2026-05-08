@@ -10,6 +10,12 @@ namespace CheckmateRPG.Core
     {
         private readonly Dictionary<string, IActionCommand> _actions = new();
         private readonly List<string> _removalBuffer = new();
+        private readonly IEventBus _eventBus;
+
+        public ActionScheduler(IEventBus eventBus = null)
+        {
+            _eventBus = eventBus;
+        }
 
         public int CurrentTick { get; private set; }
 
@@ -27,6 +33,7 @@ namespace CheckmateRPG.Core
 
             IActionCommand queued = NormalizeAndQueue(command);
             _actions[queued.ActionId] = queued;
+            PublishStateChange(queued, command.State);
             return queued;
         }
 
@@ -41,16 +48,16 @@ namespace CheckmateRPG.Core
                 switch (action.State)
                 {
                     case ActionCommandState.Queued when CurrentTick >= action.StartTick:
-                        _actions[actionId] = TransitionState(action, ActionCommandState.Executing);
+                        _actions[actionId] = TransitionStateAndNotify(action, ActionCommandState.Executing);
                         break;
                     case ActionCommandState.Resolving:
                         _actions[actionId] = ResolvePostResolveState(action);
                         break;
                     case ActionCommandState.Recovery when CurrentTick >= action.RecoveryEndTick:
-                        _actions[actionId] = TransitionState(action, ActionCommandState.Completed);
+                        _actions[actionId] = TransitionStateAndNotify(action, ActionCommandState.Completed);
                         break;
                     case ActionCommandState.Interrupted:
-                        _actions[actionId] = TransitionState(action, ActionCommandState.Completed);
+                        _actions[actionId] = TransitionStateAndNotify(action, ActionCommandState.Completed);
                         break;
                 }
             }
@@ -71,7 +78,7 @@ namespace CheckmateRPG.Core
                 if (CurrentTick < action.ResolveTick)
                     continue;
 
-                IActionCommand resolving = TransitionState(action, ActionCommandState.Resolving);
+                IActionCommand resolving = TransitionStateAndNotify(action, ActionCommandState.Resolving);
                 _actions[actionId] = resolving;
                 ready.Add(resolving);
             }
@@ -87,7 +94,7 @@ namespace CheckmateRPG.Core
             if (action.State is ActionCommandState.Completed or ActionCommandState.Cancelled or ActionCommandState.Interrupted)
                 return false;
 
-            _actions[actionId] = TransitionState(action, ActionCommandState.Interrupted);
+            _actions[actionId] = TransitionStateAndNotify(action, ActionCommandState.Interrupted);
             return true;
         }
 
@@ -107,10 +114,10 @@ namespace CheckmateRPG.Core
         private IActionCommand ResolvePostResolveState(IActionCommand action)
         {
             if (CurrentTick >= action.RecoveryEndTick)
-                return TransitionState(action, ActionCommandState.Completed);
+                return TransitionStateAndNotify(action, ActionCommandState.Completed);
 
             if (CurrentTick > action.ResolveTick)
-                return TransitionState(action, ActionCommandState.Recovery);
+                return TransitionStateAndNotify(action, ActionCommandState.Recovery);
 
             return action;
         }
@@ -173,6 +180,56 @@ namespace CheckmateRPG.Core
                 _ => throw new InvalidOperationException(
                     $"Action type '{action.GetType().Name}' is not supported by ActionScheduler state transitions.")
             };
+        }
+
+        private IActionCommand TransitionStateAndNotify(IActionCommand action, ActionCommandState newState)
+        {
+            IActionCommand updated = TransitionState(action, newState);
+            PublishStateChange(updated, action.State);
+            return updated;
+        }
+
+        private void PublishStateChange(IActionCommand action, ActionCommandState previousState)
+        {
+            if (_eventBus == null)
+                return;
+
+            ActionPhasePayload payload = new(
+                action.ActionId,
+                action.ActorId,
+                action.Targets,
+                previousState,
+                action.State,
+                CurrentTick,
+                action.QueuedTick,
+                action.StartTick,
+                action.ResolveTick,
+                action.RecoveryEndTick);
+
+            string target = action.Targets.Count > 0 ? string.Join(",", action.Targets) : string.Empty;
+
+            switch (action.State)
+            {
+                case ActionCommandState.Queued:
+                    _eventBus.Publish(new ActionQueuedEvent(payload, action.ActorId, target));
+                    break;
+                case ActionCommandState.Executing:
+                    _eventBus.Publish(new ActionStartedEvent(payload, action.ActorId, target));
+                    break;
+                case ActionCommandState.Resolving:
+                    _eventBus.Publish(new ActionResolvedEvent(payload, action.ActorId, target));
+                    break;
+                case ActionCommandState.Interrupted:
+                    _eventBus.Publish(new ActionInterruptedEvent(payload, action.ActorId, target));
+                    break;
+                case ActionCommandState.Completed:
+                    _eventBus.Publish(new ActionCompletedEvent(payload, action.ActorId, target));
+                    break;
+                case ActionCommandState.Recovery:
+                case ActionCommandState.Cancelled:
+                default:
+                    break;
+            }
         }
     }
 }
