@@ -53,7 +53,7 @@ namespace CheckmateRPG.Components
             public int DurationTicks;
             public int RemainingTicks;
             public int TickIntervalTicks;
-            public int TickRemainingTicks;
+            public int NextTickCountdown;
             public int Stacks;
             public bool IsSecondary;
         }
@@ -192,12 +192,12 @@ namespace CheckmateRPG.Components
             if (type == StatusEffectType.Burn || type == StatusEffectType.Ignite || type == StatusEffectType.Poison)
             {
                 instance.TickIntervalTicks = Mathf.Max(1, TickScheduler.SecondsToTicks(_dotTickInterval));
-                instance.TickRemainingTicks = instance.TickIntervalTicks;
+                instance.NextTickCountdown = instance.TickIntervalTicks;
             }
             else
             {
                 instance.TickIntervalTicks = 0;
-                instance.TickRemainingTicks = 0;
+                instance.NextTickCountdown = 0;
             }
         }
 
@@ -287,11 +287,11 @@ namespace CheckmateRPG.Components
 
                 if (instance.TickIntervalTicks > 0)
                 {
-                    instance.TickRemainingTicks--;
-                    if (instance.TickRemainingTicks <= 0)
+                    instance.NextTickCountdown--;
+                    if (instance.NextTickCountdown <= 0)
                     {
                         ApplyDotTick(pair.Key);
-                        instance.TickRemainingTicks = instance.TickIntervalTicks;
+                        instance.NextTickCountdown = instance.TickIntervalTicks;
                     }
                 }
 
@@ -663,7 +663,7 @@ namespace CheckmateRPG.Components
             if (TryGetEffect(StatusEffectType.Paralysis, out StatusEffectInstance paralysis))
             {
                 _canAttack = false;
-                if (paralysis.RemainingTicks >= paralysis.DurationTicks * 0.5f)
+                if (paralysis.RemainingTicks >= paralysis.DurationTicks / 2)
                     _canMove = false;
             }
         }
