@@ -51,14 +51,13 @@ namespace CheckmateRPG.Core
                 return false;
 
             var targets = new List<UnitBrain>(action.Targets.Count);
-            for (int i = 0; i < action.Targets.Count; i++)
+            foreach (string targetActorId in action.Targets)
             {
-                string targetActorId = action.Targets[i];
                 if (string.IsNullOrWhiteSpace(targetActorId))
-                    continue;
+                    return false;
 
                 if (!unitsById.TryGetValue(targetActorId, out UnitBrain target) || target.IsDead)
-                    continue;
+                    return false;
 
                 targets.Add(target);
             }
