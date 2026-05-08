@@ -1,25 +1,23 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Actions;
+using CheckmateRPG.Core.Events.ActionEvents;
+using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Data;
 using CheckmateRPG.Units;
 using UnityEngine;
 
 namespace CheckmateRPG.Core
 {
-    /// <summary>
-    /// Runtime orchestrator for command scheduling and action resolution.
-    /// Input/AI -> ActionCommand -> Scheduler -> Tick -> Resolve -> EventBus.
-    /// </summary>
     public sealed class ActionRuntimeController : MonoBehaviour
     {
-        private const string CellEncodingPrefix = "cell:";
         private const float DefaultActionSpeed = 1f;
+        private const int DefaultRecoveryTicks = 1;
 
         public static ActionRuntimeController Instance { get; private set; }
 
-        private readonly Dictionary<string, UnitBrain> _unitsById = new();
+        private readonly Dictionary<Guid, UnitBrain> _unitsById = new();
         private readonly EventBus _eventBus = new();
-        private readonly AbilityExecutionPipeline _abilityExecutionPipeline = new();
         private ActionScheduler _scheduler;
 
         public ActionScheduler Scheduler => _scheduler;
@@ -45,6 +43,7 @@ namespace CheckmateRPG.Core
             Instance = this;
             _scheduler = new ActionScheduler(_eventBus);
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
+            _eventBus.Subscribe<ActionInterruptedEvent>(HandleActionInterrupted);
         }
 
         private void OnDestroy()
@@ -53,13 +52,14 @@ namespace CheckmateRPG.Core
                 return;
 
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
+            _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
             Instance = null;
         }
 
         private void FixedUpdate()
         {
             _scheduler.AdvanceTick();
-            IReadOnlyList<IActionCommand> ready = _scheduler.ResolveReadyActions();
+            IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             for (int i = 0; i < ready.Count; i++)
                 ResolveAction(ready[i]);
             _eventBus.ProcessQueue();
@@ -67,7 +67,7 @@ namespace CheckmateRPG.Core
 
         public void RegisterUnit(UnitBrain unit)
         {
-            if (unit == null || string.IsNullOrWhiteSpace(unit.ActorId))
+            if (unit == null || unit.ActorId == Guid.Empty)
                 return;
 
             _unitsById[unit.ActorId] = unit;
@@ -76,7 +76,7 @@ namespace CheckmateRPG.Core
 
         public void UnregisterUnit(UnitBrain unit)
         {
-            if (unit == null || string.IsNullOrWhiteSpace(unit.ActorId))
+            if (unit == null || unit.ActorId == Guid.Empty)
                 return;
 
             _unitsById.Remove(unit.ActorId);
@@ -86,13 +86,12 @@ namespace CheckmateRPG.Core
         {
             if (!CanQueueAction(actor))
                 return false;
-
             if (actor.Movement == null || !actor.Movement.CanReachCell(destination))
                 return false;
 
             IActionCommand command = CreateMoveCommand(actor, destination);
-            IActionCommand queued = _scheduler.ScheduleAction(command);
-            BindQueuedAction(actor, queued);
+            _scheduler.ScheduleAction(command);
+            BindQueuedAction(actor, command);
             return true;
         }
 
@@ -100,18 +99,39 @@ namespace CheckmateRPG.Core
         {
             if (!CanQueueAction(actor))
                 return false;
-
             if (target == null || actor.Combat == null || !actor.Combat.CanAttack)
                 return false;
-
-            string targetId = GetActorId(target);
-            if (string.IsNullOrEmpty(targetId))
+            if (!TryGetActorId(target, out Guid targetId))
                 return false;
 
-            IActionCommand command = CreateBasicAttackCommand(actor, targetId);
-            IActionCommand queued = _scheduler.ScheduleAction(command);
-            BindQueuedAction(actor, queued);
+            IActionCommand command = CreateAttackCommand(actor, targetId);
+            _scheduler.ScheduleAction(command);
+            BindQueuedAction(actor, command);
             return true;
+        }
+
+        public void SyncRuntimeState(UnitBrain unit)
+        {
+            if (unit == null || unit.RuntimeState == null)
+                return;
+
+            UnitRuntimeState state = unit.RuntimeState;
+            state.UnitId = unit.ActorId;
+            if (unit.Health != null)
+                state.HP = Mathf.RoundToInt(unit.Health.CurrentHealth);
+            if (unit.StatusEffects != null)
+                state.SP = Mathf.RoundToInt(unit.StatusEffects.CurrentSp);
+            if (unit.Movement != null)
+                state.Position = unit.Movement.GridPosition;
+
+            UnitStatusFlags flags = UnitStatusFlags.None;
+            if (unit.IsDead)
+                flags |= UnitStatusFlags.Dead;
+            if (unit.Movement != null && unit.StatusEffects != null && !unit.StatusEffects.CanMove)
+                flags |= UnitStatusFlags.MoveLocked;
+            if (unit.Combat != null && unit.StatusEffects != null && !unit.StatusEffects.CanAttack)
+                flags |= UnitStatusFlags.AttackLocked;
+            state.StatusFlags = flags;
         }
 
         private bool CanQueueAction(UnitBrain actor)
@@ -120,7 +140,7 @@ namespace CheckmateRPG.Core
                 return false;
 
             SyncRuntimeState(actor);
-            if (!string.IsNullOrEmpty(actor.RuntimeState.CurrentActionId))
+            if (actor.RuntimeState.CurrentActionId.HasValue)
                 return false;
 
             return _scheduler.CurrentTick >= actor.RuntimeState.RecoveryUntilTick;
@@ -129,51 +149,69 @@ namespace CheckmateRPG.Core
         private IActionCommand CreateMoveCommand(UnitBrain actor, Vector2Int destination)
         {
             int startTick = _scheduler.CurrentTick + 1;
-            ActionTimelineDefinition timeline = BuildTimeline(actor.UnitData);
-            string actionId = CreateActionId();
-            int resolveTick = startTick + timeline.ResolveTickOffset;
-            int recoveryEndTick = startTick + timeline.RecoveryEndTickOffset;
-            string target = EncodeCell(destination);
-            return new MoveAction(
-                actionId,
+            return new MoveActionCommand(
                 actor.ActorId,
-                new[] { target },
-                _scheduler.CurrentTick,
+                actor.Movement != null ? actor.Movement.GridPosition : actor.RuntimeState.Position,
+                destination,
                 startTick,
-                resolveTick,
-                recoveryEndTick,
-                ActionCommandState.Queued);
+                ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
+                DefaultRecoveryTicks);
         }
 
-        private IActionCommand CreateBasicAttackCommand(UnitBrain actor, string targetId)
+        private IActionCommand CreateAttackCommand(UnitBrain actor, Guid targetId)
         {
             int startTick = _scheduler.CurrentTick + 1;
-            ActionTimelineDefinition timeline = BuildTimeline(actor.UnitData);
-            string actionId = CreateActionId();
-            int resolveTick = startTick + timeline.ResolveTickOffset;
-            int recoveryEndTick = startTick + timeline.RecoveryEndTickOffset;
-            return new BasicAttackAction(
-                actionId,
+            int damage = actor.UnitData != null ? Mathf.RoundToInt(actor.UnitData.AttackDamage) : 0;
+            return new AttackActionCommand(
                 actor.ActorId,
-                new[] { targetId },
-                _scheduler.CurrentTick,
+                targetId,
+                damage,
+                isCritical: false,
                 startTick,
-                resolveTick,
-                recoveryEndTick,
-                ActionCommandState.Queued);
+                ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
+                DefaultRecoveryTicks);
         }
 
-        private ActionTimelineDefinition BuildTimeline(UnitData unitData)
+        private void BindQueuedAction(UnitBrain actor, IActionCommand command)
         {
-            ActionSpeedTier speedTier = ToSpeedTier(unitData != null ? unitData.ActionSpeed : DefaultActionSpeed);
-            int duration = ActionTimelineFormula.ToActionDurationTicks(speedTier);
-            var timeline = new ActionTimelineDefinition(
-                duration,
-                ResolveTiming: 0,
-                RecoveryTiming: duration,
-                InterruptWindow: Mathf.Max(1, duration / 2));
-            timeline.Validate();
-            return timeline;
+            UnitRuntimeState state = actor.RuntimeState;
+            state.UnitId = actor.ActorId;
+            state.CurrentActionId = command.ActionId;
+            state.RecoveryUntilTick = command.RecoveryEndTick;
+        }
+
+        private void ResolveAction(IActionCommand action)
+        {
+            if (!_unitsById.TryGetValue(action.ActorId, out UnitBrain actor) || actor == null)
+                return;
+
+            SyncRuntimeState(actor);
+        }
+
+        private void HandleActionCompleted(ActionCompletedEvent actionCompletedEvent)
+        {
+            ActionLifecyclePayload payload = actionCompletedEvent.Payload;
+            if (!_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) || actor == null || actor.RuntimeState == null)
+                return;
+
+            UnitRuntimeState state = actor.RuntimeState;
+            if (state.CurrentActionId == payload.ActionId)
+                state.CurrentActionId = null;
+            state.RecoveryUntilTick = Mathf.Max(state.RecoveryUntilTick, payload.RecoveryEndTick);
+            SyncRuntimeState(actor);
+        }
+
+        private void HandleActionInterrupted(ActionInterruptedEvent actionInterruptedEvent)
+        {
+            ActionLifecyclePayload payload = actionInterruptedEvent.Payload;
+            if (!_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) || actor == null || actor.RuntimeState == null)
+                return;
+
+            UnitRuntimeState state = actor.RuntimeState;
+            if (state.CurrentActionId == payload.ActionId)
+                state.CurrentActionId = null;
+            state.RecoveryUntilTick = payload.SchedulerTick;
+            SyncRuntimeState(actor);
         }
 
         private static ActionSpeedTier ToSpeedTier(float actionSpeed)
@@ -189,141 +227,14 @@ namespace CheckmateRPG.Core
             return ActionSpeedTier.Normal;
         }
 
-        private static string CreateActionId()
+        private static bool TryGetActorId(GameObject target, out Guid actorId)
         {
-            return Guid.NewGuid().ToString("N");
-        }
-
-        private void BindQueuedAction(UnitBrain actor, IActionCommand command)
-        {
-            UnitRuntimeState state = actor.RuntimeState;
-            state.CurrentActionId = command.ActionId;
-            state.RecoveryUntilTick = command.RecoveryEndTick;
-        }
-
-        private void ResolveAction(IActionCommand action)
-        {
-            if (!_unitsById.TryGetValue(action.ActorId, out UnitBrain actor) || actor == null || actor.IsDead)
-            {
-                _scheduler.InterruptAction(action.ActionId);
-                return;
-            }
-
-            SyncRuntimeState(actor);
-
-            bool resolved = action switch
-            {
-                MoveAction move => TryResolveMove(actor, move),
-                BasicAttackAction attack => TryResolveAttack(actor, attack),
-                AbilityAction ability => TryResolveAbility(actor, ability),
-                _ => false
-            };
-
-            if (!resolved)
-                _scheduler.InterruptAction(action.ActionId);
-        }
-
-        private bool TryResolveMove(UnitBrain actor, MoveAction action)
-        {
-            if (actor.Movement == null || action.Targets.Count == 0)
-                return false;
-
-            if (!TryDecodeCell(action.Targets[0], out Vector2Int destination))
-                return false;
-
-            if (!actor.Movement.CanReachCell(destination))
-                return false;
-
-            actor.Movement.MoveTo(destination);
-            return true;
-        }
-
-        private bool TryResolveAttack(UnitBrain actor, BasicAttackAction action)
-        {
-            if (actor.Combat == null || action.Targets.Count == 0 || !actor.Combat.CanAttack)
-                return false;
-
-            if (!_unitsById.TryGetValue(action.Targets[0], out UnitBrain target) || target == null || target.IsDead)
-                return false;
-
-            actor.Combat.Attack(target.gameObject);
-            return true;
-        }
-
-        private bool TryResolveAbility(UnitBrain actor, AbilityAction action)
-        {
-            return _abilityExecutionPipeline.TryExecute(action, actor, _unitsById);
-        }
-
-        private void HandleActionCompleted(ActionCompletedEvent actionCompletedEvent)
-        {
-            ActionPhasePayload payload = actionCompletedEvent.Payload;
-            if (!_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) || actor == null)
-                return;
-
-            UnitRuntimeState state = actor.RuntimeState;
-            if (state == null)
-                return;
-
-            if (state.CurrentActionId == payload.ActionId)
-                state.CurrentActionId = string.Empty;
-            state.RecoveryUntilTick = Mathf.Max(state.RecoveryUntilTick, payload.RecoveryEndTick);
-            SyncRuntimeState(actor);
-        }
-
-        public void SyncRuntimeState(UnitBrain unit)
-        {
-            if (unit == null || unit.RuntimeState == null)
-                return;
-
-            UnitRuntimeState state = unit.RuntimeState;
-            if (unit.Health != null)
-                state.HP = unit.Health.CurrentHealth;
-            if (unit.StatusEffects != null)
-                state.SP = unit.StatusEffects.CurrentSp;
-            if (unit.Movement != null)
-                state.Position = unit.Movement.GridPosition;
-
-            UnitStatusFlags flags = UnitStatusFlags.None;
-            if (unit.IsDead)
-                flags |= UnitStatusFlags.Dead;
-            if (unit.Movement != null && unit.StatusEffects != null && !unit.StatusEffects.CanMove)
-                flags |= UnitStatusFlags.MoveLocked;
-            if (unit.Combat != null && unit.StatusEffects != null && !unit.StatusEffects.CanAttack)
-                flags |= UnitStatusFlags.AttackLocked;
-            state.StatusFlags = flags;
-        }
-
-        private static string GetActorId(GameObject target)
-        {
+            actorId = Guid.Empty;
             if (target == null || !target.TryGetComponent(out UnitBrain brain))
-                return string.Empty;
-            return brain.ActorId;
-        }
-
-        private static string EncodeCell(Vector2Int cell)
-        {
-            return $"{CellEncodingPrefix}{cell.x},{cell.y}";
-        }
-
-        private static bool TryDecodeCell(string encodedCell, out Vector2Int cell)
-        {
-            cell = default;
-            if (string.IsNullOrWhiteSpace(encodedCell) || !encodedCell.StartsWith(CellEncodingPrefix, StringComparison.Ordinal))
                 return false;
 
-            ReadOnlySpan<char> coordinates = encodedCell.AsSpan(CellEncodingPrefix.Length);
-            int separatorIndex = coordinates.IndexOf(',');
-            if (separatorIndex <= 0 || separatorIndex >= coordinates.Length - 1)
-                return false;
-
-            ReadOnlySpan<char> xSpan = coordinates.Slice(0, separatorIndex);
-            ReadOnlySpan<char> ySpan = coordinates.Slice(separatorIndex + 1);
-            if (!int.TryParse(xSpan, out int x) || !int.TryParse(ySpan, out int y))
-                return false;
-
-            cell = new Vector2Int(x, y);
-            return true;
+            actorId = brain.ActorId;
+            return actorId != Guid.Empty;
         }
     }
 }
