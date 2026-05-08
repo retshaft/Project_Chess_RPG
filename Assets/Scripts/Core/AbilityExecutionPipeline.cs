@@ -1,12 +1,14 @@
+using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Units;
 
 namespace CheckmateRPG.Core
 {
     public readonly record struct AbilityEffectIntent(
         string EffectId,
-        string SourceActorId,
-        string TargetActorId,
+        Guid SourceActorId,
+        Guid TargetActorId,
         float Magnitude);
 
     public readonly record struct AbilityResolveResult(
@@ -14,21 +16,16 @@ namespace CheckmateRPG.Core
         IReadOnlyList<AbilityEffectIntent> EffectIntents);
 
     public readonly record struct AbilityExecutionContext(
-        AbilityAction Action,
+        AbilityActionCommand Action,
         UnitBrain Actor,
         IReadOnlyList<UnitBrain> Targets);
 
-    /// <summary>
-    /// Skeleton pipeline for ability execution.
-    /// Stage order: Validate -> Commit -> Resolve -> ApplyEffects -> PostProcess.
-    /// Resolve must not directly mutate runtime HP/SP or status state.
-    /// </summary>
     public sealed class AbilityExecutionPipeline
     {
         public bool TryExecute(
-            AbilityAction action,
+            AbilityActionCommand action,
             UnitBrain actor,
-            IReadOnlyDictionary<string, UnitBrain> unitsById)
+            IReadOnlyDictionary<Guid, UnitBrain> unitsById)
         {
             if (!Validate(action, actor, unitsById, out AbilityExecutionContext context))
                 return false;
@@ -41,21 +38,21 @@ namespace CheckmateRPG.Core
         }
 
         private static bool Validate(
-            AbilityAction action,
+            AbilityActionCommand action,
             UnitBrain actor,
-            IReadOnlyDictionary<string, UnitBrain> unitsById,
+            IReadOnlyDictionary<Guid, UnitBrain> unitsById,
             out AbilityExecutionContext context)
         {
             context = default;
             if (action == null || actor == null || actor.IsDead || unitsById == null)
                 return false;
 
-            var targets = new List<UnitBrain>(action.Targets.Count);
-            foreach (string targetActorId in action.Targets)
+            var targets = new List<UnitBrain>(action.TargetIds.Count);
+            for (int i = 0; i < action.TargetIds.Count; i++)
             {
-                if (string.IsNullOrWhiteSpace(targetActorId))
+                Guid targetActorId = action.TargetIds[i];
+                if (targetActorId == Guid.Empty)
                     return false;
-
                 if (!unitsById.TryGetValue(targetActorId, out UnitBrain target) || target.IsDead)
                     return false;
 
@@ -74,14 +71,14 @@ namespace CheckmateRPG.Core
         private static AbilityResolveResult Resolve(AbilityExecutionContext context)
         {
             _ = context;
-            IReadOnlyList<AbilityEffectIntent> effectIntents = System.Array.Empty<AbilityEffectIntent>();
+            IReadOnlyList<AbilityEffectIntent> effectIntents = Array.Empty<AbilityEffectIntent>();
             return new AbilityResolveResult(true, effectIntents);
         }
 
         private static void ApplyEffects(
             AbilityExecutionContext context,
             AbilityResolveResult result,
-            IReadOnlyDictionary<string, UnitBrain> unitsById)
+            IReadOnlyDictionary<Guid, UnitBrain> unitsById)
         {
             _ = context;
             _ = unitsById;

@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 
 namespace CheckmateRPG.Core
 {
@@ -10,17 +9,6 @@ namespace CheckmateRPG.Core
         Dead = 1 << 0,
         MoveLocked = 1 << 1,
         AttackLocked = 1 << 2
-    }
-
-    [Serializable]
-    public sealed class UnitRuntimeState
-    {
-        public float HP;
-        public float SP;
-        public Vector2Int Position;
-        public string CurrentActionId;
-        public int RecoveryUntilTick;
-        public UnitStatusFlags StatusFlags;
     }
 
     [Serializable]

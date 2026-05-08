@@ -8,6 +8,7 @@ using System;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
+using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 
@@ -51,7 +52,7 @@ namespace CheckmateRPG.Units
 
         /// <summary>Read-only access to the assigned unit data.</summary>
         public UnitData UnitData => _unitData;
-        public string ActorId { get; private set; }
+        public Guid ActorId { get; private set; }
         public UnitRuntimeState RuntimeState { get; private set; }
 
         // ─── State ────────────────────────────────────────────────────────────────
@@ -106,12 +107,18 @@ namespace CheckmateRPG.Units
             Combat   = GetComponent<CombatComponent>();
             StatusEffects = GetComponent<StatusEffectComponent>();
             _team = GetComponent<TeamComponent>();
-            if (string.IsNullOrWhiteSpace(_runtimeActorId))
-                _runtimeActorId = Guid.NewGuid().ToString("N");
-            ActorId = _runtimeActorId;
+
+            if (!Guid.TryParseExact(_runtimeActorId, "N", out Guid actorId))
+            {
+                actorId = Guid.NewGuid();
+                _runtimeActorId = actorId.ToString("N");
+            }
+
+            ActorId = actorId;
             RuntimeState = new UnitRuntimeState
             {
-                CurrentActionId = string.Empty,
+                UnitId = ActorId,
+                CurrentActionId = null,
                 RecoveryUntilTick = 0
             };
         }
