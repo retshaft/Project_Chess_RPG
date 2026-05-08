@@ -75,7 +75,7 @@ namespace CheckmateRPG.Core
         private static AbilityResolveResult Resolve(AbilityExecutionContext context)
         {
             _ = context;
-            IReadOnlyList<AbilityEffectIntent> effectIntents = new List<AbilityEffectIntent>();
+            IReadOnlyList<AbilityEffectIntent> effectIntents = System.Array.Empty<AbilityEffectIntent>();
             return new AbilityResolveResult(true, effectIntents);
         }
 
