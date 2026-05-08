@@ -17,6 +17,8 @@ namespace CheckmateRPG.Components
     /// </summary>
     public class CombatComponent : MonoBehaviour, IAttackable
     {
+        private const float TickDurationSeconds = 0.1f;
+
         // ─── Events ───────────────────────────────────────────────────────────────
 
         /// <summary>Raised after a successful attack. Parameter: the target GameObject.</summary>
@@ -73,7 +75,7 @@ namespace CheckmateRPG.Components
             if (_cooldownRemaining < 0f)
                 _cooldownRemaining = 0f;
 
-            BasicAttackRuntimeState.CooldownRemaining = Mathf.CeilToInt(_cooldownRemaining / 0.1f);
+            BasicAttackRuntimeState.CooldownRemaining = Mathf.CeilToInt(_cooldownRemaining / TickDurationSeconds);
             BasicAttackRuntimeState.Locked = !CanAttack;
         }
 
@@ -132,7 +134,7 @@ namespace CheckmateRPG.Components
 
             float actionSpeed = _actionSpeed * (_statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f);
             _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
-            BasicAttackRuntimeState.CooldownRemaining = Mathf.CeilToInt(_cooldownRemaining / 0.1f);
+            BasicAttackRuntimeState.CooldownRemaining = Mathf.CeilToInt(_cooldownRemaining / TickDurationSeconds);
             BasicAttackRuntimeState.Locked = !CanAttack;
 
             OnAttackPerformed?.Invoke(target);

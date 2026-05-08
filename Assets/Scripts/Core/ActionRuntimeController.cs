@@ -299,11 +299,14 @@ namespace CheckmateRPG.Core
             if (string.IsNullOrWhiteSpace(encodedCell) || !encodedCell.StartsWith(CellEncodingPrefix, StringComparison.Ordinal))
                 return false;
 
-            string[] xy = encodedCell.Substring(CellEncodingPrefix.Length).Split(',');
-            if (xy.Length != 2)
+            ReadOnlySpan<char> coordinates = encodedCell.AsSpan(CellEncodingPrefix.Length);
+            int separatorIndex = coordinates.IndexOf(',');
+            if (separatorIndex <= 0 || separatorIndex >= coordinates.Length - 1)
                 return false;
 
-            if (!int.TryParse(xy[0], out int x) || !int.TryParse(xy[1], out int y))
+            ReadOnlySpan<char> xSpan = coordinates.Slice(0, separatorIndex);
+            ReadOnlySpan<char> ySpan = coordinates.Slice(separatorIndex + 1);
+            if (!int.TryParse(xSpan, out int x) || !int.TryParse(ySpan, out int y))
                 return false;
 
             cell = new Vector2Int(x, y);
