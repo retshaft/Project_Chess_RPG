@@ -32,7 +32,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 state.Position = mutation.To;
 
             MoveCompletedEvent moveCompletedEvent = new(
-                new MoveCompletedPayload(mutation.TargetId, mutation.From, mutation.To),
+                new CheckmateRPG.Core.Events.ActionEvents.MoveCompletedPayload(mutation.TargetId, mutation.From, mutation.To),
                 mutation.TargetId.ToString("N"),
                 mutation.To.ToString());
 

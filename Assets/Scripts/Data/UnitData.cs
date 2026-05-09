@@ -34,7 +34,7 @@ namespace CheckmateRPG.Data
         // ─── Identity ─────────────────────────────────────────────────────────────
 
         [Header("Identity")]
-        [Tooltip("Display name of the unit archetype (e.g. "Knight", "Archer").")]
+        [Tooltip("Display name of the unit archetype (e.g. Knight, Archer).")]
         public string UnitName = "Unit";
 
         [Header("Chess")]

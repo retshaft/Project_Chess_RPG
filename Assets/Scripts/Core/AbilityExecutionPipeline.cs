@@ -145,7 +145,7 @@ namespace CheckmateRPG.Core
         {
             List<AbilityEffectIntent> intents = new();
             IReadOnlyList<Guid> targetIds = request.Action.TargetIds ?? Array.Empty<Guid>();
-            IReadOnlyList<AbilityEffectDefinition> effectList = request.Definition.EffectList ?? Array.Empty<AbilityEffectDefinition>();
+            IReadOnlyList<AbilityEffectDefinition> effectList = (IReadOnlyList<AbilityEffectDefinition>)request.Definition.EffectList ?? Array.Empty<AbilityEffectDefinition>();
 
             for (int i = 0; i < effectList.Count; i++)
             {

@@ -141,7 +141,7 @@ namespace CheckmateRPG.Core.Effects
         private void PublishApplied(EffectRuntimeState state)
         {
             _eventBus.Publish(new EffectAppliedEvent(
-                new EffectAppliedPayload(
+                new CheckmateRPG.Core.Events.EffectEvents.EffectAppliedPayload(
                     state.EffectId,
                     state.SourceId,
                     state.TargetId,
