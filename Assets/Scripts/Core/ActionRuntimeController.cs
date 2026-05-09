@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Actions.Resolvers;
+using CheckmateRPG.Core.Effects;
+using CheckmateRPG.Core.Effects.Processors;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Mutations;
@@ -22,6 +24,8 @@ namespace CheckmateRPG.Core
         private readonly Dictionary<Guid, UnitBrain> _unitsById = new();
         private readonly EventBus _eventBus = new();
         private ActionScheduler _scheduler;
+        private TickScheduler _tickScheduler;
+        private EffectSystem _effectSystem;
         private ActionResolverRegistry _resolverRegistry;
         private RuntimeBattleContext _battleContext;
 
@@ -49,6 +53,9 @@ namespace CheckmateRPG.Core
             _scheduler = new ActionScheduler(_eventBus);
             _resolverRegistry = new ActionResolverRegistry();
             _battleContext = new RuntimeBattleContext(this);
+            _effectSystem = BuildEffectSystem();
+            _tickScheduler = TickScheduler.EnsureExists();
+            _tickScheduler.OnTick += HandleRuntimeTick;
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Subscribe<ActionInterruptedEvent>(HandleActionInterrupted);
         }
@@ -58,18 +65,16 @@ namespace CheckmateRPG.Core
             if (Instance != this)
                 return;
 
+            if (_tickScheduler != null)
+                _tickScheduler.OnTick -= HandleRuntimeTick;
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
             Instance = null;
         }
 
-        private void FixedUpdate()
+        public bool ApplyEffectRuntime(EffectRuntimeState effectState)
         {
-            _scheduler.AdvanceTick();
-            IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
-            for (int i = 0; i < ready.Count; i++)
-                ResolveAction(ready[i]);
-            _eventBus.ProcessQueue();
+            return _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(effectState);
         }
 
         public void RegisterUnit(UnitBrain unit)
@@ -202,6 +207,37 @@ namespace CheckmateRPG.Core
 
             ApplyRuntimeMutations(result.RuntimeMutations);
             EnqueueResolvedEvents(result.Events);
+        }
+
+        private void HandleRuntimeTick(int schedulerTick)
+        {
+            _ = schedulerTick;
+            _scheduler.AdvanceTick();
+            _effectSystem?.AdvanceTick(_scheduler.CurrentTick);
+
+            IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
+            for (int i = 0; i < ready.Count; i++)
+                ResolveAction(ready[i]);
+
+            _eventBus.ProcessQueue();
+        }
+
+        private EffectSystem BuildEffectSystem()
+        {
+            var effectSystem = new EffectSystem(_eventBus, ResolveUnit);
+            effectSystem.RegisterProcessor(new DotEffectProcessor(new Dictionary<string, float>
+            {
+                [StatusEffectType.Burn.ToString()] = 0.02f,
+                [StatusEffectType.Ignite.ToString()] = 0.03f,
+                [StatusEffectType.Poison.ToString()] = 0.02f
+            }));
+            effectSystem.RegisterProcessor(new HotEffectProcessor(new Dictionary<string, float>()));
+            return effectSystem;
+        }
+
+        private UnitBrain ResolveUnit(Guid unitId)
+        {
+            return _unitsById.TryGetValue(unitId, out UnitBrain unit) ? unit : null;
         }
 
         private void SyncAllRuntimeStates()
