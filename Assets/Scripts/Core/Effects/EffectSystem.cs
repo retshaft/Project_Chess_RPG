@@ -62,6 +62,10 @@ namespace CheckmateRPG.Core.Effects
             runtimeState.Magnitude = Mathf.Max(0f, state.Magnitude);
 
             IEffectProcessor processor = ResolveProcessor(runtimeState);
+            if (processor == null)
+            {
+                Debug.LogWarning($"[EffectSystem] No processor registered for effect '{runtimeState.EffectId}'.");
+            }
             processor?.OnApplied(_context, runtimeState);
 
             PublishApplied(runtimeState);

@@ -227,9 +227,9 @@ namespace CheckmateRPG.Core
             var effectSystem = new EffectSystem(_eventBus, ResolveUnit);
             effectSystem.RegisterProcessor(new DotEffectProcessor(new Dictionary<string, float>
             {
-                [StatusEffectType.Burn.ToString()] = 1f,
-                [StatusEffectType.Ignite.ToString()] = 1f,
-                [StatusEffectType.Poison.ToString()] = 1f
+                [StatusEffectType.Burn.ToString()] = 0.02f,
+                [StatusEffectType.Ignite.ToString()] = 0.03f,
+                [StatusEffectType.Poison.ToString()] = 0.02f
             }));
             effectSystem.RegisterProcessor(new HotEffectProcessor(new Dictionary<string, float>()));
             return effectSystem;

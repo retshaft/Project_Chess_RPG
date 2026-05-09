@@ -556,30 +556,34 @@ namespace CheckmateRPG.Components
             ActionRuntimeController.Instance.ApplyEffectRuntime(new EffectRuntimeState
             {
                 EffectId = type.ToString(),
-                SourceId = sourceActorId == Guid.Empty ? targetId : sourceActorId,
+                SourceId = sourceActorId,
                 TargetId = targetId,
                 RemainingTick = durationTicks,
                 StackCount = Mathf.Max(1, stacks),
                 TickInterval = tickIntervalTicks,
                 NextTickIn = tickIntervalTicks,
-                Magnitude = GetDotTickMagnitude(type)
+                Magnitude = GetDotRuntimeMagnitude(type)
             });
         }
 
         private static int SecondsToTicks(float seconds)
         {
-            float tickDurationSeconds = ActionTimelineFormula.TickMilliseconds / 1000f;
+            float tickDurationSeconds = TickScheduler.DefaultTickDurationSeconds;
             return Mathf.CeilToInt(Mathf.Max(0f, seconds) / tickDurationSeconds);
         }
 
-        private float GetDotTickMagnitude(StatusEffectType type)
+        private float GetDotRuntimeMagnitude(StatusEffectType type)
         {
+            const float burnBaseRatio = 0.02f;
+            const float igniteBaseRatio = 0.03f;
+            const float poisonBaseRatio = 0.02f;
+
             return type switch
             {
-                StatusEffectType.Burn => _burnDamagePercentPerTick,
-                StatusEffectType.Ignite => _igniteDamagePercentPerTick,
-                StatusEffectType.Poison => _poisonDamagePercentPerTick,
-                _ => 0f
+                StatusEffectType.Burn => burnBaseRatio > 0f ? _burnDamagePercentPerTick / burnBaseRatio : 1f,
+                StatusEffectType.Ignite => igniteBaseRatio > 0f ? _igniteDamagePercentPerTick / igniteBaseRatio : 1f,
+                StatusEffectType.Poison => poisonBaseRatio > 0f ? _poisonDamagePercentPerTick / poisonBaseRatio : 1f,
+                _ => 1f
             };
         }
 

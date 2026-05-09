@@ -5,9 +5,10 @@ namespace CheckmateRPG.Core
 {
     public sealed class TickScheduler : MonoBehaviour
     {
-        [SerializeField] private float _tickDurationSeconds = ActionTimelineFormula.TickMilliseconds / 1000f;
+        [SerializeField] private float _tickDurationSeconds;
 
         public static TickScheduler Instance { get; private set; }
+        public static float DefaultTickDurationSeconds => ActionTimelineFormula.TickMilliseconds / 1000f;
 
         public int CurrentTick { get; private set; }
         public event Action<int> OnTick;
@@ -32,6 +33,8 @@ namespace CheckmateRPG.Core
             }
 
             Instance = this;
+            if (_tickDurationSeconds <= 0f)
+                _tickDurationSeconds = DefaultTickDurationSeconds;
             _tickDurationSeconds = Mathf.Max(0.01f, _tickDurationSeconds);
         }
 
