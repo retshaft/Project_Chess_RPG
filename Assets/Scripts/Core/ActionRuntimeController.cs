@@ -28,7 +28,10 @@ namespace CheckmateRPG.Core
         private EffectSystem _effectSystem;
         private ActionResolverRegistry _resolverRegistry;
         private RuntimeMutationProcessor _mutationProcessor;
+        private AbilityExecutionPipeline _abilityPipeline;
         private RuntimeBattleContext _battleContext;
+        private readonly Dictionary<string, AbilityDefinition> _abilityDefinitions = new(StringComparer.Ordinal);
+        private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
 
         public ActionScheduler Scheduler => _scheduler;
         public IEventBus EventBus => _eventBus;
@@ -53,9 +56,19 @@ namespace CheckmateRPG.Core
             Instance = this;
             _scheduler = new ActionScheduler(_eventBus);
             _resolverRegistry = new ActionResolverRegistry();
-            _mutationProcessor = new RuntimeMutationProcessor(id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null);
+            _mutationProcessor = new RuntimeMutationProcessor(
+                id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
+                state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state));
+            _abilityPipeline = new AbilityExecutionPipeline();
             _battleContext = new RuntimeBattleContext(this);
             _effectSystem = BuildEffectSystem();
+            _resolverRegistry.Register(new AbilityActionResolver(
+                _abilityPipeline,
+                abilityId => TryGetAbilityDefinition(abilityId, out AbilityDefinition definition) ? definition : null,
+                (actorId, abilityId) => TryGetAbilityRuntimeState(actorId, abilityId, out AbilityRuntimeState state) ? state : null,
+                ResolveUnit,
+                () => _scheduler.CurrentTick,
+                () => _unitsById));
             _tickScheduler = TickScheduler.EnsureExists();
             _tickScheduler.OnTick += HandleRuntimeTick;
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
@@ -94,6 +107,7 @@ namespace CheckmateRPG.Core
                 return;
 
             _unitsById.Remove(unit.ActorId);
+            _abilityStatesByActor.Remove(unit.ActorId);
         }
 
         public bool TryEnqueueMove(UnitBrain actor, Vector2Int destination)
@@ -122,6 +136,44 @@ namespace CheckmateRPG.Core
             _scheduler.ScheduleAction(command);
             BindQueuedAction(actor, command);
             return true;
+        }
+
+        public bool TryEnqueueAbility(UnitBrain actor, AbilityDefinition definition, IReadOnlyList<Guid> targetIds)
+        {
+            if (!CanQueueAction(actor) || definition == null)
+                return false;
+
+            RegisterAbilityDefinition(definition);
+            AbilityRuntimeState runtimeState = GetOrCreateAbilityRuntimeState(actor.ActorId, definition.name);
+            AbilityQueueRequest request = new(
+                actor,
+                definition,
+                runtimeState,
+                targetIds ?? Array.Empty<Guid>(),
+                _scheduler.CurrentTick,
+                action =>
+                {
+                    _scheduler.ScheduleAction(action);
+                    BindQueuedAction(actor, action);
+                    return true;
+                },
+                _unitsById);
+
+            return _abilityPipeline.TryQueueAbility(request, out _);
+        }
+
+        public void RegisterAbilityDefinition(AbilityDefinition definition)
+        {
+            if (definition == null || string.IsNullOrWhiteSpace(definition.name))
+                return;
+            _abilityDefinitions[definition.name] = definition;
+        }
+
+        public void UnregisterAbilityDefinition(AbilityDefinition definition)
+        {
+            if (definition == null || string.IsNullOrWhiteSpace(definition.name))
+                return;
+            _abilityDefinitions.Remove(definition.name);
         }
 
         public void SyncRuntimeState(UnitBrain unit)
@@ -217,6 +269,7 @@ namespace CheckmateRPG.Core
             _ = schedulerTick;
             _scheduler.AdvanceTick();
             _effectSystem?.AdvanceTick(_scheduler.CurrentTick);
+            UpdateAbilityCooldownState(_scheduler.CurrentTick);
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             for (int i = 0; i < ready.Count; i++)
@@ -312,6 +365,77 @@ namespace CheckmateRPG.Core
 
             actorId = brain.ActorId;
             return actorId != Guid.Empty;
+        }
+
+        private bool TryGetAbilityDefinition(string abilityId, out AbilityDefinition definition)
+        {
+            definition = null;
+            if (string.IsNullOrWhiteSpace(abilityId))
+                return false;
+            return _abilityDefinitions.TryGetValue(abilityId, out definition);
+        }
+
+        private AbilityRuntimeState GetOrCreateAbilityRuntimeState(Guid actorId, string abilityId)
+        {
+            if (!_abilityStatesByActor.TryGetValue(actorId, out Dictionary<string, AbilityRuntimeState> byAbility))
+            {
+                byAbility = new Dictionary<string, AbilityRuntimeState>(StringComparer.Ordinal);
+                _abilityStatesByActor[actorId] = byAbility;
+            }
+
+            if (!byAbility.TryGetValue(abilityId, out AbilityRuntimeState state) || state == null)
+            {
+                state = new AbilityRuntimeState
+                {
+                    AbilityId = abilityId,
+                    Charges = 1
+                };
+                byAbility[abilityId] = state;
+            }
+
+            return state;
+        }
+
+        private bool TryGetAbilityRuntimeState(Guid actorId, string abilityId, out AbilityRuntimeState state)
+        {
+            state = null;
+            if (!_abilityStatesByActor.TryGetValue(actorId, out Dictionary<string, AbilityRuntimeState> byAbility))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(abilityId) && byAbility.TryGetValue(abilityId, out state))
+                return state != null;
+
+            foreach (KeyValuePair<string, AbilityRuntimeState> kv in byAbility)
+            {
+                if (kv.Value != null && kv.Value.PendingActionId.HasValue)
+                {
+                    state = kv.Value;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void UpdateAbilityCooldownState(int currentTick)
+        {
+            foreach (KeyValuePair<Guid, Dictionary<string, AbilityRuntimeState>> actorEntry in _abilityStatesByActor)
+            {
+                Dictionary<string, AbilityRuntimeState> abilityStates = actorEntry.Value;
+                if (abilityStates == null)
+                    continue;
+
+                foreach (KeyValuePair<string, AbilityRuntimeState> stateEntry in abilityStates)
+                {
+                    AbilityRuntimeState state = stateEntry.Value;
+                    if (state == null)
+                        continue;
+
+                    state.CooldownRemaining = Mathf.Max(0, state.CooldownEndTick - currentTick);
+                    if (!state.PendingActionId.HasValue && state.CooldownRemaining == 0)
+                        state.Locked = false;
+                }
+            }
         }
 
         private sealed class RuntimeBattleContext : IBattleContext

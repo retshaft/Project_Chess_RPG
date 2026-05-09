@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core;
+using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Units;
 
@@ -15,14 +16,20 @@ namespace CheckmateRPG.Core.Runtime.Processors
     {
         private readonly DamageMutationProcessor _damageProcessor;
         private readonly MovementMutationProcessor _movementProcessor;
+        private readonly EffectMutationProcessor _effectProcessor;
 
-        public RuntimeMutationProcessor(Func<Guid, UnitBrain> unitLookup)
+        public RuntimeMutationProcessor(
+            Func<Guid, UnitBrain> unitLookup,
+            Func<EffectRuntimeState, bool> applyEffect)
         {
             if (unitLookup == null)
                 throw new ArgumentNullException(nameof(unitLookup));
+            if (applyEffect == null)
+                throw new ArgumentNullException(nameof(applyEffect));
 
             _damageProcessor = new DamageMutationProcessor(unitLookup);
             _movementProcessor = new MovementMutationProcessor(unitLookup);
+            _effectProcessor = new EffectMutationProcessor(applyEffect);
         }
 
         /// <summary>
@@ -40,6 +47,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 {
                     DamageMutation dm => _damageProcessor.Apply(dm),
                     MovementMutation mm => _movementProcessor.Apply(mm),
+                    ApplyEffectMutation em => _effectProcessor.Apply(em),
                     _ => Array.Empty<IGameEvent>()
                 };
                 events.AddRange(mutationEvents);

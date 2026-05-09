@@ -14,8 +14,12 @@ namespace CheckmateRPG.Core
     [Serializable]
     public sealed class AbilityRuntimeState
     {
+        public string AbilityId;
         public int CooldownRemaining;
+        public int CooldownEndTick;
         public int Charges;
         public bool Locked;
+        public Guid? PendingActionId;
+        public int LastCommittedTick;
     }
 }
