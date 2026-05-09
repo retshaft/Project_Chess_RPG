@@ -3,5 +3,9 @@ using UnityEngine;
 
 namespace CheckmateRPG.Core.Runtime.Mutations
 {
-    public readonly record struct MovementMutation(Guid UnitId, Vector2Int From, Vector2Int To) : IRuntimeMutation;
+    public readonly record struct MovementMutation(
+        Guid MutationId,
+        Guid TargetId,
+        Vector2Int From,
+        Vector2Int To) : IRuntimeMutation;
 }

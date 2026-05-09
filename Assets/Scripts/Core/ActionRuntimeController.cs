@@ -4,7 +4,7 @@ using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime;
-using CheckmateRPG.Core.Runtime.Mutations;
+using CheckmateRPG.Core.Runtime.Processors;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
@@ -23,6 +23,7 @@ namespace CheckmateRPG.Core
         private readonly EventBus _eventBus = new();
         private ActionScheduler _scheduler;
         private ActionResolverRegistry _resolverRegistry;
+        private RuntimeMutationProcessor _mutationProcessor;
         private RuntimeBattleContext _battleContext;
 
         public ActionScheduler Scheduler => _scheduler;
@@ -48,6 +49,7 @@ namespace CheckmateRPG.Core
             Instance = this;
             _scheduler = new ActionScheduler(_eventBus);
             _resolverRegistry = new ActionResolverRegistry();
+            _mutationProcessor = new RuntimeMutationProcessor(id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null);
             _battleContext = new RuntimeBattleContext(this);
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Subscribe<ActionInterruptedEvent>(HandleActionInterrupted);
@@ -200,8 +202,9 @@ namespace CheckmateRPG.Core
             if (!result.Success)
                 return;
 
-            ApplyRuntimeMutations(result.RuntimeMutations);
+            IReadOnlyList<IGameEvent> mutationEvents = _mutationProcessor.Apply(result.RuntimeMutations);
             EnqueueResolvedEvents(result.Events);
+            EnqueueResolvedEvents(mutationEvents);
         }
 
         private void SyncAllRuntimeStates()
@@ -211,44 +214,6 @@ namespace CheckmateRPG.Core
                 if (entry.Value != null)
                     SyncRuntimeState(entry.Value);
             }
-        }
-
-        private void ApplyRuntimeMutations(IReadOnlyList<IRuntimeMutation> mutations)
-        {
-            if (mutations == null || mutations.Count == 0)
-                return;
-
-            for (int i = 0; i < mutations.Count; i++)
-            {
-                switch (mutations[i])
-                {
-                    case MovementMutation movementMutation:
-                        ApplyMovementMutation(movementMutation);
-                        break;
-                    case DamageMutation damageMutation:
-                        ApplyDamageMutation(damageMutation);
-                        break;
-                }
-            }
-        }
-
-        private void ApplyMovementMutation(MovementMutation mutation)
-        {
-            if (!_unitsById.TryGetValue(mutation.UnitId, out UnitBrain unit) || unit == null || unit.Movement == null)
-                return;
-
-            unit.Movement.ApplyResolvedMovement(mutation.To);
-            SyncRuntimeState(unit);
-        }
-
-        private void ApplyDamageMutation(DamageMutation mutation)
-        {
-            if (!_unitsById.TryGetValue(mutation.TargetId, out UnitBrain target) || target == null || target.Health == null)
-                return;
-
-            int amount = Mathf.Max(0, mutation.Amount);
-            target.Health.ApplyTrueDamage(amount);
-            SyncRuntimeState(target);
         }
 
         private void EnqueueResolvedEvents(IReadOnlyList<IGameEvent> events)

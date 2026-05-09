@@ -29,22 +29,17 @@ namespace CheckmateRPG.Core.Actions.Resolvers
             int criticalMultiplier = Math.Max(1, battleContext.CriticalDamageMultiplier);
             bool isCritical = action.IsCritical;
             int finalDamage = isCritical ? baseDamage * criticalMultiplier : baseDamage;
-            int remainingHp = Math.Max(0, target.HP - finalDamage);
 
-            DamageMutation mutation = new(action.TargetId, finalDamage);
+            DamageMutation mutation = new(Guid.NewGuid(), action.TargetId, action.ActorId, finalDamage, isCritical);
             AttackActionResolvedEvent attackResolvedEvent = new(
                 new AttackActionResolvedPayload(action.ActionId, action.ActorId, action.TargetId, finalDamage, isCritical),
-                action.ActionId.ToString("N"),
-                action.TargetId.ToString("N"));
-            DamageAppliedEvent damageAppliedEvent = new(
-                new DamageAppliedPayload(action.ActionId, action.ActorId, action.TargetId, finalDamage, remainingHp, isCritical),
                 action.ActionId.ToString("N"),
                 action.TargetId.ToString("N"));
 
             return new ActionResolutionResult(
                 true,
                 new IRuntimeMutation[] { mutation },
-                new IGameEvent[] { attackResolvedEvent, damageAppliedEvent });
+                new IGameEvent[] { attackResolvedEvent });
         }
     }
 }

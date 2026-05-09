@@ -24,6 +24,11 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         int RemainingHp,
         bool IsCritical);
 
+    public readonly record struct MoveCompletedPayload(
+        Guid UnitId,
+        Vector2Int From,
+        Vector2Int To);
+
     public sealed record MoveActionResolvedEvent(MoveActionResolvedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MoveActionResolvedPayload>(Payload, EventCategory.Domain, Source, Target);
 
@@ -32,4 +37,7 @@ namespace CheckmateRPG.Core.Events.ActionEvents
 
     public sealed record DamageAppliedEvent(DamageAppliedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<DamageAppliedPayload>(Payload, EventCategory.Combat, Source, Target);
+
+    public sealed record MoveCompletedEvent(MoveCompletedPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<MoveCompletedPayload>(Payload, EventCategory.Domain, Source, Target);
 }
