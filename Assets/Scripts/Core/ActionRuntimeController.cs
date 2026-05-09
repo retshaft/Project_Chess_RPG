@@ -247,8 +247,7 @@ namespace CheckmateRPG.Core
                 return;
 
             int amount = Mathf.Max(0, mutation.Amount);
-            if (amount > 0)
-                target.Health.ApplyTrueDamage(amount);
+            target.Health.ApplyTrueDamage(amount);
             SyncRuntimeState(target);
         }
 
