@@ -11,7 +11,7 @@ namespace CheckmateRPG.Core.Simulation
     {
         private static readonly IReadOnlyDictionary<Guid, UnitRuntimeState> EmptyRuntimeStates = new Dictionary<Guid, UnitRuntimeState>();
         private static readonly IReadOnlyDictionary<Guid, IActionCommand> EmptyActiveActions = new Dictionary<Guid, IActionCommand>();
-        private static readonly IReadOnlyDictionary<string, EffectRuntimeState> EmptyActiveEffects = new Dictionary<string, EffectRuntimeState>(StringComparer.Ordinal);
+        private static readonly IReadOnlyDictionary<string, EffectRuntimeState> EmptyActiveEffects = new Dictionary<string, EffectRuntimeState>();
         private static readonly IReadOnlyDictionary<Vector2Int, Guid> EmptyOccupiedPositions = new Dictionary<Vector2Int, Guid>();
 
         public SimulationRuntime(int currentTick)
