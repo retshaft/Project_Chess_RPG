@@ -181,7 +181,7 @@ namespace CheckmateRPG.Core
             {
                 AbilityEffectIntent intent = resolveResult.EffectIntents[i];
                 mutations.Add(new ApplyEffectMutation(
-                    Guid.NewGuid(),
+                    SeededRandomProvider.Shared.NextGuid(),
                     intent.EffectId,
                     intent.SourceActorId,
                     intent.TargetActorId,
