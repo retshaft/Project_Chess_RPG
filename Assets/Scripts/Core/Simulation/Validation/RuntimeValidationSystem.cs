@@ -40,10 +40,9 @@ namespace CheckmateRPG.Core.Simulation.Validation
             for (int i = 0; i < _validators.Count; i++)
             {
                 ISimulationValidator validator = _validators[i];
-                if (validator == null)
-                    continue;
-
-                ValidationResult result = validator.Validate(runtime) ?? ValidationResult.Valid();
+                ValidationResult result = validator.Validate(runtime);
+                if (result == null)
+                    throw new InvalidOperationException($"Validator '{validator.GetType().Name}' returned a null ValidationResult.");
                 if (!result.IsValid)
                     isValid = false;
 
