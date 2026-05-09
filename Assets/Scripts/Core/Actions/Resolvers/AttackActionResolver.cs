@@ -30,7 +30,7 @@ namespace CheckmateRPG.Core.Actions.Resolvers
             bool isCritical = action.IsCritical;
             int finalDamage = isCritical ? baseDamage * criticalMultiplier : baseDamage;
 
-            DamageMutation mutation = new(Guid.NewGuid(), action.TargetId, action.ActorId, finalDamage, isCritical);
+            DamageMutation mutation = new(SeededRandomProvider.Shared.NextGuid(), action.TargetId, action.ActorId, finalDamage, isCritical);
             AttackActionResolvedEvent attackResolvedEvent = new(
                 new AttackActionResolvedPayload(action.ActionId, action.ActorId, action.TargetId, finalDamage, isCritical),
                 action.ActionId.ToString("N"),

@@ -18,6 +18,10 @@ namespace CheckmateRPG.Core
     {
         private const float DefaultActionSpeed = 1f;
         private const int DefaultRecoveryTicks = 1;
+        private const int DefaultSimulationSeed = 1001;
+
+        [SerializeField] private int _simulationSeed = DefaultSimulationSeed;
+        [SerializeField] private bool _enableReplayRecording = true;
 
         public static ActionRuntimeController Instance { get; private set; }
 
@@ -32,9 +36,13 @@ namespace CheckmateRPG.Core
         private RuntimeBattleContext _battleContext;
         private readonly Dictionary<string, AbilityDefinition> _abilityDefinitions = new(StringComparer.Ordinal);
         private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
+        private ReplayRecorder _replayRecorder;
+        private EventTraceRecorder _eventTraceRecorder;
+        private bool ShouldRecordReplay => _enableReplayRecording && _replayRecorder != null;
 
         public ActionScheduler Scheduler => _scheduler;
         public IEventBus EventBus => _eventBus;
+        public ReplayRecorder ReplayRecorder => _replayRecorder;
 
         public static ActionRuntimeController EnsureExists()
         {
@@ -54,6 +62,7 @@ namespace CheckmateRPG.Core
             }
 
             Instance = this;
+            SeededRandomProvider.SetGlobalSeed(_simulationSeed);
             _scheduler = new ActionScheduler(_eventBus);
             _resolverRegistry = new ActionResolverRegistry();
             _mutationProcessor = new RuntimeMutationProcessor(
@@ -62,6 +71,10 @@ namespace CheckmateRPG.Core
             _abilityPipeline = new AbilityExecutionPipeline();
             _battleContext = new RuntimeBattleContext(this);
             _effectSystem = BuildEffectSystem();
+            _replayRecorder = new ReplayRecorder();
+            _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, () => _scheduler != null ? _scheduler.CurrentTick : 0);
+            if (_enableReplayRecording)
+                _eventTraceRecorder.Attach(_eventBus);
             _resolverRegistry.Register(new AbilityActionResolver(
                 _abilityPipeline,
                 abilityId => TryGetAbilityDefinition(abilityId, out AbilityDefinition definition) ? definition : null,
@@ -82,6 +95,7 @@ namespace CheckmateRPG.Core
 
             if (_tickScheduler != null)
                 _tickScheduler.OnTick -= HandleRuntimeTick;
+            _eventTraceRecorder?.Detach();
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
             Instance = null;
@@ -119,6 +133,7 @@ namespace CheckmateRPG.Core
 
             IActionCommand command = CreateMoveCommand(actor, destination);
             _scheduler.ScheduleAction(command);
+            RecordInput($"MoveInput Actor={actor.ActorId:N} Destination=({destination.x},{destination.y})");
             BindQueuedAction(actor, command);
             return true;
         }
@@ -134,6 +149,7 @@ namespace CheckmateRPG.Core
 
             IActionCommand command = CreateAttackCommand(actor, targetId);
             _scheduler.ScheduleAction(command);
+            RecordInput($"AttackInput Actor={actor.ActorId:N} Target={targetId:N}");
             BindQueuedAction(actor, command);
             return true;
         }
@@ -154,6 +170,7 @@ namespace CheckmateRPG.Core
                 action =>
                 {
                     _scheduler.ScheduleAction(action);
+                    RecordInput($"AbilityInput Actor={actor.ActorId:N} Ability={definition.name} Targets={action.TargetIds.Count}");
                     BindQueuedAction(actor, action);
                     return true;
                 },
@@ -244,6 +261,8 @@ namespace CheckmateRPG.Core
             state.UnitId = actor.ActorId;
             state.CurrentActionId = command.ActionId;
             state.RecoveryUntilTick = command.RecoveryEndTick;
+            if (ShouldRecordReplay)
+                _replayRecorder.RecordAction(_scheduler.CurrentTick, BuildActionTrace(command));
         }
 
         private void ResolveAction(IActionCommand action)
@@ -268,6 +287,8 @@ namespace CheckmateRPG.Core
         {
             _ = schedulerTick;
             _scheduler.AdvanceTick();
+            if (ShouldRecordReplay)
+                _replayRecorder.EnsureFrame(_scheduler.CurrentTick);
             _effectSystem?.AdvanceTick(_scheduler.CurrentTick);
             UpdateAbilityCooldownState(_scheduler.CurrentTick);
 
@@ -276,6 +297,17 @@ namespace CheckmateRPG.Core
                 ResolveAction(ready[i]);
 
             _eventBus.ProcessQueue();
+            if (ShouldRecordReplay)
+            {
+                SyncAllRuntimeStates();
+                _replayRecorder.RecordSnapshot(BuildFrameSnapshot(_scheduler.CurrentTick));
+            }
+        }
+
+        private void RecordInput(string input)
+        {
+            if (ShouldRecordReplay)
+                _replayRecorder.RecordInput(_scheduler.CurrentTick, input);
         }
 
         private EffectSystem BuildEffectSystem()
@@ -365,6 +397,79 @@ namespace CheckmateRPG.Core
 
             actorId = brain.ActorId;
             return actorId != Guid.Empty;
+        }
+
+        private static string BuildActionTrace(IActionCommand action)
+        {
+            string detail = action switch
+            {
+                MoveActionCommand move => $"From=({move.From.x},{move.From.y}) To=({move.To.x},{move.To.y})",
+                AttackActionCommand attack => $"Target={attack.TargetId:N} Damage={attack.Damage} Critical={attack.IsCritical}",
+                AbilityActionCommand ability => $"Ability={ability.AbilityId} Targets={ability.TargetIds.Count}",
+                _ => string.Empty
+            };
+
+            return
+                $"{action.GetType().Name}|Action={action.ActionId:N}|Actor={action.ActorId:N}|State={action.State}" +
+                $"|Queued={action.QueuedTick}|Start={action.StartTick}|Resolve={action.ResolveTick}|Recovery={action.RecoveryEndTick}|{detail}";
+        }
+
+        private FrameSnapshot BuildFrameSnapshot(int tick)
+        {
+            var snapshot = new FrameSnapshot { Tick = tick };
+            var units = new List<UnitFrameSnapshot>(_unitsById.Count);
+            foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
+            {
+                UnitBrain unit = entry.Value;
+                if (unit == null || unit.RuntimeState == null)
+                    continue;
+
+                UnitRuntimeState state = unit.RuntimeState;
+                units.Add(new UnitFrameSnapshot
+                {
+                    UnitId = state.UnitId.ToString("N"),
+                    HP = state.HP,
+                    SP = state.SP,
+                    PosX = state.Position.x,
+                    PosY = state.Position.y,
+                    StatusFlags = state.StatusFlags,
+                    CurrentActionId = state.CurrentActionId.HasValue ? state.CurrentActionId.Value.ToString("N") : string.Empty,
+                    RecoveryUntilTick = state.RecoveryUntilTick
+                });
+            }
+
+            units.Sort((left, right) => string.CompareOrdinal(left.UnitId, right.UnitId));
+            snapshot.Units = units;
+
+            IReadOnlyCollection<IActionCommand> activeActions = _scheduler.GetActiveActions();
+            var actions = new List<ActionFrameSnapshot>(activeActions.Count);
+            foreach (IActionCommand action in activeActions)
+            {
+                string data = action switch
+                {
+                    MoveActionCommand move => $"from={move.From.x},{move.From.y};to={move.To.x},{move.To.y}",
+                    AttackActionCommand attack => $"target={attack.TargetId:N};damage={attack.Damage};critical={attack.IsCritical}",
+                    AbilityActionCommand ability => $"ability={ability.AbilityId};targets={ability.TargetIds.Count}",
+                    _ => string.Empty
+                };
+
+                actions.Add(new ActionFrameSnapshot
+                {
+                    ActionId = action.ActionId.ToString("N"),
+                    ActorId = action.ActorId.ToString("N"),
+                    ActionType = action.GetType().Name,
+                    State = action.State.ToString(),
+                    QueuedTick = action.QueuedTick,
+                    StartTick = action.StartTick,
+                    ResolveTick = action.ResolveTick,
+                    RecoveryEndTick = action.RecoveryEndTick,
+                    Data = data
+                });
+            }
+
+            actions.Sort((left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
+            snapshot.ActiveActions = actions;
+            return snapshot;
         }
 
         private bool TryGetAbilityDefinition(string abilityId, out AbilityDefinition definition)

@@ -110,7 +110,7 @@ namespace CheckmateRPG.Units
 
             if (!Guid.TryParseExact(_runtimeActorId, "N", out Guid actorId))
             {
-                actorId = Guid.NewGuid();
+                actorId = SeededRandomProvider.Shared.NextGuid();
                 _runtimeActorId = actorId.ToString("N");
             }
 

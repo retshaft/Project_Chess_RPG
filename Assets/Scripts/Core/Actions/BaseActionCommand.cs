@@ -20,7 +20,7 @@ namespace CheckmateRPG.Core.Actions
             if (recoveryEndTick < resolveTick)
                 throw new ArgumentOutOfRangeException(nameof(recoveryEndTick));
 
-            ActionId = Guid.NewGuid();
+            ActionId = SeededRandomProvider.Shared.NextGuid();
             ActorId = actorId;
             State = ActionState.Queued;
             QueuedTick = -1;
