@@ -34,11 +34,11 @@ namespace CheckmateRPG.Core.Actions.Resolvers
             DamageMutation mutation = new(action.TargetId, finalDamage);
             AttackActionResolvedEvent attackResolvedEvent = new(
                 new AttackActionResolvedPayload(action.ActionId, action.ActorId, action.TargetId, finalDamage, isCritical),
-                action.ActorId.ToString("N"),
+                action.ActionId.ToString("N"),
                 action.TargetId.ToString("N"));
             DamageAppliedEvent damageAppliedEvent = new(
                 new DamageAppliedPayload(action.ActionId, action.ActorId, action.TargetId, finalDamage, remainingHp, isCritical),
-                action.ActorId.ToString("N"),
+                action.ActionId.ToString("N"),
                 action.TargetId.ToString("N"));
 
             return new ActionResolutionResult(

@@ -206,10 +206,10 @@ namespace CheckmateRPG.Core
 
         private void SyncAllRuntimeStates()
         {
-            foreach ((Guid _, UnitBrain unit) in _unitsById)
+            foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
             {
-                if (unit != null)
-                    SyncRuntimeState(unit);
+                if (entry.Value != null)
+                    SyncRuntimeState(entry.Value);
             }
         }
 

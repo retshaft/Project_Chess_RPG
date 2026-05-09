@@ -28,8 +28,8 @@ namespace CheckmateRPG.Core.Actions.Resolvers
             MovementMutation mutation = new(action.ActorId, action.From, action.To);
             MoveActionResolvedEvent resolvedEvent = new(
                 new MoveActionResolvedPayload(action.ActionId, action.ActorId, action.From, action.To),
-                action.ActorId.ToString("N"),
-                action.ActionId.ToString("N"));
+                action.ActionId.ToString("N"),
+                action.ActorId.ToString("N"));
 
             return new ActionResolutionResult(
                 true,
