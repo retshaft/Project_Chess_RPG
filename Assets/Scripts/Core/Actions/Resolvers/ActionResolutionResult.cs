@@ -1,12 +1,26 @@
+using System;
+using System.Collections.Generic;
+using CheckmateRPG.Core.Runtime.Mutations;
+
 namespace CheckmateRPG.Core.Actions.Resolvers
 {
-    /// <summary>
-    /// Immutable resolve outcome describing whether action resolution succeeded.
-    /// </summary>
-    /// <param name="Succeeded">True when resolution produced a valid outcome.</param>
-    public readonly record struct ActionResolutionResult(bool Succeeded)
+    public readonly record struct ActionResolutionResult
     {
-        public static ActionResolutionResult Success => new(true);
-        public static ActionResolutionResult Failure => new(false);
+        public ActionResolutionResult(
+            bool success,
+            IReadOnlyList<IRuntimeMutation> runtimeMutations,
+            IReadOnlyList<IGameEvent> events)
+        {
+            Success = success;
+            RuntimeMutations = runtimeMutations ?? Array.Empty<IRuntimeMutation>();
+            Events = events ?? Array.Empty<IGameEvent>();
+        }
+
+        public bool Success { get; }
+        public IReadOnlyList<IRuntimeMutation> RuntimeMutations { get; }
+        public IReadOnlyList<IGameEvent> Events { get; }
+
+        public static ActionResolutionResult Failed() =>
+            new(false, Array.Empty<IRuntimeMutation>(), Array.Empty<IGameEvent>());
     }
 }
