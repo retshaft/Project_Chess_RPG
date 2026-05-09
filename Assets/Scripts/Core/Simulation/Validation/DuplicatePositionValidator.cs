@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Runtime;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Simulation.Validation
@@ -12,18 +13,24 @@ namespace CheckmateRPG.Core.Simulation.Validation
                 throw new ArgumentNullException(nameof(runtime));
 
             var issues = new List<ValidationIssue>();
+            var occupiedUnitIds = new HashSet<Guid>(runtime.OccupiedPositions.Values);
             var seenPositions = new HashSet<Vector2Int>();
 
-            foreach (KeyValuePair<Vector2Int, Guid> pair in runtime.OccupiedPositions)
+            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in runtime.RuntimeStates)
             {
-                Vector2Int position = pair.Key;
+                Guid unitId = pair.Key;
+                UnitRuntimeState state = pair.Value;
+                if (state == null || !occupiedUnitIds.Contains(unitId))
+                    continue;
+
+                Vector2Int position = state.Position;
                 if (seenPositions.Add(position))
                     continue;
 
                 issues.Add(new ValidationIssue(
                     ValidationSeverity.Error,
                     $"Duplicate occupied position detected: {position}.",
-                    pair.Value,
+                    unitId,
                     runtime.CurrentTick));
             }
 

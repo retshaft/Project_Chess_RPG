@@ -17,6 +17,15 @@ namespace CheckmateRPG.Core.Simulation.Validation
             foreach (KeyValuePair<Guid, IActionCommand> pair in runtime.ActiveActions)
             {
                 Guid actionId = pair.Value?.ActionId ?? pair.Key;
+                if (pair.Value != null && pair.Key != pair.Value.ActionId)
+                {
+                    issues.Add(new ValidationIssue(
+                        ValidationSeverity.Error,
+                        $"ActiveActions key/action mismatch: key={pair.Key:N}, value={pair.Value.ActionId:N}.",
+                        pair.Value.ActorId,
+                        runtime.CurrentTick));
+                }
+
                 if (seenActionIds.Add(actionId))
                     continue;
 
