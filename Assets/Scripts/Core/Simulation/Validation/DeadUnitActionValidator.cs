@@ -31,14 +31,14 @@ namespace CheckmateRPG.Core.Simulation.Validation
 
                 Guid unitId = state.UnitId == Guid.Empty ? pair.Key : state.UnitId;
                 bool hasActiveAction = state.CurrentActionId.HasValue || actorsWithActiveActions.Contains(unitId);
-                if (state.HP > 0 || !hasActiveAction)
-                    continue;
-
-                issues.Add(new ValidationIssue(
-                    ValidationSeverity.Error,
-                    "Dead unit must not hold an active action.",
-                    unitId,
-                    runtime.CurrentTick));
+                if (state.HP <= 0 && hasActiveAction)
+                {
+                    issues.Add(new ValidationIssue(
+                        ValidationSeverity.Error,
+                        "Dead unit must not hold an active action.",
+                        unitId,
+                        runtime.CurrentTick));
+                }
             }
 
             return new ValidationResult(issues.Count == 0, issues);

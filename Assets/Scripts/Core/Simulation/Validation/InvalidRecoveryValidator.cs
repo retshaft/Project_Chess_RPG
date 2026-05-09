@@ -20,14 +20,14 @@ namespace CheckmateRPG.Core.Simulation.Validation
                     continue;
 
                 bool isRecovering = runtime.CurrentTick < state.RecoveryUntilTick;
-                if (!isRecovering || state.CurrentActionId.HasValue)
-                    continue;
-
-                issues.Add(new ValidationIssue(
-                    ValidationSeverity.Error,
-                    "Unit is in recovery state but has no CurrentActionId.",
-                    state.UnitId == Guid.Empty ? pair.Key : state.UnitId,
-                    runtime.CurrentTick));
+                if (isRecovering && !state.CurrentActionId.HasValue)
+                {
+                    issues.Add(new ValidationIssue(
+                        ValidationSeverity.Error,
+                        "Unit is in recovery state but has no CurrentActionId.",
+                        state.UnitId == Guid.Empty ? pair.Key : state.UnitId,
+                        runtime.CurrentTick));
+                }
             }
 
             return new ValidationResult(issues.Count == 0, issues);
