@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Actions;
+using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime;
+using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Data;
+using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
 using UnityEngine;
 
@@ -19,6 +22,8 @@ namespace CheckmateRPG.Core
         private readonly Dictionary<Guid, UnitBrain> _unitsById = new();
         private readonly EventBus _eventBus = new();
         private ActionScheduler _scheduler;
+        private ActionResolverRegistry _resolverRegistry;
+        private RuntimeBattleContext _battleContext;
 
         public ActionScheduler Scheduler => _scheduler;
         public IEventBus EventBus => _eventBus;
@@ -42,6 +47,8 @@ namespace CheckmateRPG.Core
 
             Instance = this;
             _scheduler = new ActionScheduler(_eventBus);
+            _resolverRegistry = new ActionResolverRegistry();
+            _battleContext = new RuntimeBattleContext(this);
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Subscribe<ActionInterruptedEvent>(HandleActionInterrupted);
         }
@@ -182,10 +189,79 @@ namespace CheckmateRPG.Core
 
         private void ResolveAction(IActionCommand action)
         {
+            if (action == null)
+                return;
             if (!_unitsById.TryGetValue(action.ActorId, out UnitBrain actor) || actor == null)
                 return;
 
-            SyncRuntimeState(actor);
+            SyncAllRuntimeStates();
+            if (!_resolverRegistry.TryResolve(action, _battleContext, out ActionResolutionResult result))
+                return;
+            if (!result.Success)
+                return;
+
+            ApplyRuntimeMutations(result.RuntimeMutations);
+            EnqueueResolvedEvents(result.Events);
+        }
+
+        private void SyncAllRuntimeStates()
+        {
+            foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
+            {
+                if (entry.Value != null)
+                    SyncRuntimeState(entry.Value);
+            }
+        }
+
+        private void ApplyRuntimeMutations(IReadOnlyList<IRuntimeMutation> mutations)
+        {
+            if (mutations == null || mutations.Count == 0)
+                return;
+
+            for (int i = 0; i < mutations.Count; i++)
+            {
+                switch (mutations[i])
+                {
+                    case MovementMutation movementMutation:
+                        ApplyMovementMutation(movementMutation);
+                        break;
+                    case DamageMutation damageMutation:
+                        ApplyDamageMutation(damageMutation);
+                        break;
+                }
+            }
+        }
+
+        private void ApplyMovementMutation(MovementMutation mutation)
+        {
+            if (!_unitsById.TryGetValue(mutation.UnitId, out UnitBrain unit) || unit == null || unit.Movement == null)
+                return;
+
+            unit.Movement.ApplyResolvedMovement(mutation.To);
+            SyncRuntimeState(unit);
+        }
+
+        private void ApplyDamageMutation(DamageMutation mutation)
+        {
+            if (!_unitsById.TryGetValue(mutation.TargetId, out UnitBrain target) || target == null || target.Health == null)
+                return;
+
+            int amount = Mathf.Max(0, mutation.Amount);
+            target.Health.ApplyTrueDamage(amount);
+            SyncRuntimeState(target);
+        }
+
+        private void EnqueueResolvedEvents(IReadOnlyList<IGameEvent> events)
+        {
+            if (events == null || events.Count == 0)
+                return;
+
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i] == null)
+                    continue;
+                _eventBus.Publish(events[i]);
+            }
         }
 
         private void HandleActionCompleted(ActionCompletedEvent actionCompletedEvent)
@@ -235,6 +311,81 @@ namespace CheckmateRPG.Core
 
             actorId = brain.ActorId;
             return actorId != Guid.Empty;
+        }
+
+        private sealed class RuntimeBattleContext : IBattleContext
+        {
+            private readonly ActionRuntimeController _controller;
+
+            public RuntimeBattleContext(ActionRuntimeController controller)
+            {
+                _controller = controller;
+            }
+
+            public int CriticalDamageMultiplier => 2;
+
+            public bool TryGetUnit(Guid unitId, out BattleUnitSnapshot unit)
+            {
+                if (_controller._unitsById.TryGetValue(unitId, out UnitBrain brain) &&
+                    brain != null &&
+                    brain.RuntimeState != null)
+                {
+                    UnitRuntimeState state = brain.RuntimeState;
+                    unit = new BattleUnitSnapshot(
+                        state.UnitId,
+                        state.Position,
+                        state.HP,
+                        state.StatusFlags);
+                    return true;
+                }
+
+                unit = default;
+                return false;
+            }
+
+            public bool IsCellValid(Vector2Int cell)
+            {
+                return GridSystem.Instance != null && GridSystem.Instance.IsValidCell(cell);
+            }
+
+            public bool IsCellOccupied(Vector2Int cell, Guid ignoredUnitId = default)
+            {
+                if (GridSystem.Instance == null)
+                    return true;
+
+                GameObject occupant = GridSystem.Instance.GetOccupant(cell);
+                if (occupant == null)
+                    return false;
+
+                if (ignoredUnitId != Guid.Empty &&
+                    TryGetActorId(occupant, out Guid occupantActorId) &&
+                    occupantActorId == ignoredUnitId)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            public bool IsTargetInAttackRange(Guid attackerId, Guid targetId)
+            {
+                if (!TryGetUnit(attackerId, out BattleUnitSnapshot attacker))
+                    return false;
+                if (!TryGetUnit(targetId, out BattleUnitSnapshot target))
+                    return false;
+                if (!_controller._unitsById.TryGetValue(attackerId, out UnitBrain attackerBrain) || attackerBrain == null)
+                    return false;
+
+                int range = 1;
+                if (attackerBrain.UnitData != null)
+                    range = Mathf.Max(1, attackerBrain.UnitData.AttackRange);
+
+                int distance = Mathf.Max(
+                    Mathf.Abs(attacker.Position.x - target.Position.x),
+                    Mathf.Abs(attacker.Position.y - target.Position.y));
+
+                return distance <= range;
+            }
         }
     }
 }

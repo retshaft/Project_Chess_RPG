@@ -123,6 +123,32 @@ namespace CheckmateRPG.Components
             StartMovementCoroutine(MoveCoroutine(targetGridPosition));
         }
 
+        public bool ApplyResolvedMovement(Vector2Int destination)
+        {
+            if (GridSystem.Instance == null)
+                return false;
+            if (!GridSystem.Instance.IsValidCell(destination))
+                return false;
+            if (destination != GridPosition && !GridSystem.Instance.IsCellFree(destination))
+                return false;
+
+            if (destination != GridPosition)
+            {
+                GridSystem.Instance.ClearCell(GridPosition);
+                GridSystem.Instance.SetOccupant(destination, gameObject);
+                GridPosition = destination;
+            }
+
+            CurrentMoveCostMultiplier = GridSystem.Instance.GetMoveCostMultiplier(destination) * GetActionCostMultiplier();
+            GridSystem.Instance.ApplyTileEffects(gameObject, destination);
+            transform.position = GridSystem.Instance.GridToWorld(destination);
+            IsMoving = false;
+            TryHandlePawnPromotion(destination);
+            OnMoveCompleted?.Invoke(destination);
+            _statusEffects?.NotifyAction(Core.UnitActionType.Move);
+            return true;
+        }
+
         // ─── Coroutine ────────────────────────────────────────────────────────────
 
         private IEnumerator MoveCoroutine(Vector2Int destination)
