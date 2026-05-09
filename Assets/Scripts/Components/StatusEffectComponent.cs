@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Core;
+using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
+using CheckmateRPG.Units;
 
 namespace CheckmateRPG.Components
 {
@@ -52,8 +55,6 @@ namespace CheckmateRPG.Components
         {
             public float Duration;
             public float Remaining;
-            public float TickInterval;
-            public float TickTimer;
             public int Stacks;
             public bool IsSecondary;
         }
@@ -62,6 +63,7 @@ namespace CheckmateRPG.Components
 
         private HealthComponent _health;
         private MovementComponent _movement;
+        private UnitBrain _unitBrain;
 
         private ElementType _currentAura = ElementType.None;
         private float _auraRemaining;
@@ -93,6 +95,7 @@ namespace CheckmateRPG.Components
         {
             _health = GetComponent<HealthComponent>();
             _movement = GetComponent<MovementComponent>();
+            _unitBrain = GetComponent<UnitBrain>();
         }
 
         public void Initialise(UnitData data)
@@ -152,7 +155,7 @@ namespace CheckmateRPG.Components
             return amount;
         }
 
-        public void ApplyStatusEffect(StatusEffectType type, float duration = 0f, int stacks = 0, bool isSecondary = false)
+        public void ApplyStatusEffect(StatusEffectType type, float duration = 0f, int stacks = 0, bool isSecondary = false, Guid? sourceActorId = null)
         {
             if (type == StatusEffectType.Bleed)
             {
@@ -176,15 +179,7 @@ namespace CheckmateRPG.Components
             instance.Stacks = Mathf.Max(instance.Stacks, stacks);
 
             if (type == StatusEffectType.Burn || type == StatusEffectType.Ignite || type == StatusEffectType.Poison)
-            {
-                instance.TickInterval = _dotTickInterval;
-                instance.TickTimer = _dotTickInterval;
-            }
-            else
-            {
-                instance.TickInterval = 0f;
-                instance.TickTimer = 0f;
-            }
+                ApplyRuntimeDot(type, finalDuration, Mathf.Max(1, stacks), sourceActorId ?? GetActorId());
         }
 
         public void ApplyGrabVulnerability()
@@ -271,16 +266,6 @@ namespace CheckmateRPG.Components
 
                 instance.Remaining -= deltaTime;
 
-                if (instance.TickInterval > 0f)
-                {
-                    instance.TickTimer -= deltaTime;
-                    if (instance.TickTimer <= 0f)
-                    {
-                        ApplyDotTick(pair.Key);
-                        instance.TickTimer = instance.TickInterval;
-                    }
-                }
-
                 if (instance.Remaining <= 0f)
                 {
                     expired ??= new List<StatusEffectType>();
@@ -295,27 +280,6 @@ namespace CheckmateRPG.Components
                 _activeEffects.Remove(type);
 
             UpdateWoundState();
-        }
-
-        private void ApplyDotTick(StatusEffectType type)
-        {
-            if (_health == null || _health.IsDead)
-                return;
-
-            float percent = type switch
-            {
-                StatusEffectType.Burn => _burnDamagePercentPerTick,
-                StatusEffectType.Ignite => _igniteDamagePercentPerTick,
-                StatusEffectType.Poison => _poisonDamagePercentPerTick,
-                _ => 0f
-            };
-
-            if (percent <= 0f)
-                return;
-
-            float damage = _health.MaxHealth * percent;
-            if (damage > 0f)
-                _health.ApplyMagicDamage(damage);
         }
 
         private void ApplyBleed(int stacks)
@@ -497,7 +461,7 @@ namespace CheckmateRPG.Components
                     continue;
 
                 if (unit.TryGetComponent(out StatusEffectComponent status))
-                    status.ApplyStatusEffect(StatusEffectType.Poison, _poisonDuration, isSecondary: isSecondary);
+                    status.ApplyStatusEffect(StatusEffectType.Poison, _poisonDuration, isSecondary: isSecondary, sourceActorId: GetActorId());
             }
         }
 
@@ -573,6 +537,55 @@ namespace CheckmateRPG.Components
         private bool TryGetEffect(StatusEffectType type, out StatusEffectInstance instance)
         {
             return _activeEffects.TryGetValue(type, out instance);
+        }
+
+        private void ApplyRuntimeDot(StatusEffectType type, float durationSeconds, int stacks, Guid sourceActorId)
+        {
+            if (ActionRuntimeController.Instance == null)
+                return;
+
+            Guid targetId = GetActorId();
+            if (targetId == Guid.Empty)
+                return;
+
+            int durationTicks = SecondsToTicks(durationSeconds);
+            int tickIntervalTicks = SecondsToTicks(_dotTickInterval);
+            if (durationTicks <= 0 || tickIntervalTicks <= 0)
+                return;
+
+            ActionRuntimeController.Instance.ApplyEffectRuntime(new EffectRuntimeState
+            {
+                EffectId = type.ToString(),
+                SourceId = sourceActorId == Guid.Empty ? targetId : sourceActorId,
+                TargetId = targetId,
+                RemainingTick = durationTicks,
+                StackCount = Mathf.Max(1, stacks),
+                TickInterval = tickIntervalTicks,
+                NextTickIn = tickIntervalTicks,
+                Magnitude = GetDotTickMagnitude(type)
+            });
+        }
+
+        private static int SecondsToTicks(float seconds)
+        {
+            float tickDurationSeconds = ActionTimelineFormula.TickMilliseconds / 1000f;
+            return Mathf.CeilToInt(Mathf.Max(0f, seconds) / tickDurationSeconds);
+        }
+
+        private float GetDotTickMagnitude(StatusEffectType type)
+        {
+            return type switch
+            {
+                StatusEffectType.Burn => _burnDamagePercentPerTick,
+                StatusEffectType.Ignite => _igniteDamagePercentPerTick,
+                StatusEffectType.Poison => _poisonDamagePercentPerTick,
+                _ => 0f
+            };
+        }
+
+        private Guid GetActorId()
+        {
+            return _unitBrain != null ? _unitBrain.ActorId : Guid.Empty;
         }
 
         private float GetDefaultDuration(StatusEffectType type)
