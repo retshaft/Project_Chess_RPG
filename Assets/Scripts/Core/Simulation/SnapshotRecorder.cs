@@ -53,7 +53,7 @@ namespace CheckmateRPG.Core.Simulation
             var snapshots = new List<SimulationSnapshot>(_snapshots.Count);
             foreach (KeyValuePair<int, SimulationSnapshot> pair in _snapshots)
                 snapshots.Add(pair.Value.Clone());
-            return snapshots;
+            return snapshots.AsReadOnly();
         }
 
         public void Clear()
