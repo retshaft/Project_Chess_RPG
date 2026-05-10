@@ -26,6 +26,8 @@ namespace CheckmateRPG.Core
         [SerializeField] private bool _enableReplayRecording = true;
         [SerializeField] private bool _enableRuntimeValidation = true;
         [SerializeField] private bool _haltSimulationOnCriticalValidation;
+        [SerializeField] private int _snapshotInterval = 1;
+        [SerializeField] private int _maxSnapshotCount = 32;
 
         public static ActionRuntimeController Instance { get; private set; }
 
@@ -44,6 +46,7 @@ namespace CheckmateRPG.Core
         private EventTraceRecorder _eventTraceRecorder;
         private RuntimeValidationSystem _runtimeValidationSystem;
         private ValidationExecutionStage _validationExecutionStage;
+        private SnapshotRecorder _snapshotRecorder;
         private ValidationResult _lastValidationResult = ValidationResult.Valid();
         private bool _validationHalted;
         private bool ShouldRecordReplay => _enableReplayRecording && _replayRecorder != null;
@@ -51,6 +54,7 @@ namespace CheckmateRPG.Core
         public ActionScheduler Scheduler => _scheduler;
         public IEventBus EventBus => _eventBus;
         public ReplayRecorder ReplayRecorder => _replayRecorder;
+        public SnapshotRecorder SnapshotRecorder => _snapshotRecorder;
 
         public static ActionRuntimeController EnsureExists()
         {
@@ -83,6 +87,7 @@ namespace CheckmateRPG.Core
             _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, () => _scheduler != null ? _scheduler.CurrentTick : 0);
             _runtimeValidationSystem = BuildRuntimeValidationSystem();
             _validationExecutionStage = new ValidationExecutionStage(_runtimeValidationSystem);
+            _snapshotRecorder = new SnapshotRecorder(new SnapshotPolicy(_snapshotInterval, _maxSnapshotCount));
             if (_enableReplayRecording)
                 _eventTraceRecorder.Attach(_eventBus);
             _resolverRegistry.Register(new AbilityActionResolver(
@@ -300,12 +305,14 @@ namespace CheckmateRPG.Core
                 _lastValidationResult = _validationExecutionStage.Execute(runtime);
                 if (HandleCriticalValidation(_lastValidationResult))
                 {
+                    RecordSimulationSnapshot();
                     RecordReplaySnapshot();
                     return;
                 }
             }
 
             _eventBus.ProcessQueue();
+            RecordSimulationSnapshot();
             RecordReplaySnapshot();
         }
 
@@ -466,7 +473,7 @@ namespace CheckmateRPG.Core
                 if (action == null)
                     continue;
 
-                snapshot[action.ActionId] = action;
+                snapshot[action.ActionId] = SimulationActionSnapshot.From(action);
             }
 
             return snapshot;
@@ -531,6 +538,21 @@ namespace CheckmateRPG.Core
 
             SyncAllRuntimeStates();
             _replayRecorder.RecordSnapshot(BuildFrameSnapshot(_scheduler.CurrentTick));
+        }
+
+        private void RecordSimulationSnapshot()
+        {
+            if (_snapshotRecorder == null || !_snapshotRecorder.ShouldCapture(_scheduler.CurrentTick))
+                return;
+
+            SyncAllRuntimeStates();
+            _snapshotRecorder.TryRecord(new SimulationSnapshot(
+                _scheduler.CurrentTick,
+                BuildRuntimeStateSnapshot(),
+                BuildActiveActionSnapshot(),
+                _effectSystem != null
+                    ? _effectSystem.CreateRuntimeSnapshot()
+                    : new SortedDictionary<string, EffectRuntimeState>(StringComparer.Ordinal)));
         }
 
         private static void AppendEvents(List<IGameEvent> target, IReadOnlyList<IGameEvent> source)
