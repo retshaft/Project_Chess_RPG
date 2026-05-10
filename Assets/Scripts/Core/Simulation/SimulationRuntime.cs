@@ -45,6 +45,10 @@ namespace CheckmateRPG.Core.Simulation
 
         public int CurrentTick { get; private set; }
 
+        // These properties build a fresh snapshot projection on each access to guarantee that
+        // callers always receive an immutable copy with no live reference to the internal mutable
+        // dictionaries. This trades per-access allocation for absolute reference-leak safety.
+        // Performance optimisation (e.g. dirty-flag caching) is deferred to a future milestone.
         public IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> RuntimeStates => BuildRuntimeStateView();
 
         public IReadOnlyDictionary<Guid, IReadOnlyActionState> ActiveActions => BuildActiveActionView();

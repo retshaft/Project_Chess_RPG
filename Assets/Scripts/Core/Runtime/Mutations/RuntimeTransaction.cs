@@ -40,7 +40,9 @@ namespace CheckmateRPG.Core.Runtime.Mutations
 
         public void Commit()
         {
-            EnsureNotCommitted();
+            if (IsCommitted)
+                return;
+
             IsCommitted = true;
             _buffer.Clear();
         }
