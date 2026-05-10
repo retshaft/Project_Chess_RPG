@@ -6,7 +6,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
 {
     public sealed class MutationOrderingService
     {
-        private const float EffectMagnitudePrecisionScale = 1000f;
         private readonly MutationOrderingPolicy _policy;
 
         public MutationOrderingService(MutationOrderingPolicy policy = null)
@@ -137,7 +136,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         {
             return mutation switch
             {
-                ApplyEffectMutation effect => (int)Math.Round(effect.Magnitude * EffectMagnitudePrecisionScale),
+                ApplyEffectMutation effect => BitConverter.SingleToInt32Bits(effect.Magnitude),
                 _ => 0
             };
         }
