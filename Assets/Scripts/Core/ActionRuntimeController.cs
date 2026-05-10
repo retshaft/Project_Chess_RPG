@@ -91,7 +91,7 @@ namespace CheckmateRPG.Core
             _battleContext = new RuntimeBattleContext(this);
             _effectSystem = BuildEffectSystem();
             _replayRecorder = new ReplayRecorder();
-            _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, () => _scheduler != null ? _scheduler.CurrentTick : 0);
+            _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, GetCurrentTickSafe);
             _runtimeValidationSystem = BuildRuntimeValidationSystem();
             _validationExecutionStage = new ValidationExecutionStage(_runtimeValidationSystem);
             _snapshotRecorder = new SnapshotRecorder(new SnapshotPolicy(_snapshotInterval, _maxSnapshotCount));
@@ -99,7 +99,7 @@ namespace CheckmateRPG.Core
                 _eventTraceRecorder.Attach(_eventBus);
             if (_enableSimulationTimelineDebug)
             {
-                _timelineRecorder = new SimulationTimelineRecorder(_replayRecorder, () => _scheduler != null ? _scheduler.CurrentTick : 0);
+                _timelineRecorder = new SimulationTimelineRecorder(_replayRecorder, GetCurrentTickSafe);
                 _timelineRecorder.Attach(_eventBus);
             }
             _resolverRegistry.Register(new AbilityActionResolver(
@@ -606,6 +606,11 @@ namespace CheckmateRPG.Core
         {
             string unitSegment = issue.UnitId.HasValue ? issue.UnitId.Value.ToString("N") : "none";
             return $"[Validation][{issue.Severity}] Tick={issue.Tick} Unit={unitSegment} Message={issue.Message}";
+        }
+
+        private int GetCurrentTickSafe()
+        {
+            return _scheduler != null ? _scheduler.CurrentTick : 0;
         }
 
         private void EnqueueResolvedEvents(IReadOnlyList<IGameEvent> events)

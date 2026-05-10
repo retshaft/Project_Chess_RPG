@@ -18,7 +18,7 @@ namespace CheckmateRPG.Core
 
         public SimulationTimelineRecorder(ReplayRecorder replayRecorder, Func<int> tickProvider)
         {
-            _replayRecorder = replayRecorder;
+            _replayRecorder = replayRecorder ?? throw new ArgumentNullException(nameof(replayRecorder));
             _tickProvider = tickProvider ?? throw new ArgumentNullException(nameof(tickProvider));
         }
 
@@ -113,7 +113,7 @@ namespace CheckmateRPG.Core
                 target);
 
             _entries.Add(entry);
-            _replayRecorder?.RecordTimelineEntry(safeTick, entry);
+            _replayRecorder.RecordTimelineEntry(safeTick, entry);
         }
 
         private static SimulationTimelineEntryType ResolveEntryType(IGameEvent gameEvent)
