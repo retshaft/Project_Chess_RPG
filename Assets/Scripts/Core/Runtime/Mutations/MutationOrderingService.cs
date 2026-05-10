@@ -6,6 +6,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
 {
     public sealed class MutationOrderingService
     {
+        private const float EffectMagnitudePrecisionScale = 1000f;
         private readonly MutationOrderingPolicy _policy;
 
         public MutationOrderingService(MutationOrderingPolicy policy = null)
@@ -24,11 +25,11 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 .ThenBy(entry => GetTargetKey(entry.Mutation))
                 .ThenBy(entry => GetSourceKey(entry.Mutation))
                 .ThenBy(entry => GetStringKey(entry.Mutation), StringComparer.Ordinal)
-                .ThenBy(entry => GetNumericKeyA(entry.Mutation))
-                .ThenBy(entry => GetNumericKeyB(entry.Mutation))
-                .ThenBy(entry => GetNumericKeyC(entry.Mutation))
-                .ThenBy(entry => GetNumericKeyD(entry.Mutation))
-                .ThenBy(entry => GetNumericKeyE(entry.Mutation))
+                .ThenBy(entry => GetPrimaryNumericSortKey(entry.Mutation))
+                .ThenBy(entry => GetSecondaryNumericSortKey(entry.Mutation))
+                .ThenBy(entry => GetTertiaryNumericSortKey(entry.Mutation))
+                .ThenBy(entry => GetQuaternaryNumericSortKey(entry.Mutation))
+                .ThenBy(entry => GetQuinaryNumericSortKey(entry.Mutation))
                 .ThenBy(entry => entry.OriginalIndex)
                 .Select(entry => entry.Mutation)
                 .ToArray();
@@ -90,7 +91,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             };
         }
 
-        private static int GetNumericKeyA(IRuntimeMutation mutation)
+        private static int GetPrimaryNumericSortKey(IRuntimeMutation mutation)
         {
             return mutation switch
             {
@@ -101,7 +102,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             };
         }
 
-        private static int GetNumericKeyB(IRuntimeMutation mutation)
+        private static int GetSecondaryNumericSortKey(IRuntimeMutation mutation)
         {
             return mutation switch
             {
@@ -112,7 +113,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             };
         }
 
-        private static int GetNumericKeyC(IRuntimeMutation mutation)
+        private static int GetTertiaryNumericSortKey(IRuntimeMutation mutation)
         {
             return mutation switch
             {
@@ -122,7 +123,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             };
         }
 
-        private static int GetNumericKeyD(IRuntimeMutation mutation)
+        private static int GetQuaternaryNumericSortKey(IRuntimeMutation mutation)
         {
             return mutation switch
             {
@@ -132,11 +133,11 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             };
         }
 
-        private static int GetNumericKeyE(IRuntimeMutation mutation)
+        private static int GetQuinaryNumericSortKey(IRuntimeMutation mutation)
         {
             return mutation switch
             {
-                ApplyEffectMutation effect => (int)Math.Round(effect.Magnitude * 1000f),
+                ApplyEffectMutation effect => (int)Math.Round(effect.Magnitude * EffectMagnitudePrecisionScale),
                 _ => 0
             };
         }

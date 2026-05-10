@@ -583,6 +583,22 @@ namespace CheckmateRPG.Core
             if (target == null || source == null || source.Count == 0)
                 return;
 
+            bool hasNullMutation = false;
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (source[i] == null)
+                {
+                    hasNullMutation = true;
+                    break;
+                }
+            }
+
+            if (!hasNullMutation)
+            {
+                target.AddRange(source);
+                return;
+            }
+
             for (int i = 0; i < source.Count; i++)
             {
                 if (source[i] != null)
