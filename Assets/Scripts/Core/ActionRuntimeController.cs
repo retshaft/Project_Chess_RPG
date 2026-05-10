@@ -37,6 +37,7 @@ namespace CheckmateRPG.Core
         private readonly Dictionary<Guid, UnitBrain> _unitsById = new();
         private readonly EventBus _eventBus = new();
         private ActionScheduler _scheduler;
+        private SimulationRuntime _simulationRuntime;
         private TickScheduler _tickScheduler;
         private EffectSystem _effectSystem;
         private ActionResolverRegistry _resolverRegistry;
@@ -82,14 +83,16 @@ namespace CheckmateRPG.Core
             Instance = this;
             SeededRandomProvider.SetGlobalSeed(_simulationSeed);
             _scheduler = new ActionScheduler(_eventBus);
+            _simulationRuntime = new SimulationRuntime(_scheduler.CurrentTick);
             _resolverRegistry = new ActionResolverRegistry();
-            _mutationProcessor = new RuntimeMutationProcessor(
-                id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
-                state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state));
             _mutationOrderingService = new MutationOrderingService();
             _abilityPipeline = new AbilityExecutionPipeline();
             _battleContext = new RuntimeBattleContext(this);
             _effectSystem = BuildEffectSystem();
+            _mutationProcessor = new RuntimeMutationProcessor(
+                id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
+                _simulationRuntime,
+                state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state));
             _replayRecorder = new ReplayRecorder();
             _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, GetCurrentTickSafe);
             _runtimeValidationSystem = BuildRuntimeValidationSystem();
@@ -150,6 +153,7 @@ namespace CheckmateRPG.Core
 
             _unitsById.Remove(unit.ActorId);
             _abilityStatesByActor.Remove(unit.ActorId);
+            _simulationRuntime?.UnregisterUnit(unit.ActorId);
         }
 
         public bool TryEnqueueMove(UnitBrain actor, Vector2Int destination)
@@ -223,10 +227,35 @@ namespace CheckmateRPG.Core
 
         public void SyncRuntimeState(UnitBrain unit)
         {
-            if (unit == null || unit.RuntimeState == null)
+            if (unit == null || unit.RuntimeState == null || _simulationRuntime == null)
                 return;
 
-            UnitRuntimeState state = unit.RuntimeState;
+            if (!_simulationRuntime.TryGetUnit(unit.ActorId, out UnitRuntimeState state))
+            {
+                UnitRuntimeState baseline = unit.RuntimeState;
+                int baselineHp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : baseline.HP;
+                int baselineSp = unit.StatusEffects != null ? Mathf.RoundToInt(unit.StatusEffects.CurrentSp) : baseline.SP;
+                Vector2Int baselinePosition = unit.Movement != null ? unit.Movement.GridPosition : baseline.Position;
+                UnitStatusFlags baselineFlags = UnitStatusFlags.None;
+                if (unit.IsDead)
+                    baselineFlags |= UnitStatusFlags.Dead;
+                if (unit.Movement != null && unit.StatusEffects != null && !unit.StatusEffects.CanMove)
+                    baselineFlags |= UnitStatusFlags.MoveLocked;
+                if (unit.Combat != null && unit.StatusEffects != null && !unit.StatusEffects.CanAttack)
+                    baselineFlags |= UnitStatusFlags.AttackLocked;
+
+                baseline.SeedBaseline(
+                    unit.ActorId,
+                    baselineHp,
+                    baselineSp,
+                    baselinePosition,
+                    baseline.CurrentActionId,
+                    baseline.RecoveryUntilTick,
+                    baselineFlags);
+                _simulationRuntime.RegisterUnit(baseline);
+            }
+
+            state = _simulationRuntime.GetUnit(unit.ActorId);
             int hp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : state.HP;
             int sp = unit.StatusEffects != null ? Mathf.RoundToInt(unit.StatusEffects.CurrentSp) : state.SP;
             Vector2Int position = unit.Movement != null ? unit.Movement.GridPosition : state.Position;
@@ -238,26 +267,23 @@ namespace CheckmateRPG.Core
             if (unit.Combat != null && unit.StatusEffects != null && !unit.StatusEffects.CanAttack)
                 flags |= UnitStatusFlags.AttackLocked;
 
-            if (!state.HasBaseline)
-                state.SeedBaseline(unit.ActorId, hp, sp, position, state.CurrentActionId, state.RecoveryUntilTick, flags);
-            else
-            {
-                state.SyncDerivedState(unit.ActorId, sp, flags);
-                state.SetHP(hp, OwnershipOwners.DamageMutationProcessor);
-                state.SetPosition(position, OwnershipOwners.MovementMutationProcessor);
-            }
+            _simulationRuntime.SetUnitDerivedState(unit.ActorId, sp, flags);
+            _simulationRuntime.SetUnitHP(unit.ActorId, hp, OwnershipOwners.DamageMutationProcessor);
+            _simulationRuntime.SetUnitPosition(unit.ActorId, position, OwnershipOwners.MovementMutationProcessor);
         }
 
         private bool CanQueueAction(UnitBrain actor)
         {
-            if (actor == null || actor.IsDead || actor.RuntimeState == null)
+            if (actor == null || actor.IsDead || _simulationRuntime == null)
                 return false;
 
             SyncRuntimeState(actor);
-            if (actor.RuntimeState.CurrentActionId.HasValue)
+            if (!_simulationRuntime.TryGetUnit(actor.ActorId, out UnitRuntimeState state))
+                return false;
+            if (state.CurrentActionId.HasValue)
                 return false;
 
-            return _scheduler.CurrentTick >= actor.RuntimeState.RecoveryUntilTick;
+            return _scheduler.CurrentTick >= state.RecoveryUntilTick;
         }
 
         private IActionCommand CreateMoveCommand(UnitBrain actor, Vector2Int destination)
@@ -265,7 +291,11 @@ namespace CheckmateRPG.Core
             int startTick = _scheduler.CurrentTick + 1;
             return new MoveActionCommand(
                 actor.ActorId,
-                actor.Movement != null ? actor.Movement.GridPosition : actor.RuntimeState.Position,
+                actor.Movement != null
+                    ? actor.Movement.GridPosition
+                    : (_simulationRuntime != null && _simulationRuntime.TryGetUnit(actor.ActorId, out UnitRuntimeState state)
+                        ? state.Position
+                        : default),
                 destination,
                 startTick,
                 ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
@@ -288,8 +318,11 @@ namespace CheckmateRPG.Core
 
         private void BindQueuedAction(UnitBrain actor, IActionCommand command)
         {
-            UnitRuntimeState state = actor.RuntimeState;
-            state.SetActionState(command.ActionId, command.RecoveryEndTick, OwnershipOwners.ActionScheduler);
+            if (_simulationRuntime != null)
+            {
+                _simulationRuntime.SetUnitActionState(actor.ActorId, command.ActionId, command.RecoveryEndTick, OwnershipOwners.ActionScheduler);
+                _simulationRuntime.RegisterAction(command);
+            }
             string actionTrace = BuildActionTrace(command);
             if (ShouldRecordReplay)
                 _replayRecorder.RecordAction(_scheduler.CurrentTick, actionTrace);
@@ -347,7 +380,7 @@ namespace CheckmateRPG.Core
 
         private EffectSystem BuildEffectSystem()
         {
-            var effectSystem = new EffectSystem(_eventBus, ResolveUnit);
+            var effectSystem = new EffectSystem(_eventBus, ResolveUnit, () => _simulationRuntime);
             effectSystem.RegisterProcessor(new DotEffectProcessor(new Dictionary<string, float>
             {
                 [StatusEffectType.Burn.ToString()] = 0.02f,
@@ -381,6 +414,14 @@ namespace CheckmateRPG.Core
                 if (entry.Value != null)
                     SyncRuntimeState(entry.Value);
             }
+        }
+
+        private void SyncActiveActionsRuntime()
+        {
+            if (_simulationRuntime == null || _scheduler == null)
+                return;
+
+            _simulationRuntime.ReplaceActions(_scheduler.GetActiveActions());
         }
 
         private IReadOnlyList<ActionResolutionResult> ExecuteActionUpdateStage(IReadOnlyList<IActionCommand> readyActions)
@@ -432,15 +473,11 @@ namespace CheckmateRPG.Core
                     continue;
 
                 deadUnitIds.Add(entry.Key);
-                UnitRuntimeState state = entry.Value.RuntimeState;
-                if (state == null)
-                    continue;
-
-                state.SetActionState(null, _scheduler.CurrentTick, OwnershipOwners.ActionScheduler);
-                state.AddStatusFlag(UnitStatusFlags.Dead);
+                _simulationRuntime?.ApplyDeadUnitLifecycle(entry.Key, _scheduler.CurrentTick, OwnershipOwners.ActionScheduler);
             }
 
             _scheduler.TerminateActionsForActors(deadUnitIds);
+            SyncActiveActionsRuntime();
             SyncAllRuntimeStates();
         }
 
@@ -465,65 +502,13 @@ namespace CheckmateRPG.Core
 
         private SimulationRuntime BuildSimulationRuntime(int tick)
         {
+            if (_simulationRuntime == null)
+                return new SimulationRuntime(tick);
+
             SyncAllRuntimeStates();
-            return new SimulationRuntime(
-                tick,
-                BuildRuntimeStateSnapshot(),
-                BuildActiveActionSnapshot(),
-                _effectSystem != null ? _effectSystem.CreateRuntimeSnapshot() : new SortedDictionary<string, EffectRuntimeState>(StringComparer.Ordinal),
-                BuildOccupiedPositionSnapshot());
-        }
-
-        private IReadOnlyDictionary<Guid, UnitRuntimeState> BuildRuntimeStateSnapshot()
-        {
-            var snapshot = new SortedDictionary<Guid, UnitRuntimeState>();
-            foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
-            {
-                UnitRuntimeState state = entry.Value != null ? entry.Value.RuntimeState : null;
-                if (state == null)
-                    continue;
-
-                snapshot[entry.Key] = new UnitRuntimeState(state);
-            }
-
-            return snapshot;
-        }
-
-        private IReadOnlyDictionary<Guid, IActionCommand> BuildActiveActionSnapshot()
-        {
-            IReadOnlyCollection<IActionCommand> activeActions = _scheduler.GetActiveActions();
-            var snapshot = new SortedDictionary<Guid, IActionCommand>();
-            foreach (IActionCommand action in activeActions)
-            {
-                if (action == null)
-                    continue;
-
-                snapshot[action.ActionId] = SimulationActionSnapshot.From(action);
-            }
-
-            return snapshot;
-        }
-
-        private IReadOnlyDictionary<Vector2Int, Guid> BuildOccupiedPositionSnapshot()
-        {
-            var snapshot = new SortedDictionary<Vector2Int, Guid>(new GridPositionComparer());
-            if (GridSystem.Instance == null)
-                return snapshot;
-
-            for (int x = 0; x < GridSystem.GridWidth; x++)
-            {
-                for (int y = 0; y < GridSystem.GridHeight; y++)
-                {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    GameObject occupant = GridSystem.Instance.GetOccupant(cell);
-                    if (occupant == null || !TryGetActorId(occupant, out Guid actorId))
-                        continue;
-
-                    snapshot[cell] = actorId;
-                }
-            }
-
-            return snapshot;
+            SyncActiveActionsRuntime();
+            _simulationRuntime.SetCurrentTick(tick);
+            return _simulationRuntime.CreateSnapshot(tick);
         }
 
         private bool HandleCriticalValidation(ValidationResult validationResult)
@@ -570,14 +555,12 @@ namespace CheckmateRPG.Core
             if (_snapshotRecorder == null || !_snapshotRecorder.ShouldCapture(_scheduler.CurrentTick))
                 return;
 
-            SyncAllRuntimeStates();
+            SimulationRuntime runtime = BuildSimulationRuntime(_scheduler.CurrentTick);
             _snapshotRecorder.TryRecord(new SimulationSnapshot(
                 _scheduler.CurrentTick,
-                BuildRuntimeStateSnapshot(),
-                BuildActiveActionSnapshot(),
-                _effectSystem != null
-                    ? _effectSystem.CreateRuntimeSnapshot()
-                    : new SortedDictionary<string, EffectRuntimeState>(StringComparer.Ordinal)));
+                runtime.RuntimeStates,
+                runtime.ActiveActions,
+                runtime.ActiveEffects));
         }
 
         private static void AppendEvents(List<IGameEvent> target, IReadOnlyList<IGameEvent> source)
@@ -629,29 +612,33 @@ namespace CheckmateRPG.Core
         private void HandleActionCompleted(ActionCompletedEvent actionCompletedEvent)
         {
             ActionLifecyclePayload payload = actionCompletedEvent.Payload;
-            if (!_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) || actor == null || actor.RuntimeState == null)
+            if (_simulationRuntime == null || !_simulationRuntime.TryGetUnit(payload.ActorId, out UnitRuntimeState state))
                 return;
 
-            UnitRuntimeState state = actor.RuntimeState;
-            state.SetActionState(
+            _simulationRuntime.SetUnitActionState(
+                payload.ActorId,
                 state.CurrentActionId == payload.ActionId ? null : state.CurrentActionId,
                 Mathf.Max(state.RecoveryUntilTick, payload.RecoveryEndTick),
                 OwnershipOwners.ActionScheduler);
-            SyncRuntimeState(actor);
+            _simulationRuntime.UnregisterAction(payload.ActionId);
+            if (_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) && actor != null)
+                SyncRuntimeState(actor);
         }
 
         private void HandleActionInterrupted(ActionInterruptedEvent actionInterruptedEvent)
         {
             ActionLifecyclePayload payload = actionInterruptedEvent.Payload;
-            if (!_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) || actor == null || actor.RuntimeState == null)
+            if (_simulationRuntime == null || !_simulationRuntime.TryGetUnit(payload.ActorId, out UnitRuntimeState state))
                 return;
 
-            UnitRuntimeState state = actor.RuntimeState;
-            state.SetActionState(
+            _simulationRuntime.SetUnitActionState(
+                payload.ActorId,
                 state.CurrentActionId == payload.ActionId ? null : state.CurrentActionId,
                 payload.SchedulerTick,
                 OwnershipOwners.ActionScheduler);
-            SyncRuntimeState(actor);
+            _simulationRuntime.UnregisterAction(payload.ActionId);
+            if (_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) && actor != null)
+                SyncRuntimeState(actor);
         }
 
         private static ActionSpeedTier ToSpeedTier(float actionSpeed)
@@ -703,15 +690,15 @@ namespace CheckmateRPG.Core
 
         private FrameSnapshot BuildFrameSnapshot(int tick)
         {
+            SimulationRuntime runtime = BuildSimulationRuntime(tick);
             var snapshot = new FrameSnapshot { Tick = tick };
-            var units = new List<UnitFrameSnapshot>(_unitsById.Count);
-            foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
+            var units = new List<UnitFrameSnapshot>(runtime.RuntimeStates.Count);
+            foreach (KeyValuePair<Guid, UnitRuntimeState> entry in runtime.RuntimeStates)
             {
-                UnitBrain unit = entry.Value;
-                if (unit == null || unit.RuntimeState == null)
+                UnitRuntimeState state = entry.Value;
+                if (state == null)
                     continue;
 
-                UnitRuntimeState state = unit.RuntimeState;
                 units.Add(new UnitFrameSnapshot
                 {
                     UnitId = state.UnitId.ToString("N"),
@@ -728,9 +715,8 @@ namespace CheckmateRPG.Core
             units.Sort((left, right) => string.CompareOrdinal(left.UnitId, right.UnitId));
             snapshot.Units = units;
 
-            IReadOnlyCollection<IActionCommand> activeActions = _scheduler.GetActiveActions();
-            var actions = new List<ActionFrameSnapshot>(activeActions.Count);
-            foreach (IActionCommand action in activeActions)
+            var actions = new List<ActionFrameSnapshot>(runtime.ActiveActions.Count);
+            foreach (IActionCommand action in runtime.ActiveActions.Values)
             {
                 string data = action switch
                 {
@@ -757,47 +743,38 @@ namespace CheckmateRPG.Core
             actions.Sort((left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
             snapshot.ActiveActions = actions;
 
-            List<EffectFrameSnapshot> effects;
-            if (_effectSystem != null)
+            var effects = new List<EffectFrameSnapshot>(runtime.ActiveEffects.Count);
+            foreach (KeyValuePair<string, EffectRuntimeState> pair in runtime.ActiveEffects)
             {
-                IReadOnlyDictionary<string, EffectRuntimeState> activeEffects = _effectSystem.CreateRuntimeSnapshot();
-                effects = new List<EffectFrameSnapshot>(activeEffects.Count);
-                foreach (KeyValuePair<string, EffectRuntimeState> pair in activeEffects)
+                EffectRuntimeState effect = pair.Value;
+                if (effect == null)
+                    continue;
+
+                effects.Add(new EffectFrameSnapshot
                 {
-                    EffectRuntimeState effect = pair.Value;
-                    if (effect == null)
-                        continue;
-
-                    effects.Add(new EffectFrameSnapshot
-                    {
-                        EffectId = effect.EffectId,
-                        SourceId = effect.SourceId.ToString("N"),
-                        TargetId = effect.TargetId.ToString("N"),
-                        RemainingTick = effect.RemainingTick,
-                        StackCount = effect.StackCount,
-                        TickInterval = effect.TickInterval,
-                        NextTickIn = effect.NextTickIn,
-                        Magnitude = effect.Magnitude
-                    });
-                }
-
-                effects.Sort((left, right) =>
-                {
-                    int targetCompare = string.CompareOrdinal(left.TargetId, right.TargetId);
-                    if (targetCompare != 0)
-                        return targetCompare;
-
-                    int effectCompare = string.CompareOrdinal(left.EffectId, right.EffectId);
-                    if (effectCompare != 0)
-                        return effectCompare;
-
-                    return string.CompareOrdinal(left.SourceId, right.SourceId);
+                    EffectId = effect.EffectId,
+                    SourceId = effect.SourceId.ToString("N"),
+                    TargetId = effect.TargetId.ToString("N"),
+                    RemainingTick = effect.RemainingTick,
+                    StackCount = effect.StackCount,
+                    TickInterval = effect.TickInterval,
+                    NextTickIn = effect.NextTickIn,
+                    Magnitude = effect.Magnitude
                 });
             }
-            else
+
+            effects.Sort((left, right) =>
             {
-                effects = new List<EffectFrameSnapshot>();
-            }
+                int targetCompare = string.CompareOrdinal(left.TargetId, right.TargetId);
+                if (targetCompare != 0)
+                    return targetCompare;
+
+                int effectCompare = string.CompareOrdinal(left.EffectId, right.EffectId);
+                if (effectCompare != 0)
+                    return effectCompare;
+
+                return string.CompareOrdinal(left.SourceId, right.SourceId);
+            });
 
             snapshot.ActiveEffects = effects;
             return snapshot;
@@ -881,11 +858,9 @@ namespace CheckmateRPG.Core
 
             public bool TryGetUnit(Guid unitId, out BattleUnitSnapshot unit)
             {
-                if (_controller._unitsById.TryGetValue(unitId, out UnitBrain brain) &&
-                    brain != null &&
-                    brain.RuntimeState != null)
+                if (_controller._simulationRuntime != null &&
+                    _controller._simulationRuntime.TryGetUnit(unitId, out UnitRuntimeState state))
                 {
-                    UnitRuntimeState state = brain.RuntimeState;
                     unit = new BattleUnitSnapshot(
                         state.UnitId,
                         state.Position,
@@ -905,17 +880,23 @@ namespace CheckmateRPG.Core
 
             public bool IsCellOccupied(Vector2Int cell, Guid ignoredUnitId = default)
             {
-                if (GridSystem.Instance == null)
-                    return true;
-
-                GameObject occupant = GridSystem.Instance.GetOccupant(cell);
-                if (occupant == null)
+                if (_controller._simulationRuntime == null)
+                    return false;
+                if (!_controller._simulationRuntime.IsOccupied(cell))
                     return false;
 
-                if (ignoredUnitId != Guid.Empty &&
-                    TryGetActorId(occupant, out Guid occupantActorId) &&
-                    occupantActorId == ignoredUnitId)
+                IReadOnlyList<UnitRuntimeState> occupants = _controller._simulationRuntime.GetUnitsAtPosition(cell);
+                if (occupants.Count == 0)
+                    return false;
+
+                if (ignoredUnitId != Guid.Empty)
                 {
+                    for (int i = 0; i < occupants.Count; i++)
+                    {
+                        if (occupants[i] != null && occupants[i].UnitId != ignoredUnitId)
+                            return true;
+                    }
+
                     return false;
                 }
 
@@ -943,13 +924,5 @@ namespace CheckmateRPG.Core
             }
         }
 
-        private sealed class GridPositionComparer : IComparer<Vector2Int>
-        {
-            public int Compare(Vector2Int left, Vector2Int right)
-            {
-                int xCompare = left.x.CompareTo(right.x);
-                return xCompare != 0 ? xCompare : left.y.CompareTo(right.y);
-            }
-        }
     }
 }

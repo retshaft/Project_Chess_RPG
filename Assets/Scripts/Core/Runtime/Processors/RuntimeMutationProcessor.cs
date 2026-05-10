@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CheckmateRPG.Core;
 using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Runtime.Mutations;
+using CheckmateRPG.Core.Simulation;
 using CheckmateRPG.Units;
 
 namespace CheckmateRPG.Core.Runtime.Processors
@@ -20,15 +21,18 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
         public RuntimeMutationProcessor(
             Func<Guid, UnitBrain> unitLookup,
+            SimulationRuntime simulationRuntime,
             Func<EffectRuntimeState, bool> applyEffect)
         {
             if (unitLookup == null)
                 throw new ArgumentNullException(nameof(unitLookup));
+            if (simulationRuntime == null)
+                throw new ArgumentNullException(nameof(simulationRuntime));
             if (applyEffect == null)
                 throw new ArgumentNullException(nameof(applyEffect));
 
-            _damageProcessor = new DamageMutationProcessor(unitLookup);
-            _movementProcessor = new MovementMutationProcessor(unitLookup);
+            _damageProcessor = new DamageMutationProcessor(unitLookup, simulationRuntime);
+            _movementProcessor = new MovementMutationProcessor(unitLookup, simulationRuntime);
             _effectProcessor = new EffectMutationProcessor(applyEffect);
         }
 
