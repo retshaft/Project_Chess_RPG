@@ -684,7 +684,7 @@ namespace CheckmateRPG.Core
             actions.Sort((left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
             snapshot.ActiveActions = actions;
 
-            var effects = new List<EffectFrameSnapshot>();
+            List<EffectFrameSnapshot> effects;
             if (_effectSystem != null)
             {
                 IReadOnlyDictionary<string, EffectRuntimeState> activeEffects = _effectSystem.CreateRuntimeSnapshot();
@@ -720,6 +720,10 @@ namespace CheckmateRPG.Core
 
                     return string.CompareOrdinal(left.SourceId, right.SourceId);
                 });
+            }
+            else
+            {
+                effects = new List<EffectFrameSnapshot>();
             }
 
             snapshot.ActiveEffects = effects;
