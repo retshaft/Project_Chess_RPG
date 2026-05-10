@@ -4,6 +4,7 @@ using CheckmateRPG.Core;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Mutations;
+using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Units;
 using UnityEngine;
 
@@ -33,9 +34,9 @@ namespace CheckmateRPG.Core.Runtime.Processors
             UnitRuntimeState state = target.RuntimeState;
             if (state != null)
             {
-                state.HP = actualRemainingHp;
+                state.SetHP(actualRemainingHp, OwnershipOwners.DamageMutationProcessor);
                 if (isDead)
-                    state.StatusFlags |= UnitStatusFlags.Dead;
+                    state.AddStatusFlag(UnitStatusFlags.Dead);
             }
 
             DamageAppliedEvent damageAppliedEvent = new(

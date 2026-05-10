@@ -6,6 +6,7 @@ using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Effects.Processors;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime;
+using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Core.Runtime.Processors;
 using CheckmateRPG.Core.Simulation;
 using CheckmateRPG.Core.Simulation.Validation;
@@ -214,14 +215,9 @@ namespace CheckmateRPG.Core
                 return;
 
             UnitRuntimeState state = unit.RuntimeState;
-            state.UnitId = unit.ActorId;
-            if (unit.Health != null)
-                state.HP = Mathf.RoundToInt(unit.Health.CurrentHealth);
-            if (unit.StatusEffects != null)
-                state.SP = Mathf.RoundToInt(unit.StatusEffects.CurrentSp);
-            if (unit.Movement != null)
-                state.Position = unit.Movement.GridPosition;
-
+            int hp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : state.HP;
+            int sp = unit.StatusEffects != null ? Mathf.RoundToInt(unit.StatusEffects.CurrentSp) : state.SP;
+            Vector2Int position = unit.Movement != null ? unit.Movement.GridPosition : state.Position;
             UnitStatusFlags flags = UnitStatusFlags.None;
             if (unit.IsDead)
                 flags |= UnitStatusFlags.Dead;
@@ -229,7 +225,15 @@ namespace CheckmateRPG.Core
                 flags |= UnitStatusFlags.MoveLocked;
             if (unit.Combat != null && unit.StatusEffects != null && !unit.StatusEffects.CanAttack)
                 flags |= UnitStatusFlags.AttackLocked;
-            state.StatusFlags = flags;
+
+            if (!state.HasBaseline)
+                state.SeedBaseline(unit.ActorId, hp, sp, position, state.CurrentActionId, state.RecoveryUntilTick, flags);
+            else
+            {
+                state.SyncDerivedState(unit.ActorId, sp, flags);
+                state.SetHP(hp, OwnershipOwners.DamageMutationProcessor);
+                state.SetPosition(position, OwnershipOwners.MovementMutationProcessor);
+            }
         }
 
         private bool CanQueueAction(UnitBrain actor)
@@ -273,9 +277,7 @@ namespace CheckmateRPG.Core
         private void BindQueuedAction(UnitBrain actor, IActionCommand command)
         {
             UnitRuntimeState state = actor.RuntimeState;
-            state.UnitId = actor.ActorId;
-            state.CurrentActionId = command.ActionId;
-            state.RecoveryUntilTick = command.RecoveryEndTick;
+            state.SetActionState(command.ActionId, command.RecoveryEndTick, OwnershipOwners.ActionScheduler);
             if (ShouldRecordReplay)
                 _replayRecorder.RecordAction(_scheduler.CurrentTick, BuildActionTrace(command));
         }
@@ -407,9 +409,8 @@ namespace CheckmateRPG.Core
                 if (state == null)
                     continue;
 
-                state.CurrentActionId = null;
-                state.RecoveryUntilTick = _scheduler.CurrentTick;
-                state.StatusFlags |= UnitStatusFlags.Dead;
+                state.SetActionState(null, _scheduler.CurrentTick, OwnershipOwners.ActionScheduler);
+                state.AddStatusFlag(UnitStatusFlags.Dead);
             }
 
             _scheduler.TerminateActionsForActors(deadUnitIds);
@@ -449,16 +450,7 @@ namespace CheckmateRPG.Core
                 if (state == null)
                     continue;
 
-                snapshot[entry.Key] = new UnitRuntimeState
-                {
-                    UnitId = state.UnitId,
-                    HP = state.HP,
-                    SP = state.SP,
-                    Position = state.Position,
-                    CurrentActionId = state.CurrentActionId,
-                    RecoveryUntilTick = state.RecoveryUntilTick,
-                    StatusFlags = state.StatusFlags
-                };
+                snapshot[entry.Key] = new UnitRuntimeState(state);
             }
 
             return snapshot;
@@ -593,9 +585,10 @@ namespace CheckmateRPG.Core
                 return;
 
             UnitRuntimeState state = actor.RuntimeState;
-            if (state.CurrentActionId == payload.ActionId)
-                state.CurrentActionId = null;
-            state.RecoveryUntilTick = Mathf.Max(state.RecoveryUntilTick, payload.RecoveryEndTick);
+            state.SetActionState(
+                state.CurrentActionId == payload.ActionId ? null : state.CurrentActionId,
+                Mathf.Max(state.RecoveryUntilTick, payload.RecoveryEndTick),
+                OwnershipOwners.ActionScheduler);
             SyncRuntimeState(actor);
         }
 
@@ -606,9 +599,10 @@ namespace CheckmateRPG.Core
                 return;
 
             UnitRuntimeState state = actor.RuntimeState;
-            if (state.CurrentActionId == payload.ActionId)
-                state.CurrentActionId = null;
-            state.RecoveryUntilTick = payload.SchedulerTick;
+            state.SetActionState(
+                state.CurrentActionId == payload.ActionId ? null : state.CurrentActionId,
+                payload.SchedulerTick,
+                OwnershipOwners.ActionScheduler);
             SyncRuntimeState(actor);
         }
 
@@ -770,11 +764,7 @@ namespace CheckmateRPG.Core
 
             if (!byAbility.TryGetValue(abilityId, out AbilityRuntimeState state) || state == null)
             {
-                state = new AbilityRuntimeState
-                {
-                    AbilityId = abilityId,
-                    Charges = 1
-                };
+                state = new AbilityRuntimeState(abilityId, 1);
                 byAbility[abilityId] = state;
             }
 
@@ -816,9 +806,7 @@ namespace CheckmateRPG.Core
                     if (state == null)
                         continue;
 
-                    state.CooldownRemaining = Mathf.Max(0, state.CooldownEndTick - currentTick);
-                    if (!state.PendingActionId.HasValue && state.CooldownRemaining == 0)
-                        state.Locked = false;
+                    state.UpdateCooldown(currentTick, OwnershipOwners.TickScheduler);
                 }
             }
         }

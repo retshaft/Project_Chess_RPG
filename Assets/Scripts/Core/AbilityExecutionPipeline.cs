@@ -4,6 +4,7 @@ using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
+using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Units;
 using UnityEngine;
 
@@ -198,24 +199,24 @@ namespace CheckmateRPG.Core
         private static void PostProcessQueue(AbilityQueueRequest request, AbilityActionCommand action)
         {
             AbilityRuntimeState runtimeState = request.RuntimeState;
-            runtimeState.AbilityId = request.Definition.name;
-            runtimeState.PendingActionId = action.ActionId;
-            runtimeState.Locked = true;
-            runtimeState.CooldownEndTick = request.CurrentTick + Mathf.Max(0, request.Definition.Cooldown);
-            runtimeState.CooldownRemaining = Mathf.Max(0, runtimeState.CooldownEndTick - request.CurrentTick);
-            runtimeState.LastCommittedTick = request.CurrentTick;
+            runtimeState.SetIdentity(request.Definition.name, runtimeState.Charges);
+            runtimeState.CommitQueuedAction(
+                action.ActionId,
+                request.CurrentTick,
+                request.Definition.Cooldown,
+                OwnershipOwners.ActionScheduler,
+                OwnershipOwners.TickScheduler);
         }
 
         private static IReadOnlyList<IGameEvent> PostProcessResolve(
             AbilityResolveRequest request,
             AbilityResolveResult resolveResult)
         {
-            if (request.RuntimeState != null && request.RuntimeState.PendingActionId == request.Action.ActionId)
-            {
-                request.RuntimeState.PendingActionId = null;
-                request.RuntimeState.Locked = false;
-                request.RuntimeState.CooldownRemaining = Mathf.Max(0, request.RuntimeState.CooldownEndTick - request.CurrentTick);
-            }
+            request.RuntimeState?.CompleteQueuedAction(
+                request.Action.ActionId,
+                request.CurrentTick,
+                OwnershipOwners.ActionScheduler,
+                OwnershipOwners.TickScheduler);
 
             int primaryTargetCount = request.Action.TargetIds?.Count ?? 0;
             AbilityActionResolvedEvent resolvedEvent = new(

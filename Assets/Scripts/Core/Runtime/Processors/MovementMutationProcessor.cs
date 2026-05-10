@@ -4,6 +4,7 @@ using CheckmateRPG.Core;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Mutations;
+using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Units;
 
 namespace CheckmateRPG.Core.Runtime.Processors
@@ -29,7 +30,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
             UnitRuntimeState state = unit.RuntimeState;
             if (state != null)
-                state.Position = mutation.To;
+                state.SetPosition(mutation.To, OwnershipOwners.MovementMutationProcessor);
 
             MoveCompletedEvent moveCompletedEvent = new(
                 new CheckmateRPG.Core.Events.ActionEvents.MoveCompletedPayload(mutation.TargetId, mutation.From, mutation.To),

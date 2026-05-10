@@ -553,17 +553,15 @@ namespace CheckmateRPG.Components
             if (durationTicks <= 0 || tickIntervalTicks <= 0)
                 return;
 
-            ActionRuntimeController.Instance.ApplyEffectRuntime(new EffectRuntimeState
-            {
-                EffectId = type.ToString(),
-                SourceId = sourceActorId,
-                TargetId = targetId,
-                RemainingTick = durationTicks,
-                StackCount = Mathf.Max(1, stacks),
-                TickInterval = tickIntervalTicks,
-                NextTickIn = tickIntervalTicks,
-                Magnitude = GetDotRuntimeMagnitude(type)
-            });
+            ActionRuntimeController.Instance.ApplyEffectRuntime(new EffectRuntimeState(
+                type.ToString(),
+                sourceActorId,
+                targetId,
+                durationTicks,
+                Mathf.Max(1, stacks),
+                tickIntervalTicks,
+                tickIntervalTicks,
+                GetDotRuntimeMagnitude(type)));
         }
 
         private static int SecondsToTicks(float seconds)

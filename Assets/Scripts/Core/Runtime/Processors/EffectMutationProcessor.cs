@@ -20,17 +20,15 @@ namespace CheckmateRPG.Core.Runtime.Processors
             if (string.IsNullOrWhiteSpace(mutation.EffectId) || mutation.TargetId == Guid.Empty)
                 return Array.Empty<IGameEvent>();
 
-            var state = new EffectRuntimeState
-            {
-                EffectId = mutation.EffectId,
-                SourceId = mutation.SourceId,
-                TargetId = mutation.TargetId,
-                RemainingTick = Mathf.Max(1, mutation.DurationTicks),
-                TickInterval = Mathf.Max(1, mutation.TickInterval),
-                NextTickIn = Mathf.Clamp(mutation.InitialTickIn, 1, Mathf.Max(1, mutation.TickInterval)),
-                StackCount = Mathf.Max(1, mutation.StackCount),
-                Magnitude = Mathf.Max(0f, mutation.Magnitude)
-            };
+            var state = new EffectRuntimeState(
+                mutation.EffectId,
+                mutation.SourceId,
+                mutation.TargetId,
+                Mathf.Max(1, mutation.DurationTicks),
+                Mathf.Max(1, mutation.StackCount),
+                Mathf.Max(1, mutation.TickInterval),
+                Mathf.Clamp(mutation.InitialTickIn, 1, Mathf.Max(1, mutation.TickInterval)),
+                Mathf.Max(0f, mutation.Magnitude));
 
             _ = _applyEffect(state);
             return Array.Empty<IGameEvent>();
