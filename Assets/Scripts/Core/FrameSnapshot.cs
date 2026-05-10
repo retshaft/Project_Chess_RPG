@@ -9,6 +9,7 @@ namespace CheckmateRPG.Core
         public int Tick;
         public List<UnitFrameSnapshot> Units = new();
         public List<ActionFrameSnapshot> ActiveActions = new();
+        public List<EffectFrameSnapshot> ActiveEffects = new();
     }
 
     [Serializable]
@@ -36,5 +37,18 @@ namespace CheckmateRPG.Core
         public int ResolveTick;
         public int RecoveryEndTick;
         public string Data;
+    }
+
+    [Serializable]
+    public sealed class EffectFrameSnapshot
+    {
+        public string EffectId;
+        public string SourceId;
+        public string TargetId;
+        public int RemainingTick;
+        public int StackCount;
+        public int TickInterval;
+        public int NextTickIn;
+        public float Magnitude;
     }
 }
