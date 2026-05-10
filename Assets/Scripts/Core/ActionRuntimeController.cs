@@ -568,17 +568,15 @@ namespace CheckmateRPG.Core
 
         private static void AppendEvents(List<IGameEvent> target, IReadOnlyList<IGameEvent> source)
         {
-            if (target == null || source == null || source.Count == 0)
-                return;
-
-            for (int i = 0; i < source.Count; i++)
-            {
-                if (source[i] != null)
-                    target.Add(source[i]);
-            }
+            AppendNonNullItems(target, source);
         }
 
         private static void AppendMutations(List<IRuntimeMutation> target, IReadOnlyList<IRuntimeMutation> source)
+        {
+            AppendNonNullItems(target, source);
+        }
+
+        private static void AppendNonNullItems<T>(List<T> target, IReadOnlyList<T> source) where T : class
         {
             if (target == null || source == null || source.Count == 0)
                 return;

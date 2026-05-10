@@ -46,8 +46,8 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 return;
             }
 
-            var preDeath = new List<IRuntimeMutation>(orderedMutations.Count);
-            var cleanup = new List<IRuntimeMutation>(orderedMutations.Count);
+            var preDeath = new List<IRuntimeMutation>();
+            var cleanup = new List<IRuntimeMutation>();
 
             for (int i = 0; i < orderedMutations.Count; i++)
             {
