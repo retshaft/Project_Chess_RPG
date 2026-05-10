@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Events.EffectEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
@@ -12,6 +13,7 @@ namespace CheckmateRPG.Core
         private readonly ReplayRecorder _replayRecorder;
         private readonly Func<int> _tickProvider;
         private readonly List<SimulationTimelineEntry> _entries = new();
+        private readonly Dictionary<Type, PropertyInfo> _payloadPropertyCache = new();
         private IEventBus _eventBus;
         private bool _attached;
         private long _nextSequence;
@@ -105,7 +107,7 @@ namespace CheckmateRPG.Core
             int safeTick = Math.Max(0, tick);
             var entry = SimulationTimelineEntry.Create(
                 safeTick,
-                ++_nextSequence,
+                Interlocked.Increment(ref _nextSequence),
                 type,
                 label,
                 detail,
@@ -125,7 +127,7 @@ namespace CheckmateRPG.Core
             return SimulationTimelineEntryType.Event;
         }
 
-        private static string BuildEventTrace(IGameEvent gameEvent)
+        private string BuildEventTrace(IGameEvent gameEvent)
         {
             if (gameEvent is IResolvableGameEvent resolvable)
             {
@@ -152,14 +154,27 @@ namespace CheckmateRPG.Core
             };
         }
 
-        private static string TryGetPayloadString(IGameEvent gameEvent)
+        private string TryGetPayloadString(IGameEvent gameEvent)
         {
-            PropertyInfo payloadProperty = gameEvent.GetType().GetProperty("Payload", BindingFlags.Instance | BindingFlags.Public);
+            PropertyInfo payloadProperty = GetPayloadProperty(gameEvent.GetType());
             if (payloadProperty == null)
                 return string.Empty;
 
             object payload = payloadProperty.GetValue(gameEvent);
             return payload?.ToString() ?? string.Empty;
+        }
+
+        private PropertyInfo GetPayloadProperty(Type eventType)
+        {
+            if (eventType == null)
+                return null;
+
+            if (_payloadPropertyCache.TryGetValue(eventType, out PropertyInfo cached))
+                return cached;
+
+            PropertyInfo property = eventType.GetProperty("Payload", BindingFlags.Instance | BindingFlags.Public);
+            _payloadPropertyCache[eventType] = property;
+            return property;
         }
     }
 }

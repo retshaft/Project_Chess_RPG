@@ -57,13 +57,6 @@ namespace CheckmateRPG.Core
 
             entries.Sort((left, right) =>
             {
-                if (ReferenceEquals(left, right))
-                    return 0;
-                if (left == null)
-                    return 1;
-                if (right == null)
-                    return -1;
-
                 int tickCompare = left.Tick.CompareTo(right.Tick);
                 if (tickCompare != 0)
                     return tickCompare;
