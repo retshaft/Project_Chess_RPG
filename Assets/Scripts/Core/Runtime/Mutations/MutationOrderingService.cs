@@ -29,7 +29,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 .ThenBy(entry => GetNumericKeyC(entry.Mutation))
                 .ThenBy(entry => GetNumericKeyD(entry.Mutation))
                 .ThenBy(entry => GetNumericKeyE(entry.Mutation))
-                .ThenBy(entry => GetNumericKeyF(entry.Mutation))
                 .ThenBy(entry => entry.OriginalIndex)
                 .Select(entry => entry.Mutation)
                 .ToArray();
@@ -138,14 +137,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 ApplyEffectMutation effect => (int)Math.Round(effect.Magnitude * 1000f),
-                _ => 0
-            };
-        }
-
-        private static int GetNumericKeyF(IRuntimeMutation mutation)
-        {
-            return mutation switch
-            {
                 _ => 0
             };
         }
