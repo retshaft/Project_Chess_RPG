@@ -227,12 +227,12 @@ namespace CheckmateRPG.Core
 
         public void SyncRuntimeState(UnitBrain unit)
         {
-            if (unit == null || unit.RuntimeState == null || _simulationRuntime == null)
+            if (unit == null || unit.MutableRuntimeState == null || _simulationRuntime == null)
                 return;
 
             if (!_simulationRuntime.TryGetMutableUnit(unit.ActorId, out UnitRuntimeState state))
             {
-                UnitRuntimeState baseline = unit.RuntimeState;
+                UnitRuntimeState baseline = unit.MutableRuntimeState;
                 int baselineHp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : baseline.HP;
                 int baselineSp = unit.StatusEffects != null ? Mathf.RoundToInt(unit.StatusEffects.CurrentSp) : baseline.SP;
                 Vector2Int baselinePosition = unit.Movement != null ? unit.Movement.GridPosition : baseline.Position;
