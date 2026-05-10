@@ -229,7 +229,11 @@ namespace CheckmateRPG.Core
             if (!state.HasBaseline)
                 state.SeedBaseline(unit.ActorId, hp, sp, position, state.CurrentActionId, state.RecoveryUntilTick, flags);
             else
+            {
                 state.SyncDerivedState(unit.ActorId, sp, flags);
+                state.SetHP(hp, OwnershipOwners.DamageMutationProcessor);
+                state.SetPosition(position, OwnershipOwners.MovementMutationProcessor);
+            }
         }
 
         private bool CanQueueAction(UnitBrain actor)
