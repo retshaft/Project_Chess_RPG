@@ -115,12 +115,7 @@ namespace CheckmateRPG.Units
             }
 
             ActorId = actorId;
-            RuntimeState = new UnitRuntimeState
-            {
-                UnitId = ActorId,
-                CurrentActionId = null,
-                RecoveryUntilTick = 0
-            };
+            RuntimeState = new UnitRuntimeState();
         }
 
         private void Start()

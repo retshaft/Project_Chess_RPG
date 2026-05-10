@@ -5,6 +5,7 @@
 using System;
 using UnityEngine;
 using CheckmateRPG.Core;
+using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 
@@ -29,7 +30,7 @@ namespace CheckmateRPG.Components
         /// <summary>True when the cooldown has expired and the unit is alive.</summary>
         public bool CanAttack => _cooldownRemaining <= 0f && !_isDead &&
                                  (_statusEffects == null || _statusEffects.CanAttack);
-        public AbilityRuntimeState BasicAttackRuntimeState { get; private set; } = new AbilityRuntimeState { Charges = 1 };
+        public AbilityRuntimeState BasicAttackRuntimeState { get; private set; } = new(string.Empty, 1);
 
         // ─── Private State ────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ namespace CheckmateRPG.Components
             _actionSpeed     = Mathf.Max(0.1f, data.ActionSpeed);
             _cooldownRemaining = 0f;
             _isDead          = false;
-            BasicAttackRuntimeState.Charges = 1;
+            BasicAttackRuntimeState.SetIdentity(string.Empty, 1);
             UpdateAbilityRuntimeState();
         }
 
@@ -188,8 +189,10 @@ namespace CheckmateRPG.Components
 
         private void UpdateAbilityRuntimeState()
         {
-            BasicAttackRuntimeState.CooldownRemaining = CooldownToTicks(_cooldownRemaining);
-            BasicAttackRuntimeState.Locked = !CanAttack;
+            BasicAttackRuntimeState.SetCooldownSnapshot(
+                CooldownToTicks(_cooldownRemaining),
+                !CanAttack,
+                OwnershipOwners.TickScheduler);
         }
 
         private static int CooldownToTicks(float seconds)

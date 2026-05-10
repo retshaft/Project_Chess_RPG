@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Events.EffectEvents;
+using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Units;
 using UnityEngine;
 
@@ -54,12 +55,14 @@ namespace CheckmateRPG.Core.Effects
             }
 
             EffectRuntimeState runtimeState = FindOrCreate(state);
-            runtimeState.SourceId = state.SourceId;
-            runtimeState.StackCount = Mathf.Max(1, state.StackCount);
-            runtimeState.RemainingTick = Mathf.Max(runtimeState.RemainingTick, state.RemainingTick);
-            runtimeState.TickInterval = Mathf.Max(1, state.TickInterval);
-            runtimeState.NextTickIn = Mathf.Clamp(state.NextTickIn, 1, runtimeState.TickInterval);
-            runtimeState.Magnitude = Mathf.Max(0f, state.Magnitude);
+            runtimeState.RefreshFromApplication(
+                state.SourceId,
+                state.StackCount,
+                state.RemainingTick,
+                state.TickInterval,
+                state.NextTickIn,
+                state.Magnitude,
+                OwnershipOwners.EffectSystem);
 
             IEffectProcessor processor = ResolveProcessor(runtimeState);
             if (processor == null)
@@ -81,14 +84,13 @@ namespace CheckmateRPG.Core.Effects
             for (int i = _activeEffects.Count - 1; i >= 0; i--)
             {
                 EffectRuntimeState effect = _activeEffects[i];
-                effect.RemainingTick--;
-                effect.NextTickIn--;
+                effect.AdvanceTick(OwnershipOwners.EffectSystem);
 
                 IEffectProcessor processor = ResolveProcessor(effect);
                 if (processor != null && effect.NextTickIn <= 0)
                 {
                     int deltaHp = processor.OnTick(_context, effect);
-                    effect.NextTickIn = effect.TickInterval;
+                    effect.ResetTickCountdown(OwnershipOwners.EffectSystem);
                     PublishTick(effect, deltaHp);
                 }
 
@@ -110,17 +112,7 @@ namespace CheckmateRPG.Core.Effects
                 if (effect == null)
                     continue;
 
-                snapshot[BuildSnapshotKey(effect)] = new EffectRuntimeState
-                {
-                    EffectId = effect.EffectId,
-                    SourceId = effect.SourceId,
-                    TargetId = effect.TargetId,
-                    RemainingTick = effect.RemainingTick,
-                    StackCount = effect.StackCount,
-                    TickInterval = effect.TickInterval,
-                    NextTickIn = effect.NextTickIn,
-                    Magnitude = effect.Magnitude
-                };
+                snapshot[BuildSnapshotKey(effect)] = new EffectRuntimeState(effect);
             }
 
             return snapshot;
@@ -135,17 +127,15 @@ namespace CheckmateRPG.Core.Effects
                     return active;
             }
 
-            var created = new EffectRuntimeState
-            {
-                EffectId = requested.EffectId,
-                SourceId = requested.SourceId,
-                TargetId = requested.TargetId,
-                RemainingTick = requested.RemainingTick,
-                StackCount = Mathf.Max(1, requested.StackCount),
-                TickInterval = Mathf.Max(1, requested.TickInterval),
-                NextTickIn = Mathf.Max(1, requested.NextTickIn),
-                Magnitude = Mathf.Max(0f, requested.Magnitude)
-            };
+            var created = new EffectRuntimeState(
+                requested.EffectId,
+                requested.SourceId,
+                requested.TargetId,
+                requested.RemainingTick,
+                requested.StackCount,
+                requested.TickInterval,
+                requested.NextTickIn,
+                requested.Magnitude);
 
             _activeEffects.Add(created);
             return created;
