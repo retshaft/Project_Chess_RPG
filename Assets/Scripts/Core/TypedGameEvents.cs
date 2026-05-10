@@ -15,7 +15,7 @@ namespace CheckmateRPG.Core
     public enum EventCategory
     {
         Domain,
-        Combat,
+        Simulation,
         Presentation,
         Debug
     }

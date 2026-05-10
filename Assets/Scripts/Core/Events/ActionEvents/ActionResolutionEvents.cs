@@ -41,13 +41,13 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         : BaseGameEvent<MoveActionResolvedPayload>(Payload, EventCategory.Domain, Source, Target);
 
     public sealed record AttackActionResolvedEvent(AttackActionResolvedPayload Payload, string Source = "", string Target = "")
-        : BaseGameEvent<AttackActionResolvedPayload>(Payload, EventCategory.Combat, Source, Target);
+        : BaseGameEvent<AttackActionResolvedPayload>(Payload, EventCategory.Simulation, Source, Target);
 
     public sealed record DamageAppliedEvent(DamageAppliedPayload Payload, string Source = "", string Target = "")
-        : BaseGameEvent<DamageAppliedPayload>(Payload, EventCategory.Combat, Source, Target);
+        : BaseGameEvent<DamageAppliedPayload>(Payload, EventCategory.Simulation, Source, Target);
 
     public sealed record AbilityActionResolvedEvent(AbilityActionResolvedPayload Payload, string Source = "", string Target = "")
-        : BaseGameEvent<AbilityActionResolvedPayload>(Payload, EventCategory.Combat, Source, Target);
+        : BaseGameEvent<AbilityActionResolvedPayload>(Payload, EventCategory.Simulation, Source, Target);
 
     public sealed record MoveCompletedEvent(MoveCompletedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MoveCompletedPayload>(Payload, EventCategory.Domain, Source, Target);
