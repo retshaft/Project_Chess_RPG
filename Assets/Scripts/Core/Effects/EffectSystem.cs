@@ -89,7 +89,7 @@ namespace CheckmateRPG.Core.Effects
             for (int i = effectKeys.Count - 1; i >= 0; i--)
             {
                 string effectKey = effectKeys[i];
-                if (!runtime.TryGetEffect(effectKey, out EffectRuntimeState effect))
+                if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState effect))
                     continue;
 
                 effect.AdvanceTick(OwnershipOwners.EffectSystem);
@@ -115,12 +115,12 @@ namespace CheckmateRPG.Core.Effects
         {
             SimulationRuntime runtime = GetRuntime();
             var snapshot = new SortedDictionary<string, EffectRuntimeState>(StringComparer.Ordinal);
-            foreach (KeyValuePair<string, EffectRuntimeState> pair in runtime.ActiveEffects)
+            foreach (string effectKey in runtime.ActiveEffects.Keys)
             {
-                if (pair.Value == null)
+                if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState effect) || effect == null)
                     continue;
 
-                snapshot[pair.Key] = new EffectRuntimeState(pair.Value);
+                snapshot[effectKey] = new EffectRuntimeState(effect);
             }
 
             return snapshot;
@@ -129,7 +129,7 @@ namespace CheckmateRPG.Core.Effects
         private EffectRuntimeState FindOrCreate(SimulationRuntime runtime, EffectRuntimeState requested)
         {
             string effectKey = BuildSnapshotKey(requested);
-            if (runtime.TryGetEffect(effectKey, out EffectRuntimeState active))
+            if (runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState active))
                 return active;
 
             var created = new EffectRuntimeState(
@@ -143,7 +143,7 @@ namespace CheckmateRPG.Core.Effects
                 requested.Magnitude);
 
             runtime.RegisterEffect(effectKey, created);
-            if (!runtime.TryGetEffect(effectKey, out EffectRuntimeState runtimeEffect))
+            if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState runtimeEffect))
                 return created;
 
             return runtimeEffect;
@@ -158,7 +158,7 @@ namespace CheckmateRPG.Core.Effects
             return runtime;
         }
 
-        private IEffectProcessor ResolveProcessor(EffectRuntimeState effect)
+        private IEffectProcessor ResolveProcessor(IReadOnlyEffectRuntimeState effect)
         {
             for (int i = 0; i < _processors.Count; i++)
             {
@@ -170,7 +170,7 @@ namespace CheckmateRPG.Core.Effects
             return null;
         }
 
-        private void PublishApplied(EffectRuntimeState state)
+        private void PublishApplied(IReadOnlyEffectRuntimeState state)
         {
             _eventBus.Publish(new EffectAppliedEvent(
                 new CheckmateRPG.Core.Events.EffectEvents.EffectAppliedPayload(
@@ -183,7 +183,7 @@ namespace CheckmateRPG.Core.Effects
                 state.TargetId.ToString("N")));
         }
 
-        private void PublishTick(EffectRuntimeState state, int deltaHp)
+        private void PublishTick(IReadOnlyEffectRuntimeState state, int deltaHp)
         {
             _eventBus.Publish(new EffectTickEvent(
                 new EffectTickPayload(
@@ -197,7 +197,7 @@ namespace CheckmateRPG.Core.Effects
                 state.TargetId.ToString("N")));
         }
 
-        private void PublishExpired(EffectRuntimeState state)
+        private void PublishExpired(IReadOnlyEffectRuntimeState state)
         {
             _eventBus.Publish(new EffectExpiredEvent(
                 new EffectExpiredPayload(

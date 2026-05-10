@@ -5,7 +5,7 @@ using UnityEngine;
 namespace CheckmateRPG.Core.Effects
 {
     [Serializable]
-    public sealed class EffectRuntimeState
+    public sealed class EffectRuntimeState : IReadOnlyEffectRuntimeState
     {
         public EffectRuntimeState()
         {
@@ -50,7 +50,7 @@ namespace CheckmateRPG.Core.Effects
         public float Magnitude { get; private set; } = 1f;
         public bool IsExpired => RemainingTick <= 0;
 
-        public void Seed(
+        internal void Seed(
             string effectId,
             Guid sourceId,
             Guid targetId,
@@ -70,7 +70,7 @@ namespace CheckmateRPG.Core.Effects
             Magnitude = Mathf.Max(0f, magnitude);
         }
 
-        public void RefreshFromApplication(
+        internal void RefreshFromApplication(
             Guid sourceId,
             int stackCount,
             int remainingTick,
@@ -89,14 +89,14 @@ namespace CheckmateRPG.Core.Effects
             Magnitude = Mathf.Max(0f, magnitude);
         }
 
-        public void AdvanceTick(string ownerName)
+        internal void AdvanceTick(string ownerName)
         {
             OwnershipValidationService.Default.EnsureAuthorized(ownerName, OwnershipStateKeys.EffectStack);
             RemainingTick--;
             NextTickIn--;
         }
 
-        public void ResetTickCountdown(string ownerName)
+        internal void ResetTickCountdown(string ownerName)
         {
             OwnershipValidationService.Default.EnsureAuthorized(ownerName, OwnershipStateKeys.EffectStack);
             NextTickIn = TickInterval;

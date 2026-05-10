@@ -6,7 +6,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
 {
     public sealed class DuplicateActionIdValidator : ISimulationValidator
     {
-        public ValidationResult Validate(SimulationRuntime runtime)
+        public ValidationResult Validate(IReadOnlySimulationRuntime runtime)
         {
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
@@ -14,7 +14,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
             var issues = new List<ValidationIssue>();
             var seenActionIds = new HashSet<Guid>();
 
-            foreach (KeyValuePair<Guid, IActionCommand> pair in runtime.ActiveActions)
+            foreach (KeyValuePair<Guid, IReadOnlyActionState> pair in runtime.ActiveActions)
             {
                 Guid actionId = pair.Value?.ActionId ?? pair.Key;
                 if (pair.Value != null && pair.Key != pair.Value.ActionId)

@@ -11,7 +11,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
             _validationSystem = validationSystem ?? throw new ArgumentNullException(nameof(validationSystem));
         }
 
-        public ValidationResult Execute(SimulationRuntime runtime)
+        public ValidationResult Execute(IReadOnlySimulationRuntime runtime)
         {
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));

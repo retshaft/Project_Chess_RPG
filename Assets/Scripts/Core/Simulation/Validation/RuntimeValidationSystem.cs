@@ -26,7 +26,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
             _validators.Remove(validator);
         }
 
-        public ValidationResult Validate(SimulationRuntime runtime)
+        public ValidationResult Validate(IReadOnlySimulationRuntime runtime)
         {
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
