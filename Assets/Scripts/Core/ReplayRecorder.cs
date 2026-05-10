@@ -39,6 +39,13 @@ namespace CheckmateRPG.Core
             EnsureFrame(tick).Events.Add(eventTrace);
         }
 
+        public void RecordTimelineEntry(int tick, SimulationTimelineEntry entry)
+        {
+            if (entry == null)
+                return;
+            EnsureFrame(tick).TimelineEntries.Add(entry);
+        }
+
         public void RecordSnapshot(FrameSnapshot snapshot)
         {
             if (snapshot == null)
