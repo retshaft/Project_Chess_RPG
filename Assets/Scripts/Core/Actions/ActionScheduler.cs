@@ -124,6 +124,41 @@ namespace CheckmateRPG.Core.Actions
             return ready;
         }
 
+        public void TerminateActionsForActors(IReadOnlyCollection<Guid> actorIds)
+        {
+            if (actorIds == null || actorIds.Count == 0)
+                return;
+
+            BaseActionCommand[] snapshot = new BaseActionCommand[_activeActions.Count];
+            _activeActions.Values.CopyTo(snapshot, 0);
+
+            for (int i = 0; i < snapshot.Length; i++)
+            {
+                BaseActionCommand action = snapshot[i];
+                if (action == null || action.IsCompleted || !ContainsActor(actorIds, action.ActorId))
+                    continue;
+
+                ActionState previousState = action.State;
+                action.TransitionTo(ActionState.Interrupted);
+                PublishLifecycleEvent(action, previousState);
+
+                action.TransitionTo(ActionState.Cancelled);
+                _activeActions.Remove(action.ActionId);
+                _pendingInterrupts.Remove(action.ActionId);
+            }
+        }
+
+        private static bool ContainsActor(IReadOnlyCollection<Guid> actorIds, Guid actorId)
+        {
+            foreach (Guid candidate in actorIds)
+            {
+                if (candidate == actorId)
+                    return true;
+            }
+
+            return false;
+        }
+
         private void ProcessPendingInterrupts()
         {
             if (_pendingInterrupts.Count == 0)

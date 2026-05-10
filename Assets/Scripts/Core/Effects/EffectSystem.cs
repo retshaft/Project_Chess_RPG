@@ -101,6 +101,31 @@ namespace CheckmateRPG.Core.Effects
             }
         }
 
+        public IReadOnlyDictionary<string, EffectRuntimeState> CreateRuntimeSnapshot()
+        {
+            var snapshot = new SortedDictionary<string, EffectRuntimeState>(StringComparer.Ordinal);
+            for (int i = 0; i < _activeEffects.Count; i++)
+            {
+                EffectRuntimeState effect = _activeEffects[i];
+                if (effect == null)
+                    continue;
+
+                snapshot[BuildSnapshotKey(effect)] = new EffectRuntimeState
+                {
+                    EffectId = effect.EffectId,
+                    SourceId = effect.SourceId,
+                    TargetId = effect.TargetId,
+                    RemainingTick = effect.RemainingTick,
+                    StackCount = effect.StackCount,
+                    TickInterval = effect.TickInterval,
+                    NextTickIn = effect.NextTickIn,
+                    Magnitude = effect.Magnitude
+                };
+            }
+
+            return snapshot;
+        }
+
         private EffectRuntimeState FindOrCreate(EffectRuntimeState requested)
         {
             for (int i = 0; i < _activeEffects.Count; i++)
@@ -175,6 +200,11 @@ namespace CheckmateRPG.Core.Effects
                     state.StackCount),
                 state.SourceId.ToString("N"),
                 state.TargetId.ToString("N")));
+        }
+
+        private static string BuildSnapshotKey(EffectRuntimeState effect)
+        {
+            return $"{effect.TargetId:N}:{effect.EffectId}";
         }
     }
 }

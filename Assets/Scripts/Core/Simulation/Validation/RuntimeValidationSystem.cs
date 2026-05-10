@@ -34,8 +34,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
             if (_validators.Count == 0)
                 return ValidationResult.Valid();
 
-            var issues = new List<ValidationIssue>();
-            bool isValid = true;
+            ValidationResult aggregated = ValidationResult.Valid();
 
             for (int i = 0; i < _validators.Count; i++)
             {
@@ -43,18 +42,11 @@ namespace CheckmateRPG.Core.Simulation.Validation
                 ValidationResult result = validator.Validate(runtime);
                 if (result == null)
                     throw new InvalidOperationException($"Validator '{validator.GetType().Name}' returned a null ValidationResult.");
-                if (!result.IsValid)
-                    isValid = false;
 
-                IReadOnlyList<ValidationIssue> validatorIssues = result.Issues;
-                if (validatorIssues == null || validatorIssues.Count == 0)
-                    continue;
-
-                for (int issueIndex = 0; issueIndex < validatorIssues.Count; issueIndex++)
-                    issues.Add(validatorIssues[issueIndex]);
+                aggregated = ValidationResult.Merge(aggregated, result);
             }
 
-            return new ValidationResult(isValid, issues);
+            return aggregated;
         }
     }
 }
