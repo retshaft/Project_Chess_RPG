@@ -26,6 +26,7 @@ namespace CheckmateRPG.Core
 
         [SerializeField] private int _simulationSeed = DefaultSimulationSeed;
         [SerializeField] private bool _enableReplayRecording = true;
+        [SerializeField] private bool _enableSimulationTimelineDebug;
         [SerializeField] private bool _enableRuntimeValidation = true;
         [SerializeField] private bool _haltSimulationOnCriticalValidation;
         [SerializeField] private int _snapshotInterval = 1;
@@ -47,6 +48,7 @@ namespace CheckmateRPG.Core
         private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
         private ReplayRecorder _replayRecorder;
         private EventTraceRecorder _eventTraceRecorder;
+        private SimulationTimelineRecorder _timelineRecorder;
         private RuntimeValidationSystem _runtimeValidationSystem;
         private ValidationExecutionStage _validationExecutionStage;
         private SnapshotRecorder _snapshotRecorder;
@@ -57,6 +59,7 @@ namespace CheckmateRPG.Core
         public ActionScheduler Scheduler => _scheduler;
         public IEventBus EventBus => _eventBus;
         public ReplayRecorder ReplayRecorder => _replayRecorder;
+        public SimulationTimelineRecorder TimelineRecorder => _timelineRecorder;
         public SnapshotRecorder SnapshotRecorder => _snapshotRecorder;
 
         public static ActionRuntimeController EnsureExists()
@@ -94,6 +97,11 @@ namespace CheckmateRPG.Core
             _snapshotRecorder = new SnapshotRecorder(new SnapshotPolicy(_snapshotInterval, _maxSnapshotCount));
             if (_enableReplayRecording)
                 _eventTraceRecorder.Attach(_eventBus);
+            if (_enableSimulationTimelineDebug)
+            {
+                _timelineRecorder = new SimulationTimelineRecorder(_replayRecorder, () => _scheduler != null ? _scheduler.CurrentTick : 0);
+                _timelineRecorder.Attach(_eventBus);
+            }
             _resolverRegistry.Register(new AbilityActionResolver(
                 _abilityPipeline,
                 abilityId => TryGetAbilityDefinition(abilityId, out AbilityDefinition definition) ? definition : null,
@@ -115,6 +123,7 @@ namespace CheckmateRPG.Core
             if (_tickScheduler != null)
                 _tickScheduler.OnTick -= HandleRuntimeTick;
             _eventTraceRecorder?.Detach();
+            _timelineRecorder?.Detach();
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
             Instance = null;
@@ -281,8 +290,10 @@ namespace CheckmateRPG.Core
         {
             UnitRuntimeState state = actor.RuntimeState;
             state.SetActionState(command.ActionId, command.RecoveryEndTick, OwnershipOwners.ActionScheduler);
+            string actionTrace = BuildActionTrace(command);
             if (ShouldRecordReplay)
-                _replayRecorder.RecordAction(_scheduler.CurrentTick, BuildActionTrace(command));
+                _replayRecorder.RecordAction(_scheduler.CurrentTick, actionTrace);
+            _timelineRecorder?.RecordAction(actionTrace);
         }
 
         private void HandleRuntimeTick(int schedulerTick)
@@ -294,12 +305,15 @@ namespace CheckmateRPG.Core
             _scheduler.AdvanceTick();
             if (ShouldRecordReplay)
                 _replayRecorder.EnsureFrame(_scheduler.CurrentTick);
+            _timelineRecorder?.RecordTick(_scheduler.CurrentTick);
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             IReadOnlyList<ActionResolutionResult> resolvedActions = ExecuteActionUpdateStage(ready);
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolvedActions);
+            _timelineRecorder?.RecordMutations(mutationApplyInput.PreDeathMutations, "PreDeath");
             IReadOnlyList<IGameEvent> preDeathMutationEvents = _mutationProcessor.Apply(mutationApplyInput.PreDeathMutations);
             ExecuteDeathCheckStage();
+            _timelineRecorder?.RecordMutations(mutationApplyInput.CleanupMutations, "Cleanup");
             IReadOnlyList<IGameEvent> cleanupMutationEvents = _mutationProcessor.Apply(mutationApplyInput.CleanupMutations);
             ExecuteCleanupStage();
 
