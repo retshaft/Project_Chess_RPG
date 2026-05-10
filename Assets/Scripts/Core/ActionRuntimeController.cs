@@ -7,6 +7,8 @@ using CheckmateRPG.Core.Effects.Processors;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Processors;
+using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Core.Simulation.Validation;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
@@ -22,6 +24,8 @@ namespace CheckmateRPG.Core
 
         [SerializeField] private int _simulationSeed = DefaultSimulationSeed;
         [SerializeField] private bool _enableReplayRecording = true;
+        [SerializeField] private bool _enableRuntimeValidation = true;
+        [SerializeField] private bool _haltSimulationOnCriticalValidation;
 
         public static ActionRuntimeController Instance { get; private set; }
 
@@ -38,6 +42,10 @@ namespace CheckmateRPG.Core
         private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
         private ReplayRecorder _replayRecorder;
         private EventTraceRecorder _eventTraceRecorder;
+        private RuntimeValidationSystem _runtimeValidationSystem;
+        private ValidationExecutionStage _validationExecutionStage;
+        private ValidationResult _lastValidationResult = ValidationResult.Valid();
+        private bool _validationHalted;
         private bool ShouldRecordReplay => _enableReplayRecording && _replayRecorder != null;
 
         public ActionScheduler Scheduler => _scheduler;
@@ -73,6 +81,8 @@ namespace CheckmateRPG.Core
             _effectSystem = BuildEffectSystem();
             _replayRecorder = new ReplayRecorder();
             _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, () => _scheduler != null ? _scheduler.CurrentTick : 0);
+            _runtimeValidationSystem = BuildRuntimeValidationSystem();
+            _validationExecutionStage = new ValidationExecutionStage(_runtimeValidationSystem);
             if (_enableReplayRecording)
                 _eventTraceRecorder.Attach(_eventBus);
             _resolverRegistry.Register(new AbilityActionResolver(
@@ -265,43 +275,38 @@ namespace CheckmateRPG.Core
                 _replayRecorder.RecordAction(_scheduler.CurrentTick, BuildActionTrace(command));
         }
 
-        private void ResolveAction(IActionCommand action)
-        {
-            if (action == null)
-                return;
-            if (!_unitsById.TryGetValue(action.ActorId, out UnitBrain actor) || actor == null)
-                return;
-
-            SyncAllRuntimeStates();
-            if (!_resolverRegistry.TryResolve(action, _battleContext, out ActionResolutionResult result))
-                return;
-            if (!result.Success)
-                return;
-
-            IReadOnlyList<IGameEvent> mutationEvents = _mutationProcessor.Apply(result.RuntimeMutations);
-            EnqueueResolvedEvents(result.Events);
-            EnqueueResolvedEvents(mutationEvents);
-        }
-
         private void HandleRuntimeTick(int schedulerTick)
         {
             _ = schedulerTick;
+            if (_validationHalted)
+                return;
+
             _scheduler.AdvanceTick();
             if (ShouldRecordReplay)
                 _replayRecorder.EnsureFrame(_scheduler.CurrentTick);
-            _effectSystem?.AdvanceTick(_scheduler.CurrentTick);
-            UpdateAbilityCooldownState(_scheduler.CurrentTick);
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
-            for (int i = 0; i < ready.Count; i++)
-                ResolveAction(ready[i]);
+            IReadOnlyList<ActionResolutionResult> resolvedActions = ExecuteActionUpdateStage(ready);
+            IReadOnlyList<IGameEvent> stagedEvents = ExecuteMutationApplyStage(resolvedActions);
+            EnqueueResolvedEvents(stagedEvents);
+
+            _effectSystem?.AdvanceTick(_scheduler.CurrentTick);
+            UpdateAbilityCooldownState(_scheduler.CurrentTick);
+            ExecuteDeathCheckStage();
+
+            if (_enableRuntimeValidation)
+            {
+                SimulationRuntime runtime = BuildSimulationRuntime(_scheduler.CurrentTick);
+                _lastValidationResult = _validationExecutionStage.Execute(runtime);
+                if (HandleCriticalValidation(_lastValidationResult))
+                {
+                    RecordReplaySnapshot();
+                    return;
+                }
+            }
 
             _eventBus.ProcessQueue();
-            if (ShouldRecordReplay)
-            {
-                SyncAllRuntimeStates();
-                _replayRecorder.RecordSnapshot(BuildFrameSnapshot(_scheduler.CurrentTick));
-            }
+            RecordReplaySnapshot();
         }
 
         private void RecordInput(string input)
@@ -323,6 +328,17 @@ namespace CheckmateRPG.Core
             return effectSystem;
         }
 
+        private RuntimeValidationSystem BuildRuntimeValidationSystem()
+        {
+            var validationSystem = new RuntimeValidationSystem();
+            validationSystem.Register(new NegativeHpValidator());
+            validationSystem.Register(new DuplicatePositionValidator());
+            validationSystem.Register(new InvalidRecoveryValidator());
+            validationSystem.Register(new DeadUnitActionValidator());
+            validationSystem.Register(new DuplicateActionIdValidator());
+            return validationSystem;
+        }
+
         private UnitBrain ResolveUnit(Guid unitId)
         {
             return _unitsById.TryGetValue(unitId, out UnitBrain unit) ? unit : null;
@@ -335,6 +351,204 @@ namespace CheckmateRPG.Core
                 if (entry.Value != null)
                     SyncRuntimeState(entry.Value);
             }
+        }
+
+        private IReadOnlyList<ActionResolutionResult> ExecuteActionUpdateStage(IReadOnlyList<IActionCommand> readyActions)
+        {
+            if (readyActions == null || readyActions.Count == 0)
+                return Array.Empty<ActionResolutionResult>();
+
+            SyncAllRuntimeStates();
+
+            var resolvedActions = new List<ActionResolutionResult>(readyActions.Count);
+            for (int i = 0; i < readyActions.Count; i++)
+            {
+                if (TryResolveAction(readyActions[i], out ActionResolutionResult result))
+                    resolvedActions.Add(result);
+            }
+
+            return resolvedActions;
+        }
+
+        private IReadOnlyList<IGameEvent> ExecuteMutationApplyStage(IReadOnlyList<ActionResolutionResult> resolvedActions)
+        {
+            if (resolvedActions == null || resolvedActions.Count == 0)
+                return Array.Empty<IGameEvent>();
+
+            var stagedEvents = new List<IGameEvent>();
+            for (int i = 0; i < resolvedActions.Count; i++)
+            {
+                ActionResolutionResult result = resolvedActions[i];
+                IReadOnlyList<IGameEvent> mutationEvents = _mutationProcessor.Apply(result.RuntimeMutations);
+                AppendEvents(stagedEvents, result.Events);
+                AppendEvents(stagedEvents, mutationEvents);
+            }
+
+            return stagedEvents;
+        }
+
+        private void ExecuteDeathCheckStage()
+        {
+            var deadUnitIds = new HashSet<Guid>();
+            foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
+            {
+                if (entry.Value == null || !entry.Value.IsDead)
+                    continue;
+
+                deadUnitIds.Add(entry.Key);
+                UnitRuntimeState state = entry.Value.RuntimeState;
+                if (state == null)
+                    continue;
+
+                state.CurrentActionId = null;
+                state.RecoveryUntilTick = _scheduler.CurrentTick;
+                state.StatusFlags |= UnitStatusFlags.Dead;
+            }
+
+            _scheduler.TerminateActionsForActors(deadUnitIds);
+            SyncAllRuntimeStates();
+        }
+
+        private bool TryResolveAction(IActionCommand action, out ActionResolutionResult result)
+        {
+            result = ActionResolutionResult.Failed();
+            if (action == null)
+                return false;
+            if (!_unitsById.TryGetValue(action.ActorId, out UnitBrain actor) || actor == null)
+                return false;
+            if (!_resolverRegistry.TryResolve(action, _battleContext, out result))
+                return false;
+
+            return result.Success;
+        }
+
+        private SimulationRuntime BuildSimulationRuntime(int tick)
+        {
+            SyncAllRuntimeStates();
+            return new SimulationRuntime(
+                tick,
+                BuildRuntimeStateSnapshot(),
+                BuildActiveActionSnapshot(),
+                _effectSystem != null ? _effectSystem.CreateRuntimeSnapshot() : new SortedDictionary<string, EffectRuntimeState>(StringComparer.Ordinal),
+                BuildOccupiedPositionSnapshot());
+        }
+
+        private IReadOnlyDictionary<Guid, UnitRuntimeState> BuildRuntimeStateSnapshot()
+        {
+            var snapshot = new SortedDictionary<Guid, UnitRuntimeState>();
+            foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
+            {
+                UnitRuntimeState state = entry.Value != null ? entry.Value.RuntimeState : null;
+                if (state == null)
+                    continue;
+
+                snapshot[entry.Key] = new UnitRuntimeState
+                {
+                    UnitId = state.UnitId,
+                    HP = state.HP,
+                    SP = state.SP,
+                    Position = state.Position,
+                    CurrentActionId = state.CurrentActionId,
+                    RecoveryUntilTick = state.RecoveryUntilTick,
+                    StatusFlags = state.StatusFlags
+                };
+            }
+
+            return snapshot;
+        }
+
+        private IReadOnlyDictionary<Guid, IActionCommand> BuildActiveActionSnapshot()
+        {
+            IReadOnlyCollection<IActionCommand> activeActions = _scheduler.GetActiveActions();
+            var snapshot = new SortedDictionary<Guid, IActionCommand>();
+            foreach (IActionCommand action in activeActions)
+            {
+                if (action == null)
+                    continue;
+
+                snapshot[action.ActionId] = action;
+            }
+
+            return snapshot;
+        }
+
+        private IReadOnlyDictionary<Vector2Int, Guid> BuildOccupiedPositionSnapshot()
+        {
+            var snapshot = new SortedDictionary<Vector2Int, Guid>(new GridPositionComparer());
+            if (GridSystem.Instance == null)
+                return snapshot;
+
+            for (int x = 0; x < GridSystem.GridWidth; x++)
+            {
+                for (int y = 0; y < GridSystem.GridHeight; y++)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    GameObject occupant = GridSystem.Instance.GetOccupant(cell);
+                    if (occupant == null || !TryGetActorId(occupant, out Guid actorId))
+                        continue;
+
+                    snapshot[cell] = actorId;
+                }
+            }
+
+            return snapshot;
+        }
+
+        private bool HandleCriticalValidation(ValidationResult validationResult)
+        {
+            if (validationResult == null || !validationResult.HasCriticalIssues)
+                return false;
+
+            for (int i = 0; i < validationResult.Issues.Count; i++)
+            {
+                ValidationIssue issue = validationResult.Issues[i];
+                if (issue.Severity != ValidationSeverity.Critical)
+                    continue;
+
+                string trace = BuildValidationTrace(issue);
+                if (ShouldRecordReplay)
+                    _replayRecorder.RecordEvent(_scheduler.CurrentTick, trace);
+                Debug.LogError(trace);
+            }
+
+            if (!_haltSimulationOnCriticalValidation)
+                return false;
+
+            _validationHalted = true;
+            if (_tickScheduler != null)
+                _tickScheduler.enabled = false;
+            string haltTrace = $"[Validation][Critical] Simulation halted at tick {_scheduler.CurrentTick}.";
+            if (ShouldRecordReplay)
+                _replayRecorder.RecordEvent(_scheduler.CurrentTick, haltTrace);
+            Debug.LogError(haltTrace);
+            return true;
+        }
+
+        private void RecordReplaySnapshot()
+        {
+            if (!ShouldRecordReplay)
+                return;
+
+            SyncAllRuntimeStates();
+            _replayRecorder.RecordSnapshot(BuildFrameSnapshot(_scheduler.CurrentTick));
+        }
+
+        private static void AppendEvents(List<IGameEvent> target, IReadOnlyList<IGameEvent> source)
+        {
+            if (target == null || source == null || source.Count == 0)
+                return;
+
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (source[i] != null)
+                    target.Add(source[i]);
+            }
+        }
+
+        private static string BuildValidationTrace(ValidationIssue issue)
+        {
+            string unitSegment = issue.UnitId.HasValue ? issue.UnitId.Value.ToString("N") : "none";
+            return $"[Validation][{issue.Severity}] Tick={issue.Tick} Unit={unitSegment} Message={issue.Message}";
         }
 
         private void EnqueueResolvedEvents(IReadOnlyList<IGameEvent> events)
@@ -615,6 +829,15 @@ namespace CheckmateRPG.Core
                     Mathf.Abs(attacker.Position.y - target.Position.y));
 
                 return distance <= range;
+            }
+        }
+
+        private sealed class GridPositionComparer : IComparer<Vector2Int>
+        {
+            public int Compare(Vector2Int left, Vector2Int right)
+            {
+                int xCompare = left.x.CompareTo(right.x);
+                return xCompare != 0 ? xCompare : left.y.CompareTo(right.y);
             }
         }
     }
