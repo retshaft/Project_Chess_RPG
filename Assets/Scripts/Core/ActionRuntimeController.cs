@@ -683,6 +683,46 @@ namespace CheckmateRPG.Core
 
             actions.Sort((left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
             snapshot.ActiveActions = actions;
+
+            var effects = new List<EffectFrameSnapshot>();
+            if (_effectSystem != null)
+            {
+                IReadOnlyDictionary<string, EffectRuntimeState> activeEffects = _effectSystem.CreateRuntimeSnapshot();
+                effects = new List<EffectFrameSnapshot>(activeEffects.Count);
+                foreach (KeyValuePair<string, EffectRuntimeState> pair in activeEffects)
+                {
+                    EffectRuntimeState effect = pair.Value;
+                    if (effect == null)
+                        continue;
+
+                    effects.Add(new EffectFrameSnapshot
+                    {
+                        EffectId = effect.EffectId,
+                        SourceId = effect.SourceId.ToString("N"),
+                        TargetId = effect.TargetId.ToString("N"),
+                        RemainingTick = effect.RemainingTick,
+                        StackCount = effect.StackCount,
+                        TickInterval = effect.TickInterval,
+                        NextTickIn = effect.NextTickIn,
+                        Magnitude = effect.Magnitude
+                    });
+                }
+
+                effects.Sort((left, right) =>
+                {
+                    int targetCompare = string.CompareOrdinal(left.TargetId, right.TargetId);
+                    if (targetCompare != 0)
+                        return targetCompare;
+
+                    int effectCompare = string.CompareOrdinal(left.EffectId, right.EffectId);
+                    if (effectCompare != 0)
+                        return effectCompare;
+
+                    return string.CompareOrdinal(left.SourceId, right.SourceId);
+                });
+            }
+
+            snapshot.ActiveEffects = effects;
             return snapshot;
         }
 
