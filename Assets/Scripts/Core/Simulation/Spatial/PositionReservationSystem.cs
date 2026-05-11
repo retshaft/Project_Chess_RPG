@@ -61,7 +61,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                 winnerMoves[move.ActionId] = move;
             }
 
-            if (_policy == SpatialResolutionPolicy.HigherSpeedWins)
+            bool hasPotentialSwap = HasPotentialSwap(winnerMoves);
+            if (_policy == SpatialResolutionPolicy.HigherSpeedWins && hasPotentialSwap)
                 ApplySwapBan(winnerActions, winnersByPosition, reservationLostActions, winnerMoves);
 
             return new PositionReservationSnapshot(winnerActions, winnersByPosition, reservationLostActions);
@@ -136,6 +137,24 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             }
 
             return Guid.Empty;
+        }
+
+        private static bool HasPotentialSwap(IReadOnlyDictionary<Guid, MoveActionCommand> winnerMoves)
+        {
+            if (winnerMoves == null || winnerMoves.Count < 2)
+                return false;
+
+            var pairs = new HashSet<(Vector2Int From, Vector2Int To)>();
+            foreach (KeyValuePair<Guid, MoveActionCommand> pair in winnerMoves)
+            {
+                MoveActionCommand move = pair.Value;
+                var reverse = (move.To, move.From);
+                if (pairs.Contains(reverse))
+                    return true;
+                pairs.Add((move.From, move.To));
+            }
+
+            return false;
         }
     }
 

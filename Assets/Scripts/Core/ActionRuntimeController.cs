@@ -531,8 +531,7 @@ namespace CheckmateRPG.Core
             if (move == null)
                 return;
 
-            if (!_positionReservations.HasWinningReservation(move.ActionId) ||
-                _positionReservations.IsReservationLost(move.ActionId))
+            if (!_positionReservations.HasWinningReservation(move.ActionId))
             {
                 CancelResolvingAction(move, ActionCancellationReason.ReservationLost, context);
                 return;
