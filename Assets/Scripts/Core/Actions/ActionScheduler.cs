@@ -43,23 +43,26 @@ namespace CheckmateRPG.Core.Actions
             BaseActionCommand[] snapshot = new BaseActionCommand[_activeActions.Count];
             _activeActions.Values.CopyTo(snapshot, 0);
 
+            // Queued → Casting
             for (int i = 0; i < snapshot.Length; i++)
             {
                 BaseActionCommand action = snapshot[i];
                 if (action.State == ActionState.Queued && CurrentTick >= action.StartTick)
-                    Transition(action, ActionState.Executing);
+                    Transition(action, ActionState.Casting);
             }
 
+            // Casting → Resolving
             for (int i = 0; i < snapshot.Length; i++)
             {
                 BaseActionCommand action = snapshot[i];
-                if (action.State == ActionState.Executing && CurrentTick >= action.ResolveTick)
+                if (action.State == ActionState.Casting && CurrentTick >= action.ResolveTick)
                 {
                     Transition(action, ActionState.Resolving);
                     _pendingResolveQueue.Enqueue(action.ActionId);
                 }
             }
 
+            // Resolving → Recovery / Completed
             for (int i = 0; i < snapshot.Length; i++)
             {
                 BaseActionCommand action = snapshot[i];
@@ -67,6 +70,7 @@ namespace CheckmateRPG.Core.Actions
                     Transition(action, CurrentTick >= action.RecoveryEndTick ? ActionState.Completed : ActionState.Recovery);
             }
 
+            // Recovery → Completed
             for (int i = 0; i < snapshot.Length; i++)
             {
                 BaseActionCommand action = snapshot[i];
@@ -84,7 +88,9 @@ namespace CheckmateRPG.Core.Actions
                 return;
             if (!_activeActions.TryGetValue(actionId, out BaseActionCommand action))
                 return;
-            if (!action.IsInterruptible || action.State != ActionState.Executing)
+            if (!action.IsInterruptible)
+                return;
+            if (!ActionStateMachine.CanInterrupt(action.State, action.IsRecoveryInterruptible))
                 return;
 
             _pendingInterrupts.Add(actionId);
@@ -96,7 +102,9 @@ namespace CheckmateRPG.Core.Actions
                 return;
             if (!_activeActions.TryGetValue(actionId, out BaseActionCommand action))
                 return;
-            if (action.State is not (ActionState.Queued or ActionState.Executing or ActionState.Resolving))
+
+            // Cancellation is only permitted before the Resolving phase.
+            if (!ActionStateMachine.CanCancel(action.State))
                 return;
 
             ActionState previousState = action.State;
@@ -138,11 +146,7 @@ namespace CheckmateRPG.Core.Actions
                 if (action == null || action.IsCompleted || !ContainsActor(actorIds, action.ActorId))
                     continue;
 
-                ActionState previousState = action.State;
-                action.TransitionTo(ActionState.Interrupted);
-                PublishLifecycleEvent(action, previousState);
-
-                action.TransitionTo(ActionState.Cancelled);
+                Transition(action, ActionState.Interrupted);
                 _activeActions.Remove(action.ActionId);
                 _pendingInterrupts.Remove(action.ActionId);
             }
@@ -173,13 +177,13 @@ namespace CheckmateRPG.Core.Actions
                 Guid actionId = actionIds[i];
                 if (!_activeActions.TryGetValue(actionId, out BaseActionCommand action))
                     continue;
-                if (!action.IsInterruptible || action.State != ActionState.Executing)
+                if (!action.IsInterruptible)
+                    continue;
+                if (!ActionStateMachine.CanInterrupt(action.State, action.IsRecoveryInterruptible))
                     continue;
 
                 Transition(action, ActionState.Interrupted);
-                ActionState previousState = action.State;
-                action.TransitionTo(ActionState.Cancelled);
-                PublishLifecycleEvent(action, previousState);
+                _activeActions.Remove(actionId);
             }
         }
 
@@ -232,16 +236,23 @@ namespace CheckmateRPG.Core.Actions
             string source = action.ActorId.ToString("N");
             string target = action.ActionId.ToString("N");
 
+            // Always publish the generic state-changed event.
+            _eventBus.Publish(new ActionStateChangedEvent(payload, source, target));
+
+            // Publish the specific semantic event for the new state.
             switch (action.State)
             {
                 case ActionState.Queued:
                     _eventBus.Publish(new ActionQueuedEvent(payload, source, target));
                     break;
-                case ActionState.Executing:
-                    _eventBus.Publish(new ActionStartedEvent(payload, source, target));
+                case ActionState.Casting:
+                    _eventBus.Publish(new ActionCastingEvent(payload, source, target));
                     break;
                 case ActionState.Resolving:
                     _eventBus.Publish(new ActionResolvedEvent(payload, source, target));
+                    break;
+                case ActionState.Recovery:
+                    _eventBus.Publish(new ActionRecoveryEvent(payload, source, target));
                     break;
                 case ActionState.Interrupted:
                     _eventBus.Publish(new ActionInterruptedEvent(payload, source, target));

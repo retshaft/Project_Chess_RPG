@@ -155,7 +155,7 @@ namespace CheckmateRPG.Core.Actions.Resolution
             if (action == null || context == null)
                 return true;
 
-            return action.State == ActionState.Cancelled || context.IsCancelled(action.ActionId);
+            return action.State == ActionState.Cancelled || action.State == ActionState.Interrupted || context.IsCancelled(action.ActionId);
         }
 
         /// <summary>

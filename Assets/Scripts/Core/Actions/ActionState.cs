@@ -3,7 +3,7 @@ namespace CheckmateRPG.Core.Actions
     public enum ActionState
     {
         Queued,
-        Executing,
+        Casting,
         Resolving,
         Recovery,
         Completed,

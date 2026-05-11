@@ -505,7 +505,7 @@ namespace CheckmateRPG.Core
         {
             if (action == null || context == null)
                 return;
-            if (action.State == ActionState.Cancelled || context.IsCancelled(action.ActionId))
+            if (action.State == ActionState.Cancelled || action.State == ActionState.Interrupted || context.IsCancelled(action.ActionId))
                 return;
 
             if (!_battleContext.TryGetUnit(action.ActorId, out BattleUnitSnapshot actor) ||

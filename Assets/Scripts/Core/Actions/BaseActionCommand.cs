@@ -10,7 +10,8 @@ namespace CheckmateRPG.Core.Actions
             int resolveTick,
             int recoveryEndTick,
             ActionSpeedTier speedTier,
-            bool isInterruptible = true)
+            bool isInterruptible = true,
+            bool isRecoveryInterruptible = false)
         {
             if (actorId == Guid.Empty)
                 throw new ArgumentException("ActorId must not be empty.", nameof(actorId));
@@ -30,18 +31,20 @@ namespace CheckmateRPG.Core.Actions
             RecoveryEndTick = recoveryEndTick;
             SpeedTier = speedTier;
             IsInterruptible = isInterruptible;
+            IsRecoveryInterruptible = isRecoveryInterruptible;
         }
 
         public Guid ActionId { get; }
         public Guid ActorId { get; }
-        public ActionState State { get; internal set; }
+        public ActionState State { get; private set; }
         public int QueuedTick { get; internal set; }
         public int StartTick { get; }
         public int ResolveTick { get; }
         public int RecoveryEndTick { get; }
         public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
-        public bool IsCompleted => State is ActionState.Completed or ActionState.Cancelled;
+        public bool IsRecoveryInterruptible { get; }
+        public bool IsCompleted => ActionStateMachine.IsTerminal(State);
 
         internal void MarkQueued(int queuedTick)
         {
@@ -49,9 +52,20 @@ namespace CheckmateRPG.Core.Actions
             State = ActionState.Queued;
         }
 
-        internal void TransitionTo(ActionState state)
+        /// <summary>
+        /// Performs a validated state transition through the <see cref="ActionStateMachine"/>.
+        /// Throws <see cref="InvalidOperationException"/> on any illegal transition attempt.
+        /// </summary>
+        internal void TransitionTo(ActionState newState)
         {
-            State = state;
+            if (State == newState)
+                return;
+
+            if (!ActionStateMachine.IsValidTransition(State, newState))
+                throw new InvalidOperationException(
+                    $"Invalid action state transition: {State} → {newState} (ActionId={ActionId:N}).");
+
+            State = newState;
         }
     }
 }

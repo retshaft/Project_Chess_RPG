@@ -21,13 +21,23 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         int RecoveryEndTick,
         bool IsInterruptible);
 
+    /// <summary>
+    /// Published on every action state transition. Provides full lifecycle context.
+    /// </summary>
+    public sealed record ActionStateChangedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
+
     public sealed record ActionQueuedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
 
-    public sealed record ActionStartedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
+    /// <summary>Published when an action enters the <see cref="ActionState.Casting"/> phase.</summary>
+    public sealed record ActionCastingEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
 
     public sealed record ActionResolvedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record ActionRecoveryEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
 
     public sealed record ActionInterruptedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
