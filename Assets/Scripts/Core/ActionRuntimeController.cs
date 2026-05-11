@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Actions;
+using CheckmateRPG.Core.Actions.Resolution;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Effects.Processors;
@@ -45,6 +46,7 @@ namespace CheckmateRPG.Core
         private MutationOrderingService _mutationOrderingService;
         private AbilityExecutionPipeline _abilityPipeline;
         private RuntimeBattleContext _battleContext;
+        private ResolutionPhasePipeline _resolutionPipeline;
         private readonly Dictionary<string, AbilityDefinition> _abilityDefinitions = new(StringComparer.Ordinal);
         private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
         private ReplayRecorder _replayRecorder;
@@ -93,6 +95,12 @@ namespace CheckmateRPG.Core
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
                 _simulationRuntime,
                 state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state));
+            _resolutionPipeline = new ResolutionPhasePipeline(
+                resolveAction: (action, _) =>
+                {
+                    TryResolveAction(action, out ActionResolutionResult result);
+                    return result;
+                });
             _replayRecorder = new ReplayRecorder();
             _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, GetCurrentTickSafe);
             _runtimeValidationSystem = BuildRuntimeValidationSystem();
@@ -341,8 +349,10 @@ namespace CheckmateRPG.Core
             _timelineRecorder?.RecordTick(_scheduler.CurrentTick);
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
-            IReadOnlyList<ActionResolutionResult> resolvedActions = ExecuteActionUpdateStage(ready);
-            MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolvedActions);
+            SyncAllRuntimeStates();
+            ActionResolutionContext resolutionContext =
+                _resolutionPipeline.Execute(_scheduler.CurrentTick, ready, _battleContext);
+            MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
             IReadOnlyList<IRuntimeMutation> preDeathMutations =
                 mutationApplyInput.PreDeathTransaction.CreateOrderedSnapshot(_mutationOrderingService);
             _timelineRecorder?.RecordMutations(preDeathMutations, "PreDeath");
@@ -430,45 +440,21 @@ namespace CheckmateRPG.Core
             _simulationRuntime.ReplaceActions(_scheduler.GetActiveActions());
         }
 
-        private IReadOnlyList<ActionResolutionResult> ExecuteActionUpdateStage(IReadOnlyList<IActionCommand> readyActions)
+        private MutationApplyInput BuildMutationApplyInput(ActionResolutionContext resolutionContext)
         {
-            if (readyActions == null || readyActions.Count == 0)
-                return Array.Empty<ActionResolutionResult>();
-
-            SyncAllRuntimeStates();
-
-            var resolvedActions = new List<ActionResolutionResult>(readyActions.Count);
-            for (int i = 0; i < readyActions.Count; i++)
-            {
-                if (TryResolveAction(readyActions[i], out ActionResolutionResult result))
-                    resolvedActions.Add(result);
-            }
-
-            return resolvedActions;
-        }
-
-        private MutationApplyInput BuildMutationApplyInput(IReadOnlyList<ActionResolutionResult> resolvedActions)
-        {
-            if (resolvedActions == null || resolvedActions.Count == 0)
+            if (resolutionContext == null ||
+                (resolutionContext.PendingMutations.Count == 0 && resolutionContext.PendingEvents.Count == 0))
                 return MutationApplyInput.Empty;
 
-            var actionEvents = new List<IGameEvent>();
-            var collectedMutations = new List<IRuntimeMutation>();
-            for (int i = 0; i < resolvedActions.Count; i++)
-            {
-                ActionResolutionResult result = resolvedActions[i];
-                AppendEvents(actionEvents, result.Events);
-                AppendMutations(collectedMutations, result.RuntimeMutations);
-            }
-
-            IReadOnlyList<IRuntimeMutation> orderedMutations = _mutationOrderingService.SortDeterministic(collectedMutations);
+            IReadOnlyList<IRuntimeMutation> orderedMutations =
+                _mutationOrderingService.SortDeterministic(resolutionContext.PendingMutations);
             _mutationOrderingService.SplitByDeathBoundary(
                 orderedMutations,
                 out IReadOnlyList<IRuntimeMutation> preDeathMutations,
                 out IReadOnlyList<IRuntimeMutation> cleanupMutations);
 
             return new MutationApplyInput(
-                actionEvents,
+                resolutionContext.PendingEvents,
                 RuntimeTransaction.From(preDeathMutations),
                 RuntimeTransaction.From(cleanupMutations));
         }
@@ -573,11 +559,6 @@ namespace CheckmateRPG.Core
         }
 
         private static void AppendEvents(List<IGameEvent> target, IReadOnlyList<IGameEvent> source)
-        {
-            AppendNonNullItems(target, source);
-        }
-
-        private static void AppendMutations(List<IRuntimeMutation> target, IReadOnlyList<IRuntimeMutation> source)
         {
             AppendNonNullItems(target, source);
         }
