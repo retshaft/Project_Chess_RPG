@@ -9,6 +9,7 @@ namespace CheckmateRPG.Core.Actions
             int startTick,
             int resolveTick,
             int recoveryEndTick,
+            ActionSpeedTier speedTier,
             bool isInterruptible = true)
         {
             if (actorId == Guid.Empty)
@@ -27,6 +28,7 @@ namespace CheckmateRPG.Core.Actions
             StartTick = startTick;
             ResolveTick = resolveTick;
             RecoveryEndTick = recoveryEndTick;
+            SpeedTier = speedTier;
             IsInterruptible = isInterruptible;
         }
 
@@ -37,6 +39,7 @@ namespace CheckmateRPG.Core.Actions
         public int StartTick { get; }
         public int ResolveTick { get; }
         public int RecoveryEndTick { get; }
+        public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
         public bool IsCompleted => State is ActionState.Completed or ActionState.Cancelled;
 

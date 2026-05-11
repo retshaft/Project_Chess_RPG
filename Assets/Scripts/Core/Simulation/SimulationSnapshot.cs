@@ -232,6 +232,7 @@ namespace CheckmateRPG.Core.Simulation
             int startTick,
             int resolveTick,
             int recoveryEndTick,
+            ActionSpeedTier speedTier,
             bool isInterruptible,
             Vector2Int? from,
             Vector2Int? to,
@@ -249,6 +250,7 @@ namespace CheckmateRPG.Core.Simulation
             StartTick = startTick;
             ResolveTick = resolveTick;
             RecoveryEndTick = recoveryEndTick;
+            SpeedTier = speedTier;
             IsInterruptible = isInterruptible;
             From = from;
             To = to;
@@ -269,6 +271,7 @@ namespace CheckmateRPG.Core.Simulation
                 source?.StartTick ?? 0,
                 source?.ResolveTick ?? 0,
                 source?.RecoveryEndTick ?? 0,
+                source?.SpeedTier ?? ActionSpeedTier.Normal,
                 source?.IsInterruptible ?? true,
                 source?.From,
                 source?.To,
@@ -288,6 +291,7 @@ namespace CheckmateRPG.Core.Simulation
         public int StartTick { get; }
         public int ResolveTick { get; }
         public int RecoveryEndTick { get; }
+        public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
         public bool IsCompleted => State is ActionState.Completed or ActionState.Cancelled;
         public Vector2Int? From { get; }
@@ -339,6 +343,7 @@ namespace CheckmateRPG.Core.Simulation
                 action.StartTick,
                 action.ResolveTick,
                 action.RecoveryEndTick,
+                action.SpeedTier,
                 action.IsInterruptible,
                 from,
                 to,

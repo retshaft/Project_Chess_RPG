@@ -18,6 +18,7 @@ namespace CheckmateRPG.Core.Actions
                 startTick,
                 startTick + ActionTimelineFormula.ToActionDurationTicks(speedTier),
                 startTick + ActionTimelineFormula.ToActionDurationTicks(speedTier) + Math.Max(0, recoveryDurationTicks),
+                speedTier,
                 isInterruptible)
         {
             if (targetId == Guid.Empty)

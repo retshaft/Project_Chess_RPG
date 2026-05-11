@@ -11,6 +11,7 @@ namespace CheckmateRPG.Core.Actions
         int StartTick { get; }
         int ResolveTick { get; }
         int RecoveryEndTick { get; }
+        ActionSpeedTier SpeedTier { get; }
         bool IsInterruptible { get; }
         bool IsCompleted { get; }
     }
