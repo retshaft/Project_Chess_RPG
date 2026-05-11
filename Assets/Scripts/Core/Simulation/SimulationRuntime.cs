@@ -23,6 +23,12 @@ namespace CheckmateRPG.Core.Simulation
         private readonly Dictionary<Guid, IActionCommand> _activeActions;
         private readonly Dictionary<string, EffectRuntimeState> _activeEffects;
         private readonly Dictionary<Vector2Int, Guid> _occupiedPositions;
+        private IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> _runtimeStateViewCache;
+        private IReadOnlyDictionary<Guid, IReadOnlyActionState> _activeActionViewCache;
+        private IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> _activeEffectViewCache;
+        private bool _runtimeStateViewDirty = true;
+        private bool _activeActionViewDirty = true;
+        private bool _activeEffectViewDirty = true;
 
         public SimulationRuntime(int currentTick)
             : this(currentTick, EmptyRuntimeStates, EmptyActiveActions, EmptyActiveEffects, EmptyOccupiedPositions)
@@ -45,15 +51,20 @@ namespace CheckmateRPG.Core.Simulation
 
         public int CurrentTick { get; private set; }
 
-        // These properties build a fresh snapshot projection on each access to guarantee that
-        // callers always receive an immutable copy with no live reference to the internal mutable
-        // dictionaries. This trades per-access allocation for absolute reference-leak safety.
-        // Performance optimisation (e.g. dirty-flag caching) is deferred to a future milestone.
-        public IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> RuntimeStates => BuildRuntimeStateView();
+        public IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> RuntimeStates =>
+            _runtimeStateViewDirty || _runtimeStateViewCache == null
+                ? _runtimeStateViewCache = BuildRuntimeStateView()
+                : _runtimeStateViewCache;
 
-        public IReadOnlyDictionary<Guid, IReadOnlyActionState> ActiveActions => BuildActiveActionView();
+        public IReadOnlyDictionary<Guid, IReadOnlyActionState> ActiveActions =>
+            _activeActionViewDirty || _activeActionViewCache == null
+                ? _activeActionViewCache = BuildActiveActionView()
+                : _activeActionViewCache;
 
-        public IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> ActiveEffects => BuildActiveEffectView();
+        public IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> ActiveEffects =>
+            _activeEffectViewDirty || _activeEffectViewCache == null
+                ? _activeEffectViewCache = BuildActiveEffectView()
+                : _activeEffectViewCache;
 
         public IReadOnlyDictionary<Vector2Int, Guid> OccupiedPositions =>
             new ReadOnlyDictionary<Vector2Int, Guid>(CloneOccupiedPositions(_occupiedPositions));
@@ -165,6 +176,7 @@ namespace CheckmateRPG.Core.Simulation
 
             _runtimeStates[unitState.UnitId] = new UnitRuntimeState(unitState);
             RefreshUnitPositionOwnership(unitState.UnitId);
+            MarkRuntimeStateViewDirty();
         }
 
         internal void RegisterAction(IActionCommand action)
@@ -177,11 +189,13 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             _activeActions[action.ActionId] = snapshot;
+            MarkActiveActionViewDirty();
         }
 
         internal void ReplaceActions(IReadOnlyCollection<IActionCommand> actions)
         {
             _activeActions.Clear();
+            MarkActiveActionViewDirty();
             if (actions == null || actions.Count == 0)
                 return;
 
@@ -203,6 +217,7 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             _activeEffects[effectKey] = new EffectRuntimeState(effect);
+            MarkActiveEffectViewDirty();
         }
 
         internal void UnregisterUnit(Guid unitId)
@@ -212,6 +227,7 @@ namespace CheckmateRPG.Core.Simulation
 
             CleanupUnitRuntimeArtifacts(unitId);
             _runtimeStates.Remove(unitId);
+            MarkRuntimeStateViewDirty();
         }
 
         internal void UnregisterAction(Guid actionId)
@@ -220,6 +236,7 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             _activeActions.Remove(actionId);
+            MarkActiveActionViewDirty();
         }
 
         internal void UnregisterEffect(string effectKey)
@@ -228,6 +245,7 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             _activeEffects.Remove(effectKey);
+            MarkActiveEffectViewDirty();
         }
 
         internal void SetUnitDerivedState(Guid unitId, int sp, UnitStatusFlags statusFlags)
@@ -236,6 +254,7 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             state.SyncDerivedState(unitId, sp, statusFlags);
+            MarkRuntimeStateViewDirty();
         }
 
         internal void SetUnitHP(Guid unitId, int hp, string ownerName)
@@ -244,6 +263,7 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             state.SetHP(hp, ownerName);
+            MarkRuntimeStateViewDirty();
         }
 
         internal void SetUnitPosition(Guid unitId, Vector2Int position, string ownerName)
@@ -254,6 +274,7 @@ namespace CheckmateRPG.Core.Simulation
             _occupiedPositions.Remove(state.Position);
             state.SetPosition(position, ownerName);
             _occupiedPositions[position] = unitId;
+            MarkRuntimeStateViewDirty();
         }
 
         internal void SetUnitActionState(Guid unitId, Guid? currentActionId, int recoveryUntilTick, string ownerName)
@@ -262,6 +283,7 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             state.SetActionState(currentActionId, recoveryUntilTick, ownerName);
+            MarkRuntimeStateViewDirty();
         }
 
         internal void AddUnitStatusFlag(Guid unitId, UnitStatusFlags flag)
@@ -270,6 +292,7 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             state.AddStatusFlag(flag);
+            MarkRuntimeStateViewDirty();
         }
 
         internal void CleanupUnitRuntimeArtifacts(Guid unitId)
@@ -286,6 +309,8 @@ namespace CheckmateRPG.Core.Simulation
 
             for (int i = 0; i < actionIdsToRemove.Count; i++)
                 _activeActions.Remove(actionIdsToRemove[i]);
+            if (actionIdsToRemove.Count > 0)
+                MarkActiveActionViewDirty();
 
             var effectKeysToRemove = new List<string>();
             foreach (KeyValuePair<string, EffectRuntimeState> pair in _activeEffects)
@@ -296,6 +321,8 @@ namespace CheckmateRPG.Core.Simulation
 
             for (int i = 0; i < effectKeysToRemove.Count; i++)
                 _activeEffects.Remove(effectKeysToRemove[i]);
+            if (effectKeysToRemove.Count > 0)
+                MarkActiveEffectViewDirty();
 
             _occupiedPositions.Remove(state.Position);
         }
@@ -344,6 +371,7 @@ namespace CheckmateRPG.Core.Simulation
                 projected[pair.Key] = new ReadOnlyUnitRuntimeStateView(pair.Value);
             }
 
+            _runtimeStateViewDirty = false;
             return new ReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState>(projected);
         }
 
@@ -358,6 +386,7 @@ namespace CheckmateRPG.Core.Simulation
                 projected[pair.Key] = SimulationActionSnapshot.From(pair.Value);
             }
 
+            _activeActionViewDirty = false;
             return new ReadOnlyDictionary<Guid, IReadOnlyActionState>(projected);
         }
 
@@ -372,7 +401,26 @@ namespace CheckmateRPG.Core.Simulation
                 projected[pair.Key] = new ReadOnlyEffectRuntimeStateView(pair.Value);
             }
 
+            _activeEffectViewDirty = false;
             return new ReadOnlyDictionary<string, IReadOnlyEffectRuntimeState>(projected);
+        }
+
+        private void MarkRuntimeStateViewDirty()
+        {
+            _runtimeStateViewDirty = true;
+            _runtimeStateViewCache = null;
+        }
+
+        private void MarkActiveActionViewDirty()
+        {
+            _activeActionViewDirty = true;
+            _activeActionViewCache = null;
+        }
+
+        private void MarkActiveEffectViewDirty()
+        {
+            _activeEffectViewDirty = true;
+            _activeEffectViewCache = null;
         }
 
         private static Dictionary<Guid, UnitRuntimeState> CloneRuntimeStates(IReadOnlyDictionary<Guid, UnitRuntimeState> source)
