@@ -96,7 +96,7 @@ namespace CheckmateRPG.Core.Actions
                 return;
             if (!_activeActions.TryGetValue(actionId, out BaseActionCommand action))
                 return;
-            if (action.State is not (ActionState.Queued or ActionState.Executing))
+            if (action.State is not (ActionState.Queued or ActionState.Executing or ActionState.Resolving))
                 return;
 
             ActionState previousState = action.State;

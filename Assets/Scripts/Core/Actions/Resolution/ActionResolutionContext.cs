@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Runtime.Mutations;
 
 namespace CheckmateRPG.Core.Actions.Resolution
@@ -13,6 +14,7 @@ namespace CheckmateRPG.Core.Actions.Resolution
     {
         private readonly List<IRuntimeMutation> _pendingMutations = new();
         private readonly List<IGameEvent> _pendingEvents = new();
+        private readonly Dictionary<Guid, ActionCancellationReason> _cancelledActions = new();
 
         public ActionResolutionContext(int currentTick, IReadOnlyList<IActionCommand> pendingActions)
         {
@@ -40,6 +42,7 @@ namespace CheckmateRPG.Core.Actions.Resolution
 
         /// <summary>Events accumulated across all phases. Flushed during Finalize.</summary>
         public IReadOnlyList<IGameEvent> PendingEvents => _pendingEvents;
+        public IReadOnlyDictionary<Guid, ActionCancellationReason> CancelledActions => _cancelledActions;
 
         internal void AddMutation(IRuntimeMutation mutation)
         {
@@ -75,6 +78,24 @@ namespace CheckmateRPG.Core.Actions.Resolution
                 if (events[i] != null)
                     _pendingEvents.Add(events[i]);
             }
+        }
+
+        internal void MarkCancelled(Guid actionId, ActionCancellationReason reason)
+        {
+            if (actionId == Guid.Empty)
+                return;
+
+            _cancelledActions[actionId] = reason;
+        }
+
+        public bool IsCancelled(Guid actionId)
+        {
+            return actionId != Guid.Empty && _cancelledActions.ContainsKey(actionId);
+        }
+
+        public bool TryGetCancellationReason(Guid actionId, out ActionCancellationReason reason)
+        {
+            return _cancelledActions.TryGetValue(actionId, out reason);
         }
     }
 }

@@ -3,6 +3,12 @@ using CheckmateRPG.Core.Actions;
 
 namespace CheckmateRPG.Core.Events.ActionEvents
 {
+    public readonly record struct ActionCancelledPayload(
+        Guid ActionId,
+        Guid ActorId,
+        ActionCancellationReason Reason,
+        int SchedulerTick);
+
     public readonly record struct ActionLifecyclePayload(
         Guid ActionId,
         Guid ActorId,
@@ -29,4 +35,7 @@ namespace CheckmateRPG.Core.Events.ActionEvents
 
     public sealed record ActionCompletedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record ActionCancelledEvent(ActionCancelledPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionCancelledPayload>(Payload, EventCategory.Domain, Source, Target);
 }
