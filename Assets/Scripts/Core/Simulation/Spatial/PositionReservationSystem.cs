@@ -128,7 +128,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             foreach (KeyValuePair<Guid, MoveActionCommand> pair in candidates)
             {
                 MoveActionCommand candidate = pair.Value;
-                if (candidate == null || candidate.ActionId == move.ActionId)
+                if (candidate.ActionId == move.ActionId)
                     continue;
 
                 if (move.From == candidate.To && move.To == candidate.From)
