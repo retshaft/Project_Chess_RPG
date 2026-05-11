@@ -158,11 +158,13 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             WinningReservationsByAction = winningReservationsByAction ?? EmptyActionReservations;
             WinningReservationsByPosition = winningReservationsByPosition ?? EmptyPositionReservations;
             ReservationLostActions = reservationLostActions ?? EmptyLostActions;
+            _reservationLostLookup = BuildReservationLostLookup(ReservationLostActions);
         }
 
         public IReadOnlyDictionary<Guid, ReservedPosition> WinningReservationsByAction { get; }
         public IReadOnlyDictionary<Vector2Int, ReservedPosition> WinningReservationsByPosition { get; }
         public IReadOnlyCollection<Guid> ReservationLostActions { get; }
+        private readonly HashSet<Guid> _reservationLostLookup;
 
         public bool HasWinningReservation(Guid actionId)
         {
@@ -171,16 +173,22 @@ namespace CheckmateRPG.Core.Simulation.Spatial
 
         public bool IsReservationLost(Guid actionId)
         {
-            if (actionId == Guid.Empty)
-                return false;
+            return actionId != Guid.Empty && _reservationLostLookup.Contains(actionId);
+        }
 
-            foreach (Guid lostActionId in ReservationLostActions)
+        private static HashSet<Guid> BuildReservationLostLookup(IReadOnlyCollection<Guid> actionIds)
+        {
+            var lookup = new HashSet<Guid>();
+            if (actionIds == null || actionIds.Count == 0)
+                return lookup;
+
+            foreach (Guid actionId in actionIds)
             {
-                if (lostActionId == actionId)
-                    return true;
+                if (actionId != Guid.Empty)
+                    lookup.Add(actionId);
             }
 
-            return false;
+            return lookup;
         }
     }
 }

@@ -594,9 +594,10 @@ namespace CheckmateRPG.Core
             if (_simulationRuntime != null &&
                 _simulationRuntime.TryGetMutableUnit(action.ActorId, out UnitRuntimeState state))
             {
+                Guid? updatedActionId = state.CurrentActionId == action.ActionId ? null : state.CurrentActionId;
                 _simulationRuntime.SetUnitActionState(
                     action.ActorId,
-                    state.CurrentActionId == action.ActionId ? null : state.CurrentActionId,
+                    updatedActionId,
                     _scheduler.CurrentTick,
                     OwnershipOwners.ActionScheduler);
             }
