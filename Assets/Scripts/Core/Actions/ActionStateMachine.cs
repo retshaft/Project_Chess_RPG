@@ -7,8 +7,7 @@ namespace CheckmateRPG.Core.Actions
     /// </summary>
     /// <remarks>
     /// Basic flow:   Queued → Casting → Resolving → Recovery → Completed
-    /// Interrupt:    Casting → Interrupted
-    ///               Recovery → Interrupted  (when IsRecoveryInterruptible)
+    /// Interrupt:    Queued/Casting/Recovery → Interrupted (policy-gated)
     /// Cancel:       Queued  → Cancelled
     ///               Casting → Cancelled     (pre-resolve only)
     /// </remarks>
@@ -44,13 +43,22 @@ namespace CheckmateRPG.Core.Actions
 
         /// <summary>
         /// Returns <c>true</c> when an action in <paramref name="state"/> is eligible
-        /// for interruption. Casting-phase interrupts are gated by the per-action
-        /// <c>IsInterruptible</c> flag. Recovery-phase interrupts additionally require
-        /// <paramref name="isRecoveryInterruptible"/> to be <c>true</c>.
+        /// for interruption based on the action's <paramref name="window"/> policy.
         /// </summary>
-        public static bool CanInterrupt(ActionState state, bool isRecoveryInterruptible) =>
-            state == ActionState.Casting ||
-            (state == ActionState.Recovery && isRecoveryInterruptible);
+        public static bool CanInterrupt(ActionState state, InterruptWindow window)
+        {
+            if (window == InterruptWindow.Uninterruptible)
+                return state == ActionState.Queued;
+
+            return state switch
+            {
+                ActionState.Queued => true,
+                ActionState.Casting => window == InterruptWindow.CastingInterruptible,
+                ActionState.Resolving => false,
+                ActionState.Recovery => window == InterruptWindow.RecoveryInterruptible,
+                _ => false
+            };
+        }
 
         /// <summary>
         /// Returns <c>true</c> when <paramref name="state"/> is a terminal lifecycle stage

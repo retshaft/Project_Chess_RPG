@@ -234,6 +234,8 @@ namespace CheckmateRPG.Core.Simulation
             ActionSpeedTier speedTier,
             bool isInterruptible,
             bool isRecoveryInterruptible,
+            InterruptPriority interruptPriority,
+            InterruptWindow interruptWindow,
             Vector2Int? from,
             Vector2Int? to,
             Guid? targetId,
@@ -253,6 +255,8 @@ namespace CheckmateRPG.Core.Simulation
             SpeedTier = speedTier;
             IsInterruptible = isInterruptible;
             IsRecoveryInterruptible = isRecoveryInterruptible;
+            InterruptPriority = interruptPriority;
+            InterruptWindow = interruptWindow;
             From = from;
             To = to;
             TargetId = targetId;
@@ -275,6 +279,8 @@ namespace CheckmateRPG.Core.Simulation
                 source?.SpeedTier ?? ActionSpeedTier.Normal,
                 source?.IsInterruptible ?? true,
                 source?.IsRecoveryInterruptible ?? false,
+                source?.InterruptPriority ?? InterruptPriority.Normal,
+                source?.InterruptWindow ?? InterruptWindow.CastingInterruptible,
                 source?.From,
                 source?.To,
                 source?.TargetId,
@@ -296,6 +302,8 @@ namespace CheckmateRPG.Core.Simulation
         public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
         public bool IsRecoveryInterruptible { get; }
+        public InterruptPriority InterruptPriority { get; }
+        public InterruptWindow InterruptWindow { get; }
         public bool IsCompleted => ActionStateMachine.IsTerminal(State);
         public Vector2Int? From { get; }
         public Vector2Int? To { get; }
@@ -349,6 +357,8 @@ namespace CheckmateRPG.Core.Simulation
                 action.SpeedTier,
                 action.IsInterruptible,
                 action.IsRecoveryInterruptible,
+                action.InterruptPriority,
+                action.InterruptWindow,
                 from,
                 to,
                 targetId,

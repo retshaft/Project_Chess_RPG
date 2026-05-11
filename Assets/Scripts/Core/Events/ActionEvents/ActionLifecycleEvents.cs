@@ -21,6 +21,13 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         int RecoveryEndTick,
         bool IsInterruptible);
 
+    public readonly record struct ActionInterruptedPayload(
+        Guid SourceActionId,
+        Guid TargetActionId,
+        Guid ActorId,
+        InterruptPriority InterruptPriority,
+        int SchedulerTick);
+
     /// <summary>
     /// Published on every action state transition. Provides full lifecycle context.
     /// </summary>
@@ -40,8 +47,8 @@ namespace CheckmateRPG.Core.Events.ActionEvents
     public sealed record ActionRecoveryEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
 
-    public sealed record ActionInterruptedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
-        : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);
+    public sealed record ActionInterruptedEvent(ActionInterruptedPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionInterruptedPayload>(Payload, EventCategory.Domain, Source, Target);
 
     public sealed record ActionCompletedEvent(ActionLifecyclePayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<ActionLifecyclePayload>(Payload, EventCategory.Domain, Source, Target);

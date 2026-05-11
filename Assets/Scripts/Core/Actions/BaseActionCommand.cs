@@ -11,7 +11,9 @@ namespace CheckmateRPG.Core.Actions
             int recoveryEndTick,
             ActionSpeedTier speedTier,
             bool isInterruptible = true,
-            bool isRecoveryInterruptible = false)
+            bool isRecoveryInterruptible = false,
+            InterruptPriority interruptPriority = InterruptPriority.Normal,
+            InterruptWindow? interruptWindow = null)
         {
             if (actorId == Guid.Empty)
                 throw new ArgumentException("ActorId must not be empty.", nameof(actorId));
@@ -32,6 +34,13 @@ namespace CheckmateRPG.Core.Actions
             SpeedTier = speedTier;
             IsInterruptible = isInterruptible;
             IsRecoveryInterruptible = isRecoveryInterruptible;
+            InterruptPriority = interruptPriority;
+            InterruptWindow = interruptWindow ??
+                (isRecoveryInterruptible
+                    ? InterruptWindow.RecoveryInterruptible
+                    : isInterruptible
+                        ? InterruptWindow.CastingInterruptible
+                        : InterruptWindow.Uninterruptible);
         }
 
         public Guid ActionId { get; }
@@ -44,6 +53,9 @@ namespace CheckmateRPG.Core.Actions
         public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
         public bool IsRecoveryInterruptible { get; }
+        public InterruptPriority InterruptPriority { get; }
+        public InterruptWindow InterruptWindow { get; }
+        public ActionInterruptPolicy InterruptPolicy => new(InterruptPriority, InterruptWindow);
         public bool IsCompleted => ActionStateMachine.IsTerminal(State);
 
         internal void MarkQueued(int queuedTick)

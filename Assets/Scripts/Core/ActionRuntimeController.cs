@@ -730,22 +730,22 @@ namespace CheckmateRPG.Core
 
         private void HandleActionInterrupted(ActionInterruptedEvent actionInterruptedEvent)
         {
-            ActionLifecyclePayload payload = actionInterruptedEvent.Payload;
+            ActionInterruptedPayload payload = actionInterruptedEvent.Payload;
             if (_simulationRuntime == null || !_simulationRuntime.TryGetMutableUnit(payload.ActorId, out UnitRuntimeState state))
                 return;
 
             _simulationRuntime.SetUnitActionState(
                 payload.ActorId,
-                state.CurrentActionId == payload.ActionId ? null : state.CurrentActionId,
+                state.CurrentActionId == payload.TargetActionId ? null : state.CurrentActionId,
                 payload.SchedulerTick,
                 OwnershipOwners.ActionScheduler);
-            _simulationRuntime.UnregisterAction(payload.ActionId);
+            _simulationRuntime.UnregisterAction(payload.TargetActionId);
             if (_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) && actor != null)
                 SyncRuntimeState(actor);
             _eventBus.Publish(new ActionCancelledEvent(
-                new ActionCancelledPayload(payload.ActionId, payload.ActorId, ActionCancellationReason.Interrupted, payload.SchedulerTick),
+                new ActionCancelledPayload(payload.TargetActionId, payload.ActorId, ActionCancellationReason.Interrupted, payload.SchedulerTick),
                 payload.ActorId.ToString("N"),
-                payload.ActionId.ToString("N")));
+                payload.TargetActionId.ToString("N")));
         }
 
         private static ActionSpeedTier ToSpeedTier(float actionSpeed)
