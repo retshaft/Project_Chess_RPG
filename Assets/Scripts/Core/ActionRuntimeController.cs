@@ -871,7 +871,10 @@ namespace CheckmateRPG.Core
                     StackCount = effect.StackCount,
                     TickInterval = effect.TickInterval,
                     NextTickIn = effect.NextTickIn,
-                    Magnitude = effect.Magnitude
+                    Magnitude = effect.Magnitude,
+                    TimingPhase = effect.TimingPhase,
+                    ActionSpeedLevel = effect.ActionSpeedLevel,
+                    IsReaction = effect.IsReaction
                 });
             }
 

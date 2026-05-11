@@ -1,4 +1,5 @@
 using System;
+using CheckmateRPG.Core;
 using CheckmateRPG.Core.Runtime.Ownership;
 using UnityEngine;
 
@@ -19,9 +20,12 @@ namespace CheckmateRPG.Core.Effects
             int stackCount,
             int tickInterval = 1,
             int nextTickIn = 1,
-            float magnitude = 1f)
+            float magnitude = 1f,
+            EffectTimingPhase timingPhase = EffectTimingPhase.OnTickEnd,
+            ActionSpeedTier actionSpeedLevel = ActionSpeedTier.Normal,
+            bool isReaction = false)
         {
-            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude);
+            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction);
         }
 
         public EffectRuntimeState(EffectRuntimeState source)
@@ -37,7 +41,10 @@ namespace CheckmateRPG.Core.Effects
                 source.StackCount,
                 source.TickInterval,
                 source.NextTickIn,
-                source.Magnitude);
+                source.Magnitude,
+                source.TimingPhase,
+                source.ActionSpeedLevel,
+                source.IsReaction);
         }
 
         public string EffectId { get; private set; } = string.Empty;
@@ -49,6 +56,9 @@ namespace CheckmateRPG.Core.Effects
         public int NextTickIn { get; private set; } = 1;
         public float Magnitude { get; private set; } = 1f;
         public bool IsExpired => RemainingTick <= 0;
+        public EffectTimingPhase TimingPhase { get; private set; } = EffectTimingPhase.OnTickEnd;
+        public ActionSpeedTier ActionSpeedLevel { get; private set; } = ActionSpeedTier.Normal;
+        public bool IsReaction { get; private set; }
 
         internal void Seed(
             string effectId,
@@ -58,7 +68,10 @@ namespace CheckmateRPG.Core.Effects
             int stackCount,
             int tickInterval = 1,
             int nextTickIn = 1,
-            float magnitude = 1f)
+            float magnitude = 1f,
+            EffectTimingPhase timingPhase = EffectTimingPhase.OnTickEnd,
+            ActionSpeedTier actionSpeedLevel = ActionSpeedTier.Normal,
+            bool isReaction = false)
         {
             EffectId = effectId ?? string.Empty;
             SourceId = sourceId;
@@ -68,6 +81,9 @@ namespace CheckmateRPG.Core.Effects
             TickInterval = Mathf.Max(1, tickInterval);
             NextTickIn = Mathf.Max(1, nextTickIn);
             Magnitude = Mathf.Max(0f, magnitude);
+            TimingPhase = timingPhase;
+            ActionSpeedLevel = actionSpeedLevel;
+            IsReaction = isReaction;
         }
 
         internal void RefreshFromApplication(

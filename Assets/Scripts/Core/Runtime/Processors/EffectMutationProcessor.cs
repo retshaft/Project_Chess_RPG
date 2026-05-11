@@ -28,7 +28,10 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 Mathf.Max(1, mutation.StackCount),
                 Mathf.Max(1, mutation.TickInterval),
                 Mathf.Clamp(mutation.InitialTickIn, 1, Mathf.Max(1, mutation.TickInterval)),
-                Mathf.Max(0f, mutation.Magnitude));
+                Mathf.Max(0f, mutation.Magnitude),
+                mutation.TimingPhase,
+                mutation.ActionSpeedLevel,
+                mutation.IsReaction);
 
             _ = _applyEffect(state);
             return Array.Empty<IGameEvent>();

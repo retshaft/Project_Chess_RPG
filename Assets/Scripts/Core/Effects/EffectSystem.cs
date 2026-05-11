@@ -30,12 +30,15 @@ namespace CheckmateRPG.Core.Effects
         private readonly EffectSystemContext _context;
         private readonly Func<SimulationRuntime> _runtimeProvider;
         private readonly List<IEffectProcessor> _processors = new();
+        private readonly EffectExpirationQueue _expirationQueue = new();
+        private readonly EffectTimingPipeline _timingPipeline;
 
         public EffectSystem(IEventBus eventBus, Func<Guid, UnitBrain> unitResolver, Func<SimulationRuntime> runtimeProvider)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _context = new EffectSystemContext(unitResolver);
             _runtimeProvider = runtimeProvider ?? throw new ArgumentNullException(nameof(runtimeProvider));
+            _timingPipeline = new EffectTimingPipeline(_expirationQueue);
         }
 
         public void RegisterProcessor(IEffectProcessor processor)
@@ -78,6 +81,13 @@ namespace CheckmateRPG.Core.Effects
             return true;
         }
 
+        /// <summary>
+        /// Advances all active effects for one tick.
+        /// Duration countdown and DOT/HOT ticks are routed exclusively through
+        /// <see cref="EffectTimingPhase.OnTickEnd"/> via <see cref="EffectTimingPipeline"/>.
+        /// Expired effects are collected in <see cref="EffectExpirationQueue"/> and removed
+        /// after all tick processing is complete.
+        /// </summary>
         public void AdvanceTick(int schedulerTick)
         {
             SimulationRuntime runtime = GetRuntime();
@@ -85,30 +95,77 @@ namespace CheckmateRPG.Core.Effects
             if (runtime.ActiveEffects.Count == 0)
                 return;
 
-            var effectKeys = new List<string>(runtime.ActiveEffects.Keys);
-            for (int i = effectKeys.Count - 1; i >= 0; i--)
+            // Build a snapshot of the mutable effect dictionary for pipeline consumption.
+            var mutableSnapshot = BuildMutableEffectSnapshot(runtime);
+
+            // Run only the OnTickEnd phase here; other phases are invoked by the
+            // ResolutionPhasePipeline at the appropriate moment.
+            IReadOnlyList<EffectTickResult> tickResults = _timingPipeline.RunPhase(
+                EffectTimingPhase.OnTickEnd,
+                schedulerTick,
+                mutableSnapshot,
+                ResolveProcessor,
+                _context);
+
+            // Publish tick events for each effect that fired this tick.
+            for (int i = 0; i < tickResults.Count; i++)
             {
-                string effectKey = effectKeys[i];
-                if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState effect))
-                    continue;
-
-                effect.AdvanceTick(OwnershipOwners.EffectSystem);
-
-                IEffectProcessor processor = ResolveProcessor(effect);
-                if (processor != null && effect.NextTickIn <= 0)
-                {
-                    int deltaHp = processor.OnTick(_context, effect);
-                    effect.ResetTickCountdown(OwnershipOwners.EffectSystem);
-                    PublishTick(effect, deltaHp);
-                }
-
-                if (!effect.IsExpired)
-                    continue;
-
-                processor?.OnExpired(_context, effect);
-                PublishExpired(effect);
-                runtime.UnregisterEffect(effectKey);
+                EffectTickResult result = tickResults[i];
+                PublishTick(result.Effect, result.DeltaHp);
             }
+
+            // Flush expired effects – deferred removal guarantees that no effect is
+            // removed inline while the pipeline is still iterating.
+            _expirationQueue.Flush(effectKey =>
+            {
+                if (runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState expired))
+                    PublishExpired(expired);
+
+                runtime.UnregisterEffect(effectKey);
+            });
+        }
+
+        /// <summary>
+        /// Runs a single non-OnTickEnd timing phase for all matching active effects.
+        /// Intended to be called by the <c>ResolutionPhasePipeline</c> at the correct moment.
+        /// </summary>
+        /// <param name="phase">The phase to run. Must not be <see cref="EffectTimingPhase.OnTickEnd"/>.</param>
+        /// <param name="schedulerTick">Current simulation tick.</param>
+        /// <param name="actionId">Action that triggered this phase (may be <see cref="Guid.Empty"/>).</param>
+        public IReadOnlyList<EffectTickResult> RunPhase(
+            EffectTimingPhase phase,
+            int schedulerTick,
+            Guid actionId = default)
+        {
+            if (phase == EffectTimingPhase.OnTickEnd)
+                throw new ArgumentException(
+                    "OnTickEnd is driven by AdvanceTick. Use AdvanceTick() instead.",
+                    nameof(phase));
+
+            SimulationRuntime runtime = GetRuntime();
+            if (runtime.ActiveEffects.Count == 0)
+                return Array.Empty<EffectTickResult>();
+
+            var mutableSnapshot = BuildMutableEffectSnapshot(runtime);
+
+            IReadOnlyList<EffectTickResult> results = _timingPipeline.RunPhase(
+                phase,
+                schedulerTick,
+                mutableSnapshot,
+                ResolveProcessor,
+                _context,
+                actionId);
+
+            // Flush any expiration requests that may have arisen during non-tick phases.
+            _expirationQueue.Flush(effectKey =>
+            {
+                if (runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState expired))
+                    PublishExpired(expired);
+
+                runtime.UnregisterEffect(effectKey);
+            });
+
+            return results;
         }
 
         public IReadOnlyDictionary<string, EffectRuntimeState> CreateRuntimeSnapshot()
@@ -140,7 +197,10 @@ namespace CheckmateRPG.Core.Effects
                 requested.StackCount,
                 requested.TickInterval,
                 requested.NextTickIn,
-                requested.Magnitude);
+                requested.Magnitude,
+                requested.TimingPhase,
+                requested.ActionSpeedLevel,
+                requested.IsReaction);
 
             runtime.RegisterEffect(effectKey, created);
             if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState runtimeEffect))
@@ -168,6 +228,22 @@ namespace CheckmateRPG.Core.Effects
             }
 
             return null;
+        }
+
+        private static Dictionary<string, EffectRuntimeState> BuildMutableEffectSnapshot(
+            SimulationRuntime runtime)
+        {
+            var snapshot = new Dictionary<string, EffectRuntimeState>(
+                runtime.ActiveEffects.Count,
+                StringComparer.Ordinal);
+
+            foreach (string key in runtime.ActiveEffects.Keys)
+            {
+                if (runtime.TryGetMutableEffect(key, out EffectRuntimeState effect) && effect != null)
+                    snapshot[key] = effect;
+            }
+
+            return snapshot;
         }
 
         private void PublishApplied(IReadOnlyEffectRuntimeState state)

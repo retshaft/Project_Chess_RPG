@@ -159,6 +159,9 @@ namespace CheckmateRPG.Core
                 CompareEffectField(effectKey, "StackCount", expectedEffect.StackCount, actualEffect.StackCount, differences);
                 CompareEffectField(effectKey, "TickInterval", expectedEffect.TickInterval, actualEffect.TickInterval, differences);
                 CompareEffectField(effectKey, "NextTickIn", expectedEffect.NextTickIn, actualEffect.NextTickIn, differences);
+                CompareEffectField(effectKey, "TimingPhase", expectedEffect.TimingPhase, actualEffect.TimingPhase, differences);
+                CompareEffectField(effectKey, "ActionSpeedLevel", expectedEffect.ActionSpeedLevel, actualEffect.ActionSpeedLevel, differences);
+                CompareEffectField(effectKey, "IsReaction", expectedEffect.IsReaction, actualEffect.IsReaction, differences);
 
                 if (Math.Abs(expectedEffect.Magnitude - actualEffect.Magnitude) > floatTolerance)
                 {

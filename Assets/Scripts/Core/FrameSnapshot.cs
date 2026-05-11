@@ -50,5 +50,8 @@ namespace CheckmateRPG.Core
         public int TickInterval;
         public int NextTickIn;
         public float Magnitude;
+        public CheckmateRPG.Core.Effects.EffectTimingPhase TimingPhase;
+        public ActionSpeedTier ActionSpeedLevel;
+        public bool IsReaction;
     }
 }

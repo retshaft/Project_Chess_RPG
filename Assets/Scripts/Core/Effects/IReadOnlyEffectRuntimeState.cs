@@ -1,4 +1,5 @@
 using System;
+using CheckmateRPG.Core;
 
 namespace CheckmateRPG.Core.Effects
 {
@@ -13,5 +14,23 @@ namespace CheckmateRPG.Core.Effects
         int NextTickIn { get; }
         float Magnitude { get; }
         bool IsExpired { get; }
+
+        /// <summary>
+        /// The timing phase in which this effect is evaluated by the
+        /// <see cref="EffectTimingPipeline"/>. Defaults to <see cref="EffectTimingPhase.OnTickEnd"/>.
+        /// </summary>
+        EffectTimingPhase TimingPhase { get; }
+
+        /// <summary>
+        /// Speed tier used for deterministic ordering within the same
+        /// <see cref="TimingPhase"/>. Lower values are processed first.
+        /// </summary>
+        ActionSpeedTier ActionSpeedLevel { get; }
+
+        /// <summary>
+        /// When <c>true</c>, this effect is a reaction and is restricted to the
+        /// <see cref="EffectTimingPhase.OnPostResolve"/> phase.
+        /// </summary>
+        bool IsReaction { get; }
     }
 }
