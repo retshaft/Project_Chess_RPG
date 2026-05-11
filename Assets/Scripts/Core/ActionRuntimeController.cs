@@ -11,6 +11,7 @@ using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Core.Runtime.Processors;
 using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Core.Simulation.Spatial;
 using CheckmateRPG.Core.Simulation.Validation;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
@@ -47,6 +48,8 @@ namespace CheckmateRPG.Core
         private AbilityExecutionPipeline _abilityPipeline;
         private RuntimeBattleContext _battleContext;
         private ResolutionPhasePipeline _resolutionPipeline;
+        private PositionReservationSystem _positionReservationSystem;
+        private PositionReservationSnapshot _positionReservations = PositionReservationSnapshot.Empty;
         private readonly Dictionary<string, AbilityDefinition> _abilityDefinitions = new(StringComparer.Ordinal);
         private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
         private ReplayRecorder _replayRecorder;
@@ -90,6 +93,7 @@ namespace CheckmateRPG.Core
             _mutationOrderingService = new MutationOrderingService();
             _abilityPipeline = new AbilityExecutionPipeline();
             _battleContext = new RuntimeBattleContext(this);
+            _positionReservationSystem = new PositionReservationSystem(SpatialResolutionPolicy.HigherSpeedWins);
             _effectSystem = BuildEffectSystem();
             _mutationProcessor = new RuntimeMutationProcessor(
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
@@ -100,7 +104,8 @@ namespace CheckmateRPG.Core
                 {
                     TryResolveAction(action, out ActionResolutionResult result);
                     return result;
-                });
+                },
+                onPreResolveAction: HandlePreResolveAction);
             _replayRecorder = new ReplayRecorder();
             _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, GetCurrentTickSafe);
             _runtimeValidationSystem = BuildRuntimeValidationSystem();
@@ -350,6 +355,7 @@ namespace CheckmateRPG.Core
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             SyncAllRuntimeStates();
+            _positionReservations = _positionReservationSystem.Build(ready);
             ActionResolutionContext resolutionContext =
                 _resolutionPipeline.Execute(_scheduler.CurrentTick, ready, _battleContext);
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
@@ -495,6 +501,111 @@ namespace CheckmateRPG.Core
             return result.Success;
         }
 
+        private void HandlePreResolveAction(IActionCommand action, ActionResolutionContext context)
+        {
+            if (action == null || context == null)
+                return;
+            if (action.State == ActionState.Cancelled || context.IsCancelled(action.ActionId))
+                return;
+
+            if (!_battleContext.TryGetUnit(action.ActorId, out BattleUnitSnapshot actor) ||
+                (actor.StatusFlags & UnitStatusFlags.Dead) != 0)
+            {
+                CancelResolvingAction(action, ActionCancellationReason.Interrupted, context);
+                return;
+            }
+
+            switch (action)
+            {
+                case MoveActionCommand move:
+                    ValidateMoveActionPreResolve(move, context);
+                    break;
+                case AttackActionCommand attack:
+                    ValidateAttackActionPreResolve(attack, context);
+                    break;
+            }
+        }
+
+        private void ValidateMoveActionPreResolve(MoveActionCommand move, ActionResolutionContext context)
+        {
+            if (move == null)
+                return;
+
+            if (!_positionReservations.HasWinningReservation(move.ActionId) ||
+                _positionReservations.IsReservationLost(move.ActionId))
+            {
+                CancelResolvingAction(move, ActionCancellationReason.ReservationLost, context);
+                return;
+            }
+
+            if (!_battleContext.IsCellValid(move.To))
+            {
+                CancelResolvingAction(move, ActionCancellationReason.TargetInvalid, context);
+                return;
+            }
+
+            if (_battleContext.IsCellOccupied(move.To, move.ActorId))
+            {
+                CancelResolvingAction(move, ActionCancellationReason.ReservationLost, context);
+            }
+        }
+
+        private void ValidateAttackActionPreResolve(AttackActionCommand attack, ActionResolutionContext context)
+        {
+            if (attack == null)
+                return;
+
+            if (!_battleContext.TryGetUnit(attack.TargetId, out BattleUnitSnapshot target) ||
+                (target.StatusFlags & UnitStatusFlags.Dead) != 0)
+            {
+                CancelResolvingAction(attack, ActionCancellationReason.TargetInvalid, context);
+                return;
+            }
+
+            if (!_battleContext.IsCellValid(target.Position))
+            {
+                CancelResolvingAction(attack, ActionCancellationReason.TargetInvalid, context);
+                return;
+            }
+
+            if (!_battleContext.IsTargetInAttackRange(attack.ActorId, attack.TargetId))
+            {
+                CancelResolvingAction(attack, ActionCancellationReason.OutOfRange, context);
+            }
+        }
+
+        private void CancelResolvingAction(
+            IActionCommand action,
+            ActionCancellationReason reason,
+            ActionResolutionContext context)
+        {
+            if (action == null || context == null)
+                return;
+            if (context.IsCancelled(action.ActionId))
+                return;
+
+            _scheduler.CancelAction(action.ActionId);
+            context.MarkCancelled(action.ActionId, reason);
+            context.AddEvent(new ActionCancelledEvent(
+                new ActionCancelledPayload(action.ActionId, action.ActorId, reason, _scheduler.CurrentTick),
+                action.ActorId.ToString("N"),
+                action.ActionId.ToString("N")));
+
+            if (_simulationRuntime != null &&
+                _simulationRuntime.TryGetMutableUnit(action.ActorId, out UnitRuntimeState state))
+            {
+                _simulationRuntime.SetUnitActionState(
+                    action.ActorId,
+                    state.CurrentActionId == action.ActionId ? null : state.CurrentActionId,
+                    _scheduler.CurrentTick,
+                    OwnershipOwners.ActionScheduler);
+            }
+
+            _simulationRuntime?.UnregisterAction(action.ActionId);
+            if (_unitsById.TryGetValue(action.ActorId, out UnitBrain actor) && actor != null)
+                SyncRuntimeState(actor);
+        }
+
         private IReadOnlySimulationRuntime BuildSimulationRuntime(int tick)
         {
             if (_simulationRuntime == null)
@@ -629,6 +740,10 @@ namespace CheckmateRPG.Core
             _simulationRuntime.UnregisterAction(payload.ActionId);
             if (_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) && actor != null)
                 SyncRuntimeState(actor);
+            _eventBus.Publish(new ActionCancelledEvent(
+                new ActionCancelledPayload(payload.ActionId, payload.ActorId, ActionCancellationReason.Interrupted, payload.SchedulerTick),
+                payload.ActorId.ToString("N"),
+                payload.ActionId.ToString("N")));
         }
 
         private static ActionSpeedTier ToSpeedTier(float actionSpeed)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Actions.Resolvers;
 
 namespace CheckmateRPG.Core.Actions.Resolution
@@ -117,6 +118,8 @@ namespace CheckmateRPG.Core.Actions.Resolution
                 IActionCommand action = actions[i];
                 if (action == null)
                     continue;
+                if (action.State == ActionState.Cancelled || context.IsCancelled(action.ActionId))
+                    continue;
 
                 ActionResolutionResult result = _resolveAction(action, battleContext);
                 if (!result.Success)
@@ -141,7 +144,14 @@ namespace CheckmateRPG.Core.Actions.Resolution
 
             IReadOnlyList<IActionCommand> actions = context.PendingActions;
             for (int i = 0; i < actions.Count; i++)
-                _onPostResolveAction(actions[i], context);
+            {
+                IActionCommand action = actions[i];
+                if (action == null)
+                    continue;
+                if (action.State == ActionState.Cancelled || context.IsCancelled(action.ActionId))
+                    continue;
+                _onPostResolveAction(action, context);
+            }
         }
 
         /// <summary>
