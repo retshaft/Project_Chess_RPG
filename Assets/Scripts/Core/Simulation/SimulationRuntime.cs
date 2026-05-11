@@ -428,14 +428,17 @@ namespace CheckmateRPG.Core.Simulation
         {
             public ReadOnlyUnitRuntimeStateView(UnitRuntimeState source)
             {
-                UnitId = source?.UnitId ?? Guid.Empty;
-                HP = source?.HP ?? 0;
-                SP = source?.SP ?? 0;
-                Position = source?.Position ?? default;
-                CurrentActionId = source?.CurrentActionId;
-                RecoveryUntilTick = source?.RecoveryUntilTick ?? 0;
-                StatusFlags = source?.StatusFlags ?? UnitStatusFlags.None;
-                HasBaseline = source?.HasBaseline ?? false;
+                if (source == null)
+                    throw new ArgumentNullException(nameof(source));
+
+                UnitId = source.UnitId;
+                HP = source.HP;
+                SP = source.SP;
+                Position = source.Position;
+                CurrentActionId = source.CurrentActionId;
+                RecoveryUntilTick = source.RecoveryUntilTick;
+                StatusFlags = source.StatusFlags;
+                HasBaseline = source.HasBaseline;
             }
 
             public Guid UnitId { get; }
@@ -452,15 +455,18 @@ namespace CheckmateRPG.Core.Simulation
         {
             public ReadOnlyEffectRuntimeStateView(EffectRuntimeState source)
             {
-                EffectId = source?.EffectId ?? string.Empty;
-                SourceId = source?.SourceId ?? Guid.Empty;
-                TargetId = source?.TargetId ?? Guid.Empty;
-                RemainingTick = source?.RemainingTick ?? 0;
-                StackCount = source?.StackCount ?? 0;
-                TickInterval = source?.TickInterval ?? 1;
-                NextTickIn = source?.NextTickIn ?? 1;
-                Magnitude = source?.Magnitude ?? 0f;
-                IsExpired = source?.IsExpired ?? true;
+                if (source == null)
+                    throw new ArgumentNullException(nameof(source));
+
+                EffectId = source.EffectId;
+                SourceId = source.SourceId;
+                TargetId = source.TargetId;
+                RemainingTick = source.RemainingTick;
+                StackCount = source.StackCount;
+                TickInterval = source.TickInterval;
+                NextTickIn = source.NextTickIn;
+                Magnitude = source.Magnitude;
+                IsExpired = source.IsExpired;
             }
 
             public string EffectId { get; }
