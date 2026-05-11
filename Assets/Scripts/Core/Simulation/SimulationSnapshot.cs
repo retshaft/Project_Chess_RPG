@@ -157,8 +157,7 @@ namespace CheckmateRPG.Core.Simulation
             {
                 SimulationEffectSnapshot snapshot = pair.Value != null
                     ? new SimulationEffectSnapshot(pair.Value)
-                    : new SimulationEffectSnapshot(pair.Key, string.Empty, Guid.Empty, Guid.Empty, 0, 0, 0, 0, 0f);
-                cloned[pair.Key] = snapshot;
+                    : new SimulationEffectSnapshot(pair.Key, string.Empty, Guid.Empty, Guid.Empty, 0, 0, 0, 0, 0f);                cloned[pair.Key] = snapshot;
             }
 
             return new ReadOnlyDictionary<string, SimulationEffectSnapshot>(cloned);
@@ -382,7 +381,10 @@ namespace CheckmateRPG.Core.Simulation
             int stackCount,
             int tickInterval,
             int nextTickIn,
-            float magnitude)
+            float magnitude,
+            CheckmateRPG.Core.Effects.EffectTimingPhase timingPhase = CheckmateRPG.Core.Effects.EffectTimingPhase.OnTickEnd,
+            ActionSpeedTier actionSpeedLevel = ActionSpeedTier.Normal,
+            bool isReaction = false)
         {
             Key = key ?? string.Empty;
             EffectId = effectId ?? string.Empty;
@@ -393,6 +395,9 @@ namespace CheckmateRPG.Core.Simulation
             TickInterval = tickInterval;
             NextTickIn = nextTickIn;
             Magnitude = magnitude;
+            TimingPhase = timingPhase;
+            ActionSpeedLevel = actionSpeedLevel;
+            IsReaction = isReaction;
         }
 
         public SimulationEffectSnapshot(SimulationEffectSnapshot source)
@@ -405,7 +410,10 @@ namespace CheckmateRPG.Core.Simulation
                 source?.StackCount ?? 0,
                 source?.TickInterval ?? 0,
                 source?.NextTickIn ?? 0,
-                source?.Magnitude ?? 0f)
+                source?.Magnitude ?? 0f,
+                source?.TimingPhase ?? CheckmateRPG.Core.Effects.EffectTimingPhase.OnTickEnd,
+                source?.ActionSpeedLevel ?? ActionSpeedTier.Normal,
+                source?.IsReaction ?? false)
         {
         }
 
@@ -418,6 +426,9 @@ namespace CheckmateRPG.Core.Simulation
         public int TickInterval { get; }
         public int NextTickIn { get; }
         public float Magnitude { get; }
+        public CheckmateRPG.Core.Effects.EffectTimingPhase TimingPhase { get; }
+        public ActionSpeedTier ActionSpeedLevel { get; }
+        public bool IsReaction { get; }
 
         public static SimulationEffectSnapshot From(string fallbackKey, EffectRuntimeState state)
         {
@@ -435,7 +446,10 @@ namespace CheckmateRPG.Core.Simulation
                 state?.StackCount ?? 0,
                 state?.TickInterval ?? 0,
                 state?.NextTickIn ?? 0,
-                state?.Magnitude ?? 0f);
+                state?.Magnitude ?? 0f,
+                state?.TimingPhase ?? CheckmateRPG.Core.Effects.EffectTimingPhase.OnTickEnd,
+                state?.ActionSpeedLevel ?? ActionSpeedTier.Normal,
+                state?.IsReaction ?? false);
         }
 
         private static string BuildKey(IReadOnlyEffectRuntimeState state)

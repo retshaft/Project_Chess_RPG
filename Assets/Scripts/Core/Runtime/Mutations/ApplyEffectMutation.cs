@@ -1,4 +1,5 @@
 using System;
+using CheckmateRPG.Core;
 
 namespace CheckmateRPG.Core.Runtime.Mutations
 {
@@ -11,5 +12,8 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         int TickInterval,
         int InitialTickIn,
         int StackCount,
-        float Magnitude) : IRuntimeMutation;
+        float Magnitude,
+        CheckmateRPG.Core.Effects.EffectTimingPhase TimingPhase = CheckmateRPG.Core.Effects.EffectTimingPhase.OnTickEnd,
+        ActionSpeedTier ActionSpeedLevel = ActionSpeedTier.Normal,
+        bool IsReaction = false) : IRuntimeMutation;
 }
