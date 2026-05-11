@@ -53,7 +53,12 @@ namespace CheckmateRPG.Units
         /// <summary>Read-only access to the assigned unit data.</summary>
         public UnitData UnitData => _unitData;
         public Guid ActorId { get; private set; }
-        public UnitRuntimeState RuntimeState { get; private set; }
+
+        /// <summary>Read-only view of this unit's simulation runtime state.</summary>
+        public IReadOnlyUnitRuntimeState RuntimeState => MutableRuntimeState;
+
+        /// <summary>Internal mutable access to this unit's runtime state. Use only from the mutation pipeline.</summary>
+        internal UnitRuntimeState MutableRuntimeState { get; private set; }
 
         // ─── State ────────────────────────────────────────────────────────────────
 
@@ -115,7 +120,7 @@ namespace CheckmateRPG.Units
             }
 
             ActorId = actorId;
-            RuntimeState = new UnitRuntimeState();
+            MutableRuntimeState = new UnitRuntimeState();
         }
 
         private void Start()

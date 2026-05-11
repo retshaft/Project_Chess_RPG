@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace CheckmateRPG.Core.Simulation
 {
-    public sealed class SimulationRuntime
+    public sealed class SimulationRuntime : IReadOnlySimulationRuntime
     {
         private static readonly IReadOnlyDictionary<Guid, UnitRuntimeState> EmptyRuntimeStates =
             new ReadOnlyDictionary<Guid, UnitRuntimeState>(new Dictionary<Guid, UnitRuntimeState>());
@@ -23,6 +23,14 @@ namespace CheckmateRPG.Core.Simulation
         private readonly Dictionary<Guid, IActionCommand> _activeActions;
         private readonly Dictionary<string, EffectRuntimeState> _activeEffects;
         private readonly Dictionary<Vector2Int, Guid> _occupiedPositions;
+        private IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> _runtimeStateViewCache;
+        private IReadOnlyDictionary<Guid, IReadOnlyActionState> _activeActionViewCache;
+        private IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> _activeEffectViewCache;
+        private IReadOnlyDictionary<Vector2Int, Guid> _occupiedPositionViewCache;
+        private bool _runtimeStateViewDirty = true;
+        private bool _activeActionViewDirty = true;
+        private bool _activeEffectViewDirty = true;
+        private bool _occupiedPositionViewDirty = true;
 
         public SimulationRuntime(int currentTick)
             : this(currentTick, EmptyRuntimeStates, EmptyActiveActions, EmptyActiveEffects, EmptyOccupiedPositions)
@@ -41,18 +49,29 @@ namespace CheckmateRPG.Core.Simulation
             _activeActions = CloneActiveActions(activeActions ?? throw new ArgumentNullException(nameof(activeActions)));
             _activeEffects = CloneActiveEffects(activeEffects ?? throw new ArgumentNullException(nameof(activeEffects)));
             _occupiedPositions = CloneOccupiedPositions(occupiedPositions ?? throw new ArgumentNullException(nameof(occupiedPositions)));
-
-            RuntimeStates = new ReadOnlyDictionary<Guid, UnitRuntimeState>(_runtimeStates);
-            ActiveActions = new ReadOnlyDictionary<Guid, IActionCommand>(_activeActions);
-            ActiveEffects = new ReadOnlyDictionary<string, EffectRuntimeState>(_activeEffects);
-            OccupiedPositions = new ReadOnlyDictionary<Vector2Int, Guid>(_occupiedPositions);
         }
 
         public int CurrentTick { get; private set; }
-        public IReadOnlyDictionary<Guid, UnitRuntimeState> RuntimeStates { get; }
-        public IReadOnlyDictionary<Guid, IActionCommand> ActiveActions { get; }
-        public IReadOnlyDictionary<string, EffectRuntimeState> ActiveEffects { get; }
-        public IReadOnlyDictionary<Vector2Int, Guid> OccupiedPositions { get; }
+
+        public IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> RuntimeStates =>
+            _runtimeStateViewDirty || _runtimeStateViewCache == null
+                ? _runtimeStateViewCache = BuildRuntimeStateView()
+                : _runtimeStateViewCache;
+
+        public IReadOnlyDictionary<Guid, IReadOnlyActionState> ActiveActions =>
+            _activeActionViewDirty || _activeActionViewCache == null
+                ? _activeActionViewCache = BuildActiveActionView()
+                : _activeActionViewCache;
+
+        public IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> ActiveEffects =>
+            _activeEffectViewDirty || _activeEffectViewCache == null
+                ? _activeEffectViewCache = BuildActiveEffectView()
+                : _activeEffectViewCache;
+
+        public IReadOnlyDictionary<Vector2Int, Guid> OccupiedPositions =>
+            _occupiedPositionViewDirty || _occupiedPositionViewCache == null
+                ? _occupiedPositionViewCache = BuildOccupiedPositionView()
+                : _occupiedPositionViewCache;
 
         public static string BuildEffectKey(EffectRuntimeState effect)
         {
@@ -67,50 +86,89 @@ namespace CheckmateRPG.Core.Simulation
             return $"{targetId:N}:{effectId ?? string.Empty}";
         }
 
-        public void SetCurrentTick(int tick)
+        internal void SetCurrentTick(int tick)
         {
             CurrentTick = tick;
         }
 
-        public UnitRuntimeState GetUnit(Guid unitId)
+        public IReadOnlyUnitRuntimeState GetUnit(Guid unitId)
         {
-            if (!TryGetUnit(unitId, out UnitRuntimeState unit))
+            if (!TryGetUnit(unitId, out IReadOnlyUnitRuntimeState unit))
                 throw new KeyNotFoundException($"Unit runtime state not found for '{unitId:N}'.");
 
             return unit;
         }
 
-        public bool TryGetUnit(Guid unitId, out UnitRuntimeState unit)
+        public bool TryGetUnit(Guid unitId, out IReadOnlyUnitRuntimeState unit)
+        {
+            if (unitId == Guid.Empty)
+            {
+                unit = null;
+                return false;
+            }
+
+            return RuntimeStates.TryGetValue(unitId, out unit);
+        }
+
+        internal bool TryGetMutableUnit(Guid unitId, out UnitRuntimeState unit)
         {
             return _runtimeStates.TryGetValue(unitId, out unit) && unit != null;
         }
 
-        public IActionCommand GetAction(Guid actionId)
+        internal UnitRuntimeState GetMutableUnit(Guid unitId)
         {
-            if (!_activeActions.TryGetValue(actionId, out IActionCommand action) || action == null)
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState unit))
+                throw new KeyNotFoundException($"Unit runtime state not found for '{unitId:N}'.");
+
+            return unit;
+        }
+
+        public IReadOnlyActionState GetAction(Guid actionId)
+        {
+            if (!TryGetAction(actionId, out IReadOnlyActionState action))
                 throw new KeyNotFoundException($"Action runtime state not found for '{actionId:N}'.");
 
             return action;
         }
 
-        public bool TryGetAction(Guid actionId, out IActionCommand action)
+        public bool TryGetAction(Guid actionId, out IReadOnlyActionState action)
         {
-            return _activeActions.TryGetValue(actionId, out action) && action != null;
+            if (actionId == Guid.Empty)
+            {
+                action = null;
+                return false;
+            }
+
+            return ActiveActions.TryGetValue(actionId, out action);
         }
 
-        public bool TryGetEffect(string effectKey, out EffectRuntimeState effect)
+        public bool TryGetEffect(string effectKey, out IReadOnlyEffectRuntimeState effect)
+        {
+            if (string.IsNullOrWhiteSpace(effectKey))
+            {
+                effect = null;
+                return false;
+            }
+
+            return ActiveEffects.TryGetValue(effectKey, out effect);
+        }
+
+        internal bool TryGetMutableEffect(string effectKey, out EffectRuntimeState effect)
         {
             return !string.IsNullOrWhiteSpace(effectKey) &&
                    _activeEffects.TryGetValue(effectKey, out effect) &&
                    effect != null;
         }
 
-        public IReadOnlyList<UnitRuntimeState> GetUnitsAtPosition(Vector2Int position)
+        public IReadOnlyList<IReadOnlyUnitRuntimeState> GetUnitsAtPosition(Vector2Int position)
         {
-            if (!_occupiedPositions.TryGetValue(position, out Guid unitId) || !TryGetUnit(unitId, out UnitRuntimeState unit))
-                return Array.Empty<UnitRuntimeState>();
+            if (!OccupiedPositions.TryGetValue(position, out Guid unitId) ||
+                !TryGetUnit(unitId, out IReadOnlyUnitRuntimeState unit))
+            {
+                return Array.Empty<IReadOnlyUnitRuntimeState>();
+            }
 
-            return new[] { unit };
+            return new IReadOnlyUnitRuntimeState[] { unit };
         }
 
         public bool IsOccupied(Vector2Int position)
@@ -118,16 +176,17 @@ namespace CheckmateRPG.Core.Simulation
             return _occupiedPositions.ContainsKey(position);
         }
 
-        public void RegisterUnit(UnitRuntimeState unitState)
+        internal void RegisterUnit(UnitRuntimeState unitState)
         {
             if (unitState == null || unitState.UnitId == Guid.Empty)
                 return;
 
             _runtimeStates[unitState.UnitId] = new UnitRuntimeState(unitState);
             RefreshUnitPositionOwnership(unitState.UnitId);
+            MarkRuntimeStateViewDirty();
         }
 
-        public void RegisterAction(IActionCommand action)
+        internal void RegisterAction(IActionCommand action)
         {
             if (action == null || action.ActionId == Guid.Empty)
                 return;
@@ -137,19 +196,36 @@ namespace CheckmateRPG.Core.Simulation
                 return;
 
             _activeActions[action.ActionId] = snapshot;
+            MarkActiveActionViewDirty();
         }
 
-        public void ReplaceActions(IReadOnlyCollection<IActionCommand> actions)
+        internal void ReplaceActions(IReadOnlyCollection<IActionCommand> actions)
         {
             _activeActions.Clear();
-            if (actions == null || actions.Count == 0)
-                return;
+            try
+            {
+                if (actions == null || actions.Count == 0)
+                    return;
 
-            foreach (IActionCommand action in actions)
-                RegisterAction(action);
+                foreach (IActionCommand action in actions)
+                {
+                    if (action == null || action.ActionId == Guid.Empty)
+                        continue;
+
+                    SimulationActionSnapshot snapshot = SimulationActionSnapshot.From(action);
+                    if (snapshot == null)
+                        continue;
+
+                    _activeActions[action.ActionId] = snapshot;
+                }
+            }
+            finally
+            {
+                MarkActiveActionViewDirty();
+            }
         }
 
-        public void RegisterEffect(EffectRuntimeState effect)
+        internal void RegisterEffect(EffectRuntimeState effect)
         {
             if (effect == null)
                 return;
@@ -157,84 +233,94 @@ namespace CheckmateRPG.Core.Simulation
             RegisterEffect(BuildEffectKey(effect), effect);
         }
 
-        public void RegisterEffect(string effectKey, EffectRuntimeState effect)
+        internal void RegisterEffect(string effectKey, EffectRuntimeState effect)
         {
             if (string.IsNullOrWhiteSpace(effectKey) || effect == null)
                 return;
 
             _activeEffects[effectKey] = new EffectRuntimeState(effect);
+            MarkActiveEffectViewDirty();
         }
 
-        public void UnregisterUnit(Guid unitId)
+        internal void UnregisterUnit(Guid unitId)
         {
             if (unitId == Guid.Empty)
                 return;
 
             CleanupUnitRuntimeArtifacts(unitId);
             _runtimeStates.Remove(unitId);
+            MarkRuntimeStateViewDirty();
         }
 
-        public void UnregisterAction(Guid actionId)
+        internal void UnregisterAction(Guid actionId)
         {
             if (actionId == Guid.Empty)
                 return;
 
             _activeActions.Remove(actionId);
+            MarkActiveActionViewDirty();
         }
 
-        public void UnregisterEffect(string effectKey)
+        internal void UnregisterEffect(string effectKey)
         {
             if (string.IsNullOrWhiteSpace(effectKey))
                 return;
 
             _activeEffects.Remove(effectKey);
+            MarkActiveEffectViewDirty();
         }
 
-        public void SetUnitDerivedState(Guid unitId, int sp, UnitStatusFlags statusFlags)
+        internal void SetUnitDerivedState(Guid unitId, int sp, UnitStatusFlags statusFlags)
         {
-            if (!TryGetUnit(unitId, out UnitRuntimeState state))
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
                 return;
 
             state.SyncDerivedState(unitId, sp, statusFlags);
+            MarkRuntimeStateViewDirty();
         }
 
-        public void SetUnitHP(Guid unitId, int hp, string ownerName)
+        internal void SetUnitHP(Guid unitId, int hp, string ownerName)
         {
-            if (!TryGetUnit(unitId, out UnitRuntimeState state))
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
                 return;
 
             state.SetHP(hp, ownerName);
+            MarkRuntimeStateViewDirty();
         }
 
-        public void SetUnitPosition(Guid unitId, Vector2Int position, string ownerName)
+        internal void SetUnitPosition(Guid unitId, Vector2Int position, string ownerName)
         {
-            if (!TryGetUnit(unitId, out UnitRuntimeState state))
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
                 return;
 
             _occupiedPositions.Remove(state.Position);
             state.SetPosition(position, ownerName);
             _occupiedPositions[position] = unitId;
+            MarkRuntimeStateViewDirty();
+            MarkOccupiedPositionViewDirty();
         }
 
-        public void SetUnitActionState(Guid unitId, Guid? currentActionId, int recoveryUntilTick, string ownerName)
+        internal void SetUnitActionState(Guid unitId, Guid? currentActionId, int recoveryUntilTick, string ownerName)
         {
-            if (!TryGetUnit(unitId, out UnitRuntimeState state))
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
                 return;
 
             state.SetActionState(currentActionId, recoveryUntilTick, ownerName);
+            MarkRuntimeStateViewDirty();
         }
 
-        public void AddUnitStatusFlag(Guid unitId, UnitStatusFlags flag)
+        internal void AddUnitStatusFlag(Guid unitId, UnitStatusFlags flag)
         {
-            if (!TryGetUnit(unitId, out UnitRuntimeState state))
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
                 return;
 
             state.AddStatusFlag(flag);
+            MarkRuntimeStateViewDirty();
         }
 
-        public void CleanupUnitRuntimeArtifacts(Guid unitId)
+        internal void CleanupUnitRuntimeArtifacts(Guid unitId)
         {
-            if (!TryGetUnit(unitId, out UnitRuntimeState state))
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
                 return;
 
             var actionIdsToRemove = new List<Guid>();
@@ -246,6 +332,8 @@ namespace CheckmateRPG.Core.Simulation
 
             for (int i = 0; i < actionIdsToRemove.Count; i++)
                 _activeActions.Remove(actionIdsToRemove[i]);
+            if (actionIdsToRemove.Count > 0)
+                MarkActiveActionViewDirty();
 
             var effectKeysToRemove = new List<string>();
             foreach (KeyValuePair<string, EffectRuntimeState> pair in _activeEffects)
@@ -256,18 +344,21 @@ namespace CheckmateRPG.Core.Simulation
 
             for (int i = 0; i < effectKeysToRemove.Count; i++)
                 _activeEffects.Remove(effectKeysToRemove[i]);
+            if (effectKeysToRemove.Count > 0)
+                MarkActiveEffectViewDirty();
 
             _occupiedPositions.Remove(state.Position);
+            MarkOccupiedPositionViewDirty();
         }
 
-        public void ApplyDeadUnitLifecycle(Guid unitId, int currentTick, string actionOwnerName)
+        internal void ApplyDeadUnitLifecycle(Guid unitId, int currentTick, string actionOwnerName)
         {
             SetUnitActionState(unitId, null, currentTick, actionOwnerName);
             AddUnitStatusFlag(unitId, UnitStatusFlags.Dead);
             CleanupUnitRuntimeArtifacts(unitId);
         }
 
-        public SimulationRuntime CreateSnapshot(int tick)
+        internal SimulationRuntime CreateSnapshot(int tick)
         {
             return new SimulationRuntime(
                 tick,
@@ -289,8 +380,85 @@ namespace CheckmateRPG.Core.Simulation
             for (int i = 0; i < positionsToClear.Count; i++)
                 _occupiedPositions.Remove(positionsToClear[i]);
 
-            if (TryGetUnit(unitId, out UnitRuntimeState unit))
+            if (TryGetMutableUnit(unitId, out UnitRuntimeState unit))
                 _occupiedPositions[unit.Position] = unitId;
+
+            MarkOccupiedPositionViewDirty();
+        }
+
+        private IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> BuildRuntimeStateView()
+        {
+            var projected = new Dictionary<Guid, IReadOnlyUnitRuntimeState>();
+            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in _runtimeStates)
+            {
+                if (pair.Value == null)
+                    continue;
+
+                projected[pair.Key] = new ReadOnlyUnitRuntimeStateView(pair.Value);
+            }
+
+            _runtimeStateViewDirty = false;
+            return new ReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState>(projected);
+        }
+
+        private IReadOnlyDictionary<Guid, IReadOnlyActionState> BuildActiveActionView()
+        {
+            var projected = new Dictionary<Guid, IReadOnlyActionState>();
+            foreach (KeyValuePair<Guid, IActionCommand> pair in _activeActions)
+            {
+                if (pair.Value == null)
+                    continue;
+
+                projected[pair.Key] = SimulationActionSnapshot.From(pair.Value);
+            }
+
+            _activeActionViewDirty = false;
+            return new ReadOnlyDictionary<Guid, IReadOnlyActionState>(projected);
+        }
+
+        private IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> BuildActiveEffectView()
+        {
+            var projected = new Dictionary<string, IReadOnlyEffectRuntimeState>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, EffectRuntimeState> pair in _activeEffects)
+            {
+                if (pair.Value == null)
+                    continue;
+
+                projected[pair.Key] = new ReadOnlyEffectRuntimeStateView(pair.Value);
+            }
+
+            _activeEffectViewDirty = false;
+            return new ReadOnlyDictionary<string, IReadOnlyEffectRuntimeState>(projected);
+        }
+
+        private IReadOnlyDictionary<Vector2Int, Guid> BuildOccupiedPositionView()
+        {
+            _occupiedPositionViewDirty = false;
+            return new ReadOnlyDictionary<Vector2Int, Guid>(CloneOccupiedPositions(_occupiedPositions));
+        }
+
+        private void MarkRuntimeStateViewDirty()
+        {
+            _runtimeStateViewDirty = true;
+            _runtimeStateViewCache = null;
+        }
+
+        private void MarkActiveActionViewDirty()
+        {
+            _activeActionViewDirty = true;
+            _activeActionViewCache = null;
+        }
+
+        private void MarkActiveEffectViewDirty()
+        {
+            _activeEffectViewDirty = true;
+            _activeEffectViewCache = null;
+        }
+
+        private void MarkOccupiedPositionViewDirty()
+        {
+            _occupiedPositionViewDirty = true;
+            _occupiedPositionViewCache = null;
         }
 
         private static Dictionary<Guid, UnitRuntimeState> CloneRuntimeStates(IReadOnlyDictionary<Guid, UnitRuntimeState> source)
@@ -327,6 +495,7 @@ namespace CheckmateRPG.Core.Simulation
             {
                 if (pair.Value == null)
                     continue;
+
                 clone[pair.Key] = new EffectRuntimeState(pair.Value);
             }
 
@@ -339,6 +508,62 @@ namespace CheckmateRPG.Core.Simulation
             foreach (KeyValuePair<Vector2Int, Guid> pair in source)
                 clone[pair.Key] = pair.Value;
             return clone;
+        }
+
+        private sealed class ReadOnlyUnitRuntimeStateView : IReadOnlyUnitRuntimeState
+        {
+            public ReadOnlyUnitRuntimeStateView(UnitRuntimeState source)
+            {
+                if (source == null)
+                    throw new ArgumentNullException(nameof(source));
+
+                UnitId = source.UnitId;
+                HP = source.HP;
+                SP = source.SP;
+                Position = source.Position;
+                CurrentActionId = source.CurrentActionId;
+                RecoveryUntilTick = source.RecoveryUntilTick;
+                StatusFlags = source.StatusFlags;
+                HasBaseline = source.HasBaseline;
+            }
+
+            public Guid UnitId { get; }
+            public int HP { get; }
+            public int SP { get; }
+            public Vector2Int Position { get; }
+            public Guid? CurrentActionId { get; }
+            public int RecoveryUntilTick { get; }
+            public UnitStatusFlags StatusFlags { get; }
+            public bool HasBaseline { get; }
+        }
+
+        private sealed class ReadOnlyEffectRuntimeStateView : IReadOnlyEffectRuntimeState
+        {
+            public ReadOnlyEffectRuntimeStateView(EffectRuntimeState source)
+            {
+                if (source == null)
+                    throw new ArgumentNullException(nameof(source));
+
+                EffectId = source.EffectId;
+                SourceId = source.SourceId;
+                TargetId = source.TargetId;
+                RemainingTick = source.RemainingTick;
+                StackCount = source.StackCount;
+                TickInterval = source.TickInterval;
+                NextTickIn = source.NextTickIn;
+                Magnitude = source.Magnitude;
+                IsExpired = source.IsExpired;
+            }
+
+            public string EffectId { get; }
+            public Guid SourceId { get; }
+            public Guid TargetId { get; }
+            public int RemainingTick { get; }
+            public int StackCount { get; }
+            public int TickInterval { get; }
+            public int NextTickIn { get; }
+            public float Magnitude { get; }
+            public bool IsExpired { get; }
         }
     }
 }

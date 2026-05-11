@@ -13,18 +13,18 @@ namespace CheckmateRPG.Core.Effects.Processors
             _healRatioPerTick = healRatioPerTick ?? new Dictionary<string, float>();
         }
 
-        public bool CanProcess(EffectRuntimeState effect)
+        public bool CanProcess(IReadOnlyEffectRuntimeState effect)
         {
             return effect != null && _healRatioPerTick.ContainsKey(effect.EffectId);
         }
 
-        public void OnApplied(EffectSystemContext context, EffectRuntimeState effect)
+        public void OnApplied(EffectSystemContext context, IReadOnlyEffectRuntimeState effect)
         {
             _ = context;
             _ = effect;
         }
 
-        public int OnTick(EffectSystemContext context, EffectRuntimeState effect)
+        public int OnTick(EffectSystemContext context, IReadOnlyEffectRuntimeState effect)
         {
             if (!context.TryGetUnit(effect.TargetId, out var target) ||
                 target == null ||
@@ -46,7 +46,7 @@ namespace CheckmateRPG.Core.Effects.Processors
             return Mathf.RoundToInt(healAmount);
         }
 
-        public void OnExpired(EffectSystemContext context, EffectRuntimeState effect)
+        public void OnExpired(EffectSystemContext context, IReadOnlyEffectRuntimeState effect)
         {
             _ = context;
             _ = effect;

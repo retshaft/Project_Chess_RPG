@@ -6,16 +6,16 @@ namespace CheckmateRPG.Core.Simulation.Validation
 {
     public sealed class NegativeHpValidator : ISimulationValidator
     {
-        public ValidationResult Validate(SimulationRuntime runtime)
+        public ValidationResult Validate(IReadOnlySimulationRuntime runtime)
         {
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
 
             var issues = new List<ValidationIssue>();
 
-            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in runtime.RuntimeStates)
+            foreach (KeyValuePair<Guid, IReadOnlyUnitRuntimeState> pair in runtime.RuntimeStates)
             {
-                UnitRuntimeState state = pair.Value;
+                IReadOnlyUnitRuntimeState state = pair.Value;
                 if (state == null)
                     continue;
 

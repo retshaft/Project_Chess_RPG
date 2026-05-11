@@ -10,12 +10,12 @@ namespace CheckmateRPG.Core.Simulation
 {
     public sealed class SimulationSnapshot
     {
-        private static readonly IReadOnlyDictionary<Guid, UnitRuntimeState> EmptyRuntimeStates =
-            new ReadOnlyDictionary<Guid, UnitRuntimeState>(new Dictionary<Guid, UnitRuntimeState>());
-        private static readonly IReadOnlyDictionary<Guid, IActionCommand> EmptyActiveActions =
-            new ReadOnlyDictionary<Guid, IActionCommand>(new Dictionary<Guid, IActionCommand>());
-        private static readonly IReadOnlyDictionary<string, EffectRuntimeState> EmptyActiveEffects =
-            new ReadOnlyDictionary<string, EffectRuntimeState>(new Dictionary<string, EffectRuntimeState>(StringComparer.Ordinal));
+        private static readonly IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> EmptyRuntimeStates =
+            new ReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState>(new Dictionary<Guid, IReadOnlyUnitRuntimeState>());
+        private static readonly IReadOnlyDictionary<Guid, IReadOnlyActionState> EmptyActiveActions =
+            new ReadOnlyDictionary<Guid, IReadOnlyActionState>(new Dictionary<Guid, IReadOnlyActionState>());
+        private static readonly IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> EmptyActiveEffects =
+            new ReadOnlyDictionary<string, IReadOnlyEffectRuntimeState>(new Dictionary<string, IReadOnlyEffectRuntimeState>(StringComparer.Ordinal));
 
         public SimulationSnapshot(int tick)
             : this(tick, EmptyRuntimeStates, EmptyActiveActions, EmptyActiveEffects)
@@ -24,9 +24,9 @@ namespace CheckmateRPG.Core.Simulation
 
         public SimulationSnapshot(
             int tick,
-            IReadOnlyDictionary<Guid, UnitRuntimeState> runtimeStates,
-            IReadOnlyDictionary<Guid, IActionCommand> activeActions,
-            IReadOnlyDictionary<string, EffectRuntimeState> activeEffects)
+            IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> runtimeStates,
+            IReadOnlyDictionary<Guid, IReadOnlyActionState> activeActions,
+            IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> activeEffects)
             : this(
                 tick,
                 CloneRuntimeStates(runtimeStates),
@@ -62,13 +62,13 @@ namespace CheckmateRPG.Core.Simulation
         }
 
         private static IReadOnlyDictionary<Guid, SimulationUnitSnapshot> CloneRuntimeStates(
-            IReadOnlyDictionary<Guid, UnitRuntimeState> runtimeStates)
+            IReadOnlyDictionary<Guid, IReadOnlyUnitRuntimeState> runtimeStates)
         {
             if (runtimeStates == null)
                 throw new ArgumentNullException(nameof(runtimeStates));
 
             var cloned = new SortedDictionary<Guid, SimulationUnitSnapshot>();
-            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in runtimeStates)
+            foreach (KeyValuePair<Guid, IReadOnlyUnitRuntimeState> pair in runtimeStates)
             {
                 SimulationUnitSnapshot snapshot = SimulationUnitSnapshot.From(pair.Key, pair.Value);
                 cloned[snapshot.UnitId] = snapshot;
@@ -96,13 +96,13 @@ namespace CheckmateRPG.Core.Simulation
         }
 
         private static IReadOnlyDictionary<Guid, SimulationActionSnapshot> CloneActiveActions(
-            IReadOnlyDictionary<Guid, IActionCommand> activeActions)
+            IReadOnlyDictionary<Guid, IReadOnlyActionState> activeActions)
         {
             if (activeActions == null)
                 throw new ArgumentNullException(nameof(activeActions));
 
             var cloned = new SortedDictionary<Guid, SimulationActionSnapshot>();
-            foreach (KeyValuePair<Guid, IActionCommand> pair in activeActions)
+            foreach (KeyValuePair<Guid, IReadOnlyActionState> pair in activeActions)
             {
                 SimulationActionSnapshot snapshot = SimulationActionSnapshot.From(pair.Value);
                 if (snapshot != null)
@@ -131,13 +131,13 @@ namespace CheckmateRPG.Core.Simulation
         }
 
         private static IReadOnlyDictionary<string, SimulationEffectSnapshot> CloneActiveEffects(
-            IReadOnlyDictionary<string, EffectRuntimeState> activeEffects)
+            IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> activeEffects)
         {
             if (activeEffects == null)
                 throw new ArgumentNullException(nameof(activeEffects));
 
             var cloned = new SortedDictionary<string, SimulationEffectSnapshot>(StringComparer.Ordinal);
-            foreach (KeyValuePair<string, EffectRuntimeState> pair in activeEffects)
+            foreach (KeyValuePair<string, IReadOnlyEffectRuntimeState> pair in activeEffects)
             {
                 SimulationEffectSnapshot snapshot = SimulationEffectSnapshot.From(pair.Key, pair.Value);
                 cloned[snapshot.Key] = snapshot;
@@ -205,7 +205,7 @@ namespace CheckmateRPG.Core.Simulation
         public int RecoveryUntilTick { get; }
         public UnitStatusFlags StatusFlags { get; }
 
-        public static SimulationUnitSnapshot From(Guid fallbackUnitId, UnitRuntimeState state)
+        public static SimulationUnitSnapshot From(Guid fallbackUnitId, IReadOnlyUnitRuntimeState state)
         {
             Guid unitId = state != null && state.UnitId != Guid.Empty ? state.UnitId : fallbackUnitId;
             return new SimulationUnitSnapshot(
@@ -298,7 +298,7 @@ namespace CheckmateRPG.Core.Simulation
         public string AbilityId { get; }
         public IReadOnlyList<Guid> TargetIds { get; }
 
-        public static SimulationActionSnapshot From(IActionCommand action)
+        public static SimulationActionSnapshot From(IReadOnlyActionState action)
         {
             if (action == null)
                 return null;
@@ -411,6 +411,11 @@ namespace CheckmateRPG.Core.Simulation
 
         public static SimulationEffectSnapshot From(string fallbackKey, EffectRuntimeState state)
         {
+            return From(fallbackKey, (IReadOnlyEffectRuntimeState)state);
+        }
+
+        public static SimulationEffectSnapshot From(string fallbackKey, IReadOnlyEffectRuntimeState state)
+        {
             return new SimulationEffectSnapshot(
                 string.IsNullOrWhiteSpace(fallbackKey) ? BuildKey(state) : fallbackKey,
                 state?.EffectId,
@@ -423,7 +428,7 @@ namespace CheckmateRPG.Core.Simulation
                 state?.Magnitude ?? 0f);
         }
 
-        private static string BuildKey(EffectRuntimeState state)
+        private static string BuildKey(IReadOnlyEffectRuntimeState state)
         {
             if (state == null)
                 return string.Empty;

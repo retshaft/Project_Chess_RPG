@@ -7,7 +7,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
 {
     public sealed class DuplicatePositionValidator : ISimulationValidator
     {
-        public ValidationResult Validate(SimulationRuntime runtime)
+        public ValidationResult Validate(IReadOnlySimulationRuntime runtime)
         {
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
@@ -16,10 +16,10 @@ namespace CheckmateRPG.Core.Simulation.Validation
             var occupiedUnitIds = new HashSet<Guid>(runtime.OccupiedPositions.Values);
             var seenPositions = new HashSet<Vector2Int>();
 
-            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in runtime.RuntimeStates)
+            foreach (KeyValuePair<Guid, IReadOnlyUnitRuntimeState> pair in runtime.RuntimeStates)
             {
                 Guid unitId = pair.Key;
-                UnitRuntimeState state = pair.Value;
+                IReadOnlyUnitRuntimeState state = pair.Value;
                 if (state == null || !occupiedUnitIds.Contains(unitId))
                     continue;
 

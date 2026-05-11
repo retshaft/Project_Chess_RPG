@@ -58,5 +58,23 @@ namespace CheckmateRPG.Core.Runtime.Processors
             }
             return events;
         }
+
+        public IReadOnlyList<IGameEvent> Apply(RuntimeTransaction transaction, MutationOrderingService orderingService)
+        {
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
+            if (orderingService == null)
+                throw new ArgumentNullException(nameof(orderingService));
+            if (transaction.Count == 0)
+            {
+                transaction.Commit();
+                return Array.Empty<IGameEvent>();
+            }
+
+            IReadOnlyList<IRuntimeMutation> ordered = transaction.CreateOrderedSnapshot(orderingService);
+            IReadOnlyList<IGameEvent> events = Apply(ordered);
+            transaction.Commit();
+            return events;
+        }
     }
 }

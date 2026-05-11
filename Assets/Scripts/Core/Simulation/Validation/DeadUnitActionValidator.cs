@@ -7,7 +7,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
 {
     public sealed class DeadUnitActionValidator : ISimulationValidator
     {
-        public ValidationResult Validate(SimulationRuntime runtime)
+        public ValidationResult Validate(IReadOnlySimulationRuntime runtime)
         {
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
@@ -15,7 +15,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
             var issues = new List<ValidationIssue>();
             var actorsWithActiveActions = new HashSet<Guid>();
 
-            foreach (IActionCommand action in runtime.ActiveActions.Values)
+            foreach (IReadOnlyActionState action in runtime.ActiveActions.Values)
             {
                 if (action == null)
                     continue;
@@ -23,9 +23,9 @@ namespace CheckmateRPG.Core.Simulation.Validation
                 actorsWithActiveActions.Add(action.ActorId);
             }
 
-            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in runtime.RuntimeStates)
+            foreach (KeyValuePair<Guid, IReadOnlyUnitRuntimeState> pair in runtime.RuntimeStates)
             {
-                UnitRuntimeState state = pair.Value;
+                IReadOnlyUnitRuntimeState state = pair.Value;
                 if (state == null)
                     continue;
 
