@@ -234,6 +234,7 @@ namespace CheckmateRPG.Core.Simulation
             int recoveryEndTick,
             ActionSpeedTier speedTier,
             bool isInterruptible,
+            bool isRecoveryInterruptible,
             Vector2Int? from,
             Vector2Int? to,
             Guid? targetId,
@@ -252,6 +253,7 @@ namespace CheckmateRPG.Core.Simulation
             RecoveryEndTick = recoveryEndTick;
             SpeedTier = speedTier;
             IsInterruptible = isInterruptible;
+            IsRecoveryInterruptible = isRecoveryInterruptible;
             From = from;
             To = to;
             TargetId = targetId;
@@ -273,6 +275,7 @@ namespace CheckmateRPG.Core.Simulation
                 source?.RecoveryEndTick ?? 0,
                 source?.SpeedTier ?? ActionSpeedTier.Normal,
                 source?.IsInterruptible ?? true,
+                source?.IsRecoveryInterruptible ?? false,
                 source?.From,
                 source?.To,
                 source?.TargetId,
@@ -293,7 +296,8 @@ namespace CheckmateRPG.Core.Simulation
         public int RecoveryEndTick { get; }
         public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
-        public bool IsCompleted => State is ActionState.Completed or ActionState.Cancelled;
+        public bool IsRecoveryInterruptible { get; }
+        public bool IsCompleted => ActionStateMachine.IsTerminal(State);
         public Vector2Int? From { get; }
         public Vector2Int? To { get; }
         public Guid? TargetId { get; }
@@ -345,6 +349,7 @@ namespace CheckmateRPG.Core.Simulation
                 action.RecoveryEndTick,
                 action.SpeedTier,
                 action.IsInterruptible,
+                action.IsRecoveryInterruptible,
                 from,
                 to,
                 targetId,
