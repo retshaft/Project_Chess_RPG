@@ -115,6 +115,7 @@ namespace CheckmateRPG.Core.Actions
 
         private static int CompareSpeed(ActionSpeedTier left, ActionSpeedTier right)
         {
+            // ActionSpeedTier enum is ordered from fastest (0) to slowest (4).
             return ((int)left).CompareTo((int)right);
         }
     }

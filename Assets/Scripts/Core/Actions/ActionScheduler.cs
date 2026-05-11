@@ -208,14 +208,12 @@ namespace CheckmateRPG.Core.Actions
                     continue;
                 if (!_interruptArbitrationService.CanInterrupt(action))
                     continue;
-                if (!_activeActions.TryGetValue(request.TargetActionId, out BaseActionCommand targetAction))
-                    continue;
 
                 IActionCommand sourceAction = request.SourceActionId != Guid.Empty &&
                                               _activeActions.TryGetValue(request.SourceActionId, out BaseActionCommand source)
                     ? source
                     : null;
-                if (!_interruptArbitrationService.ShouldInterrupt(request.Priority, sourceAction, targetAction))
+                if (!_interruptArbitrationService.ShouldInterrupt(request.Priority, sourceAction, action))
                     continue;
 
                 _interruptContextByTarget[request.TargetActionId] = request;
