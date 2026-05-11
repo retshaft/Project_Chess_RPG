@@ -43,7 +43,7 @@ namespace CheckmateRPG.Core.Effects
             int tickCompare = ex.RemainingTick.CompareTo(ey.RemainingTick);
             if (tickCompare != 0) return tickCompare;
 
-            // 3. Deterministic EffectId key tie-break.
+            // 3. Deterministic runtime key tie-break (format: "{targetId}:{effectId}").
             return string.Compare(x.Key, y.Key, StringComparison.Ordinal);
         }
     }
