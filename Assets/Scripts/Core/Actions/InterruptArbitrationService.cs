@@ -97,6 +97,28 @@ namespace CheckmateRPG.Core.Actions
                 currentTick);
         }
 
+        public PendingInterruptRequest BuildFallbackRequest(IReadOnlyActionState targetAction, int currentTick)
+        {
+            if (targetAction == null)
+            {
+                return new PendingInterruptRequest(
+                    Guid.Empty,
+                    Guid.Empty,
+                    InterruptPriority.Normal,
+                    ActionSpeedTier.Normal,
+                    currentTick,
+                    currentTick);
+            }
+
+            return new PendingInterruptRequest(
+                Guid.Empty,
+                targetAction.ActionId,
+                InterruptPriority.Normal,
+                targetAction.SpeedTier,
+                targetAction.StartTick,
+                currentTick);
+        }
+
         private static int CompareActionOrder(IActionCommand sourceAction, IReadOnlyActionState targetAction)
         {
             ActionSpeedTier sourceSpeedTier = sourceAction?.SpeedTier ?? ActionSpeedTier.Normal;

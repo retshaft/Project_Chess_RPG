@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CheckmateRPG.Core.Events.ActionEvents;
 
 namespace CheckmateRPG.Core.Actions
@@ -113,8 +114,9 @@ namespace CheckmateRPG.Core.Actions
                 CurrentTick,
                 sourceAction);
 
-            if (!_pendingInterrupts.TryGetValue(targetActionId, out PendingInterruptRequest existing) ||
-                _interruptArbitrationService.IsIncomingRequestHigher(existing, request))
+            bool shouldReplaceExisting = !_pendingInterrupts.TryGetValue(targetActionId, out PendingInterruptRequest existing) ||
+                                         _interruptArbitrationService.IsIncomingRequestHigher(existing, request);
+            if (shouldReplaceExisting)
             {
                 _pendingInterrupts[targetActionId] = request;
             }
@@ -194,10 +196,7 @@ namespace CheckmateRPG.Core.Actions
             if (_pendingInterrupts.Count == 0)
                 return;
 
-            PendingInterruptRequest[] requests = new PendingInterruptRequest[_pendingInterrupts.Count];
-            int requestIndex = 0;
-            foreach (KeyValuePair<Guid, PendingInterruptRequest> pair in _pendingInterrupts)
-                requests[requestIndex++] = pair.Value;
+            PendingInterruptRequest[] requests = _pendingInterrupts.Values.ToArray();
             _pendingInterrupts.Clear();
             Array.Sort(requests, _interruptArbitrationService.ComparePendingRequestOrder);
 
@@ -303,13 +302,7 @@ namespace CheckmateRPG.Core.Actions
                     PendingInterruptRequest interruptContext =
                         _interruptContextByTarget.TryGetValue(action.ActionId, out PendingInterruptRequest request)
                             ? request
-                            : new PendingInterruptRequest(
-                                Guid.Empty,
-                                action.ActionId,
-                                InterruptPriority.Normal,
-                                action.SpeedTier,
-                                action.StartTick,
-                                CurrentTick);
+                            : _interruptArbitrationService.BuildFallbackRequest(action, CurrentTick);
                     _eventBus.Publish(new ActionInterruptedEvent(
                         new ActionInterruptedPayload(
                             interruptContext.SourceActionId,
