@@ -13,7 +13,9 @@ namespace CheckmateRPG.Core.Actions
             bool isInterruptible = true,
             bool isRecoveryInterruptible = false,
             InterruptPriority interruptPriority = InterruptPriority.Normal,
-            InterruptWindow? interruptWindow = null)
+            InterruptWindow? interruptWindow = null,
+            ActionLockType intentLockType = ActionLockType.CastLock,
+            ActionConcurrencyPolicy concurrencyPolicy = ActionConcurrencyPolicy.Reject)
         {
             if (actorId == Guid.Empty)
                 throw new ArgumentException("ActorId must not be empty.", nameof(actorId));
@@ -41,20 +43,24 @@ namespace CheckmateRPG.Core.Actions
                     : isInterruptible
                         ? InterruptWindow.CastingInterruptible
                         : InterruptWindow.Uninterruptible);
+            IntentLockType = intentLockType;
+            ConcurrencyPolicy = concurrencyPolicy;
         }
 
         public Guid ActionId { get; }
         public Guid ActorId { get; }
         public ActionState State { get; private set; }
         public int QueuedTick { get; internal set; }
-        public int StartTick { get; }
-        public int ResolveTick { get; }
-        public int RecoveryEndTick { get; }
+        public int StartTick { get; private set; }
+        public int ResolveTick { get; private set; }
+        public int RecoveryEndTick { get; private set; }
         public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
         public bool IsRecoveryInterruptible { get; }
         public InterruptPriority InterruptPriority { get; }
         public InterruptWindow InterruptWindow { get; }
+        public ActionLockType IntentLockType { get; }
+        public ActionConcurrencyPolicy ConcurrencyPolicy { get; }
         public ActionInterruptPolicy InterruptPolicy => new(InterruptPriority, InterruptWindow);
         public bool IsCompleted => ActionStateMachine.IsTerminal(State);
 
@@ -62,6 +68,16 @@ namespace CheckmateRPG.Core.Actions
         {
             QueuedTick = queuedTick;
             State = ActionState.Queued;
+        }
+
+        internal void RebaseTimeline(int startTick)
+        {
+            int boundedStartTick = Math.Max(0, startTick);
+            int castDuration = Math.Max(0, ResolveTick - StartTick);
+            int recoveryDuration = Math.Max(0, RecoveryEndTick - ResolveTick);
+            StartTick = boundedStartTick;
+            ResolveTick = boundedStartTick + castDuration;
+            RecoveryEndTick = ResolveTick + recoveryDuration;
         }
 
         /// <summary>

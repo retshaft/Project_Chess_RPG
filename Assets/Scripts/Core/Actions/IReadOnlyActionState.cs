@@ -16,6 +16,8 @@ namespace CheckmateRPG.Core.Actions
         bool IsRecoveryInterruptible { get; }
         InterruptPriority InterruptPriority { get; }
         InterruptWindow InterruptWindow { get; }
+        ActionLockType IntentLockType { get; }
+        ActionConcurrencyPolicy ConcurrencyPolicy { get; }
         bool IsCompleted { get; }
     }
 }

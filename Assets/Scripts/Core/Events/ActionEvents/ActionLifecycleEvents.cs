@@ -28,6 +28,13 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         InterruptPriority InterruptPriority,
         int SchedulerTick);
 
+    public readonly record struct ActionRejectedPayload(
+        Guid RequestedActionId,
+        Guid ActorId,
+        ActionAdmissionRejectionReason Reason,
+        ActionLockType CurrentLock,
+        int SchedulerTick);
+
     /// <summary>
     /// Published on every action state transition. Provides full lifecycle context.
     /// </summary>
@@ -55,4 +62,7 @@ namespace CheckmateRPG.Core.Events.ActionEvents
 
     public sealed record ActionCancelledEvent(ActionCancelledPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<ActionCancelledPayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record ActionRejectedEvent(ActionRejectedPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<ActionRejectedPayload>(Payload, EventCategory.Domain, Source, Target);
 }

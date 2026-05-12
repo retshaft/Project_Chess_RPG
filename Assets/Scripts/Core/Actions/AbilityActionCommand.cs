@@ -12,14 +12,18 @@ namespace CheckmateRPG.Core.Actions
             int startTick,
             ActionSpeedTier speedTier,
             int recoveryDurationTicks = 1,
-            bool isInterruptible = true)
+            bool isInterruptible = true,
+            ActionLockType intentLockType = ActionLockType.CastLock,
+            ActionConcurrencyPolicy concurrencyPolicy = ActionConcurrencyPolicy.Reject)
             : base(
                 actorId,
                 startTick,
                 startTick + ActionTimelineFormula.ToActionDurationTicks(speedTier),
                 startTick + ActionTimelineFormula.ToActionDurationTicks(speedTier) + Math.Max(0, recoveryDurationTicks),
                 speedTier,
-                isInterruptible)
+                isInterruptible,
+                intentLockType: intentLockType,
+                concurrencyPolicy: concurrencyPolicy)
         {
             AbilityId = abilityId ?? string.Empty;
             TargetIds = targetIds ?? Array.Empty<Guid>();
