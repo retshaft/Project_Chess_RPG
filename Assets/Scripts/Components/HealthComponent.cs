@@ -28,7 +28,7 @@ namespace CheckmateRPG.Components
 
         private float _currentHealth;
         private float _maxHealth;
-        private bool  _isDead;
+        private bool _isDead;
         private float _damageTakenMultiplier = 1f;
         private float _defense;
         private float _resistance;
@@ -43,8 +43,8 @@ namespace CheckmateRPG.Components
         // ─── IDamageable ──────────────────────────────────────────────────────────
 
         public float CurrentHealth => _currentHealth;
-        public float MaxHealth     => _maxHealth;
-        public bool  IsDead        => _isDead;
+        public float MaxHealth => _maxHealth;
+        public bool IsDead => _isDead;
 
         public void SetDamageTakenMultiplier(float multiplier)
         {
@@ -63,12 +63,14 @@ namespace CheckmateRPG.Components
         /// </summary>
         public void Initialise(UnitData data)
         {
-            _maxHealth     = data.MaxHealth;
+            _maxHealth = data.MaxHealth;
             _currentHealth = _maxHealth;
-            _isDead        = false;
-            _defense       = Mathf.Clamp01(data.Defense);
-            _resistance    = Mathf.Clamp01(data.Resistance);
-            _defenseBonus  = 0f;
+            _isDead = false;
+            // 기획 변경에 따라 물리 방어력은 0~1(%)이 아닌 실제 절대값 수치를 사용할 수 있도록 제한(Clamp01)을 해제하거나 기획 수치에 맞게 조정해야 합니다.
+            // 일단 기존 코드 형태를 유지하되, 차감 연산이 정상 동작하도록 수정합니다. (실제 데이터 에셋의 스탯 값이 0~1 사이인지, 절대값인지 확인 필요)
+            _defense = data.Defense;
+            _resistance = Mathf.Clamp01(data.Resistance); // 저항력은 % 감소이므로 0~1 유지
+            _defenseBonus = 0f;
         }
 
         // ─── IDamageable Implementation ───────────────────────────────────────────
@@ -151,14 +153,32 @@ namespace CheckmateRPG.Components
             if (damageType == DamageType.True)
                 return amount;
 
-            float reduction = damageType == DamageType.Physical
-                ? Mathf.Clamp01(_defense + _defenseBonus)
-                : _resistance;
-            if (_statusEffects != null)
-                reduction *= damageType == DamageType.Physical ? _statusEffects.DefenseMultiplier : _statusEffects.ResistanceMultiplier;
+            if (damageType == DamageType.Physical)
+            {
+                // 물리 방어력 연산: 피해량 - 방어력 (감산)
+                float currentDefense = _defense + _defenseBonus;
 
-            reduction = Mathf.Clamp01(reduction);
-            return amount * (1f - reduction);
+                // 상태이상 등에 의한 방어력 비율 증감 적용 (예: 초전도에 의한 방어력 40% 감소)
+                if (_statusEffects != null)
+                    currentDefense *= _statusEffects.DefenseMultiplier;
+
+                // 방어력이 0 미만이 되지 않도록 처리
+                currentDefense = Mathf.Max(0f, currentDefense);
+
+                // 피해량에서 방어력을 차감하되, 피해량이 0 이하로 떨어지지 않도록 보정 (최소 1의 피해는 줄지, 완전히 막을지 기획 확인 필요. 여기선 최소 0으로 보정)
+                return Mathf.Max(0f, amount - currentDefense);
+            }
+            else // DamageType.Magical
+            {
+                // 마법 저항력 연산: 피해량 * (1 - 저항력) (비율 감소)
+                float currentResistance = _resistance;
+
+                if (_statusEffects != null)
+                    currentResistance *= _statusEffects.ResistanceMultiplier;
+
+                currentResistance = Mathf.Clamp01(currentResistance);
+                return amount * (1f - currentResistance);
+            }
         }
     }
 }

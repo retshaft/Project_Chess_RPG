@@ -104,7 +104,7 @@ namespace CheckmateRPG.Core.Simulation
             var cloned = new SortedDictionary<Guid, SimulationActionSnapshot>();
             foreach (KeyValuePair<Guid, IReadOnlyActionState> pair in activeActions)
             {
-                SimulationActionSnapshot snapshot = SimulationActionSnapshot.From(pair.Value);
+                SimulationActionSnapshot snapshot = SimulationActionSnapshot.CreateFrom(pair.Value);
                 if (snapshot != null)
                     cloned[snapshot.ActionId] = snapshot;
             }
@@ -321,7 +321,7 @@ namespace CheckmateRPG.Core.Simulation
         public string AbilityId { get; }
         public IReadOnlyList<Guid> TargetIds { get; }
 
-        public static SimulationActionSnapshot From(IReadOnlyActionState action)
+        public static SimulationActionSnapshot CreateFrom(IReadOnlyActionState action)
         {
             if (action == null)
                 return null;

@@ -93,7 +93,18 @@ namespace CheckmateRPG.Core
 
             SimulationTimelineEntryType type = ResolveEntryType(gameEvent);
             string detail = BuildEventTrace(gameEvent);
-            AddEntry(_tickProvider(), type, gameEvent.GetType().Name, detail, gameEvent.Source, gameEvent.Target);
+
+            // IResolvableGameEvent인 경우에만 Source와 Target을 가져오도록 수정
+            string source = string.Empty;
+            string target = string.Empty;
+
+            if (gameEvent is IResolvableGameEvent resolvable)
+            {
+                source = resolvable.Source;
+                target = resolvable.Target;
+            }
+
+            AddEntry(_tickProvider(), type, gameEvent.GetType().Name, detail, source, target);
         }
 
         private void AddEntry(

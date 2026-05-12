@@ -20,6 +20,8 @@ namespace CheckmateRPG.Core.Actions
 
     public sealed class ActionCostReservation
     {
+        private const float ComparisonTolerance = 0.0001f;
+
         private readonly Dictionary<Guid, ReservationEntry> _reservations = new();
         private readonly Dictionary<Guid, int> _reservedSpByActor = new();
         private float _reservedAp;
@@ -131,4 +133,3 @@ namespace CheckmateRPG.Core.Actions
         }
     }
 }
-        private const float ComparisonTolerance = 0.0001f;

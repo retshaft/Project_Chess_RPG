@@ -155,9 +155,13 @@ namespace CheckmateRPG.Core.Simulation
 
         internal bool TryGetMutableEffect(string effectKey, out EffectRuntimeState effect)
         {
-            return !string.IsNullOrWhiteSpace(effectKey) &&
-                   _activeEffects.TryGetValue(effectKey, out effect) &&
-                   effect != null;
+            if (string.IsNullOrWhiteSpace(effectKey))
+            {
+                effect = null; // 예외 상황에서도 out 매개변수에 값을 반드시 할당
+                return false;
+            }
+
+            return _activeEffects.TryGetValue(effectKey, out effect) && effect != null;
         }
 
         public IReadOnlyList<IReadOnlyUnitRuntimeState> GetUnitsAtPosition(Vector2Int position)
@@ -191,7 +195,7 @@ namespace CheckmateRPG.Core.Simulation
             if (action == null || action.ActionId == Guid.Empty)
                 return;
 
-            SimulationActionSnapshot snapshot = SimulationActionSnapshot.From(action);
+            SimulationActionSnapshot snapshot = SimulationActionSnapshot.CreateFrom(action);
             if (snapshot == null)
                 return;
 
@@ -212,7 +216,7 @@ namespace CheckmateRPG.Core.Simulation
                     if (action == null || action.ActionId == Guid.Empty)
                         continue;
 
-                    SimulationActionSnapshot snapshot = SimulationActionSnapshot.From(action);
+                    SimulationActionSnapshot snapshot = SimulationActionSnapshot.CreateFrom(action);
                     if (snapshot == null)
                         continue;
 
@@ -409,7 +413,7 @@ namespace CheckmateRPG.Core.Simulation
                 if (pair.Value == null)
                     continue;
 
-                projected[pair.Key] = SimulationActionSnapshot.From(pair.Value);
+                projected[pair.Key] = SimulationActionSnapshot.CreateFrom(pair.Value);
             }
 
             _activeActionViewDirty = false;
@@ -480,7 +484,7 @@ namespace CheckmateRPG.Core.Simulation
             var clone = new SortedDictionary<Guid, IActionCommand>();
             foreach (KeyValuePair<Guid, IActionCommand> pair in source)
             {
-                SimulationActionSnapshot action = SimulationActionSnapshot.From(pair.Value);
+                SimulationActionSnapshot action = SimulationActionSnapshot.CreateFrom(pair.Value);
                 if (action != null)
                     clone[pair.Key] = action;
             }
@@ -553,6 +557,11 @@ namespace CheckmateRPG.Core.Simulation
                 NextTickIn = source.NextTickIn;
                 Magnitude = source.Magnitude;
                 IsExpired = source.IsExpired;
+
+                // 추가된 인터페이스 속성 초기화
+                TimingPhase = source.TimingPhase;
+                ActionSpeedLevel = source.ActionSpeedLevel;
+                IsReaction = source.IsReaction;
             }
 
             public string EffectId { get; }
@@ -564,6 +573,11 @@ namespace CheckmateRPG.Core.Simulation
             public int NextTickIn { get; }
             public float Magnitude { get; }
             public bool IsExpired { get; }
+
+            // 누락된 인터페이스 속성 구현 추가
+            public EffectTimingPhase TimingPhase { get; }
+            public ActionSpeedTier ActionSpeedLevel { get; }
+            public bool IsReaction { get; }
         }
     }
 }
