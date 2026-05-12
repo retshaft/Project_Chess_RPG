@@ -102,7 +102,6 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                             tick));
                         break;
                     case SpatialResolutionPolicy.PriorityWin:
-                    case SpatialResolutionPolicy.HigherSpeedWins:
                     case SpatialResolutionPolicy.SwapAllowed:
                         ResolvePriorityWinner(contenders, winners, losers, conflicts, tick, SpatialConflictType.SameTarget);
                         break;
@@ -156,7 +155,6 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                             tick));
                         break;
                     case SpatialResolutionPolicy.PriorityWin:
-                    case SpatialResolutionPolicy.HigherSpeedWins:
                         ResolvePriorityWinner(pair, winners, losers, conflicts, tick, SpatialConflictType.CrossSwap);
                         break;
                     case SpatialResolutionPolicy.ForceOverride:
