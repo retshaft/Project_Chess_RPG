@@ -8,5 +8,6 @@ namespace CheckmateRPG.Core.Simulation.Spatial
         Guid UnitId,
         Guid ActionId,
         ActionSpeedTier ActionSpeedLevel,
-        int ReservationTick);
+        int ReservationTick,
+        bool IsForcedMovement = false);
 }
