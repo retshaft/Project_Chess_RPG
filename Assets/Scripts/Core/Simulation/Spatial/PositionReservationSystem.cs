@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Actions;
+using CheckmateRPG.Core.Events.ActionEvents;
+using CheckmateRPG.Core.Simulation;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Simulation.Spatial
@@ -8,13 +10,18 @@ namespace CheckmateRPG.Core.Simulation.Spatial
     public sealed class PositionReservationSystem
     {
         private readonly SpatialResolutionPolicy _policy;
+        private readonly SpatialArbitrationService _arbitrationService;
 
-        public PositionReservationSystem(SpatialResolutionPolicy policy = SpatialResolutionPolicy.HigherSpeedWins)
+        public PositionReservationSystem(SpatialResolutionPolicy policy = SpatialResolutionPolicy.PriorityWin)
         {
             _policy = policy;
+            _arbitrationService = new SpatialArbitrationService(_policy);
         }
 
-        public PositionReservationSnapshot Build(IReadOnlyList<IActionCommand> actions)
+        public PositionReservationSnapshot Build(
+            IReadOnlyList<IActionCommand> actions,
+            IReadOnlySimulationRuntime runtime = null,
+            int currentTick = 0)
         {
             if (actions == null || actions.Count == 0)
                 return PositionReservationSnapshot.Empty;
@@ -30,131 +37,46 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                     move.ActorId,
                     move.ActionId,
                     move.SpeedTier,
-                    move.ResolveTick)));
+                    move.ResolveTick,
+                    IsForcedMovement: false)));
             }
 
             if (moveReservations.Count == 0)
                 return PositionReservationSnapshot.Empty;
 
-            moveReservations.Sort((left, right) => CompareReservationOrder(left.Reservation, right.Reservation));
+            SpatialArbitrationOutcome outcome = _arbitrationService.Resolve(moveReservations, runtime, currentTick);
+            IReadOnlyList<SpatialConflictResolvedEvent> conflictEvents =
+                BuildConflictEvents(outcome.ConflictDecisions);
 
-            var winnersByPosition = new Dictionary<Vector2Int, ReservedPosition>();
-            var winnerActions = new Dictionary<Guid, ReservedPosition>();
-            var reservationLostActions = new HashSet<Guid>();
-            var winnerMoves = new Dictionary<Guid, MoveActionCommand>();
-
-            for (int i = 0; i < moveReservations.Count; i++)
-            {
-                MoveActionCommand move = moveReservations[i].Action;
-                ReservedPosition reservation = moveReservations[i].Reservation;
-                if (move.ActionId == Guid.Empty)
-                    continue;
-
-                if (winnersByPosition.ContainsKey(reservation.Position))
-                {
-                    reservationLostActions.Add(move.ActionId);
-                    continue;
-                }
-
-                winnersByPosition[reservation.Position] = reservation;
-                winnerActions[move.ActionId] = reservation;
-                winnerMoves[move.ActionId] = move;
-            }
-
-            bool hasPotentialSwap = HasPotentialSwap(winnerMoves);
-            if (_policy == SpatialResolutionPolicy.HigherSpeedWins && hasPotentialSwap)
-                ApplySwapBan(winnerActions, winnersByPosition, reservationLostActions, winnerMoves);
-
-            return new PositionReservationSnapshot(winnerActions, winnersByPosition, reservationLostActions);
+            return new PositionReservationSnapshot(
+                outcome.WinningReservationsByAction,
+                outcome.WinningReservationsByPosition,
+                outcome.ReservationLostActions,
+                conflictEvents);
         }
 
-        private static int CompareReservationOrder(ReservedPosition x, ReservedPosition y)
+        private static IReadOnlyList<SpatialConflictResolvedEvent> BuildConflictEvents(
+            IReadOnlyList<SpatialConflictDecision> conflictDecisions)
         {
-            int speedCompare = ((int)x.ActionSpeedLevel).CompareTo((int)y.ActionSpeedLevel);
-            if (speedCompare != 0)
-                return speedCompare;
+            if (conflictDecisions == null || conflictDecisions.Count == 0)
+                return Array.Empty<SpatialConflictResolvedEvent>();
 
-            int tickCompare = x.ReservationTick.CompareTo(y.ReservationTick);
-            if (tickCompare != 0)
-                return tickCompare;
-
-            return x.ActionId.CompareTo(y.ActionId);
-        }
-
-        private static void ApplySwapBan(
-            Dictionary<Guid, ReservedPosition> winnerActions,
-            Dictionary<Vector2Int, ReservedPosition> winnersByPosition,
-            HashSet<Guid> reservationLostActions,
-            Dictionary<Guid, MoveActionCommand> winnerMoves)
-        {
-            if (winnerMoves.Count < 2)
-                return;
-
-            var examined = new HashSet<Guid>();
-            var orderedIds = new List<Guid>(winnerMoves.Keys);
-            orderedIds.Sort();
-
-            for (int i = 0; i < orderedIds.Count; i++)
+            var events = new List<SpatialConflictResolvedEvent>(conflictDecisions.Count);
+            for (int i = 0; i < conflictDecisions.Count; i++)
             {
-                Guid actionId = orderedIds[i];
-                if (!winnerMoves.TryGetValue(actionId, out MoveActionCommand move))
-                    continue;
-                if (examined.Contains(actionId))
-                    continue;
-
-                Guid otherActionId = FindSwapCounterpartActionId(move, winnerMoves);
-                if (otherActionId == Guid.Empty || !winnerMoves.TryGetValue(otherActionId, out MoveActionCommand otherMove))
-                    continue;
-
-                examined.Add(actionId);
-                examined.Add(otherActionId);
-
-                ReservedPosition left = winnerActions[actionId];
-                ReservedPosition right = winnerActions[otherActionId];
-                bool leftWins = CompareReservationOrder(left, right) <= 0;
-                Guid loserId = leftWins ? otherActionId : actionId;
-                MoveActionCommand loserMove = leftWins ? otherMove : move;
-
-                reservationLostActions.Add(loserId);
-                winnerActions.Remove(loserId);
-                winnersByPosition.Remove(loserMove.To);
-                winnerMoves.Remove(loserId);
-            }
-        }
-
-        private static Guid FindSwapCounterpartActionId(
-            MoveActionCommand move,
-            IReadOnlyDictionary<Guid, MoveActionCommand> candidates)
-        {
-            foreach (KeyValuePair<Guid, MoveActionCommand> pair in candidates)
-            {
-                MoveActionCommand candidate = pair.Value;
-                if (candidate.ActionId == move.ActionId)
-                    continue;
-
-                if (move.From == candidate.To && move.To == candidate.From)
-                    return candidate.ActionId;
+                SpatialConflictDecision decision = conflictDecisions[i];
+                var payload = new SpatialConflictResolvedPayload(
+                    decision.ConflictType,
+                    decision.WinningAction,
+                    decision.LosingActions ?? Array.Empty<Guid>(),
+                    decision.Tick);
+                events.Add(new SpatialConflictResolvedEvent(
+                    payload,
+                    source: decision.WinningAction != Guid.Empty ? decision.WinningAction.ToString("N") : string.Empty,
+                    target: payload.ConflictType.ToString()));
             }
 
-            return Guid.Empty;
-        }
-
-        private static bool HasPotentialSwap(IReadOnlyDictionary<Guid, MoveActionCommand> winnerMoves)
-        {
-            if (winnerMoves == null || winnerMoves.Count < 2)
-                return false;
-
-            var pairs = new HashSet<(Vector2Int From, Vector2Int To)>();
-            foreach (KeyValuePair<Guid, MoveActionCommand> pair in winnerMoves)
-            {
-                MoveActionCommand move = pair.Value;
-                var reverse = (move.To, move.From);
-                if (pairs.Contains(reverse))
-                    return true;
-                pairs.Add((move.From, move.To));
-            }
-
-            return false;
+            return events;
         }
     }
 
@@ -165,24 +87,29 @@ namespace CheckmateRPG.Core.Simulation.Spatial
         private static readonly IReadOnlyDictionary<Vector2Int, ReservedPosition> EmptyPositionReservations =
             new Dictionary<Vector2Int, ReservedPosition>();
         private static readonly IReadOnlyCollection<Guid> EmptyLostActions = Array.Empty<Guid>();
+        private static readonly IReadOnlyList<SpatialConflictResolvedEvent> EmptyConflictEvents =
+            Array.Empty<SpatialConflictResolvedEvent>();
 
         public static PositionReservationSnapshot Empty { get; } =
-            new(EmptyActionReservations, EmptyPositionReservations, EmptyLostActions);
+            new(EmptyActionReservations, EmptyPositionReservations, EmptyLostActions, EmptyConflictEvents);
 
         public PositionReservationSnapshot(
             IReadOnlyDictionary<Guid, ReservedPosition> winningReservationsByAction,
             IReadOnlyDictionary<Vector2Int, ReservedPosition> winningReservationsByPosition,
-            IReadOnlyCollection<Guid> reservationLostActions)
+            IReadOnlyCollection<Guid> reservationLostActions,
+            IReadOnlyList<SpatialConflictResolvedEvent> conflictEvents)
         {
             WinningReservationsByAction = winningReservationsByAction ?? EmptyActionReservations;
             WinningReservationsByPosition = winningReservationsByPosition ?? EmptyPositionReservations;
             ReservationLostActions = reservationLostActions ?? EmptyLostActions;
+            ConflictEvents = conflictEvents ?? EmptyConflictEvents;
             _reservationLostLookup = BuildReservationLostLookup(ReservationLostActions);
         }
 
         public IReadOnlyDictionary<Guid, ReservedPosition> WinningReservationsByAction { get; }
         public IReadOnlyDictionary<Vector2Int, ReservedPosition> WinningReservationsByPosition { get; }
         public IReadOnlyCollection<Guid> ReservationLostActions { get; }
+        public IReadOnlyList<SpatialConflictResolvedEvent> ConflictEvents { get; }
         private readonly HashSet<Guid> _reservationLostLookup;
 
         public bool HasWinningReservation(Guid actionId)

@@ -105,7 +105,7 @@ namespace CheckmateRPG.Core
             _actionCostPolicy = new DefaultActionCostPolicy();
             _actionCostReservation = new ActionCostReservation();
             _battleContext = new RuntimeBattleContext(this);
-            _positionReservationSystem = new PositionReservationSystem(SpatialResolutionPolicy.HigherSpeedWins);
+            _positionReservationSystem = new PositionReservationSystem(SpatialResolutionPolicy.PriorityWin);
             _predictionPipeline = new PredictionPipeline(
                 isCellValid: cell => GridSystem.Instance != null && GridSystem.Instance.IsValidCell(cell),
                 attackRangeLookup: unitId =>
@@ -115,7 +115,7 @@ namespace CheckmateRPG.Core
                     return 1;
                 },
                 criticalDamageMultiplier: 2,
-                spatialPolicy: SpatialResolutionPolicy.HigherSpeedWins);
+                spatialPolicy: SpatialResolutionPolicy.PriorityWin);
             _effectSystem = BuildEffectSystem();
             _mutationProcessor = new RuntimeMutationProcessor(
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
@@ -410,7 +410,7 @@ namespace CheckmateRPG.Core
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             SyncAllRuntimeStates();
-            _positionReservations = _positionReservationSystem.Build(ready);
+            _positionReservations = _positionReservationSystem.Build(ready, _simulationRuntime, _scheduler.CurrentTick);
             ActionResolutionContext resolutionContext =
                 _resolutionPipeline.Execute(_scheduler.CurrentTick, ready, _battleContext);
             resolutionContext.CurrentPhase = ResolutionPhase.MutationCommit;
@@ -441,6 +441,7 @@ namespace CheckmateRPG.Core
             }
 
             var stagedEvents = new List<IGameEvent>();
+            AppendEvents(stagedEvents, _positionReservations.ConflictEvents);
             AppendEvents(stagedEvents, mutationApplyInput.ActionEvents);
             AppendEvents(stagedEvents, preDeathMutationEvents);
             AppendEvents(stagedEvents, cleanupMutationEvents);
@@ -605,11 +606,6 @@ namespace CheckmateRPG.Core
             {
                 CancelResolvingAction(move, ActionCancellationReason.TargetInvalid, context);
                 return;
-            }
-
-            if (_battleContext.IsCellOccupied(move.To, move.ActorId))
-            {
-                CancelResolvingAction(move, ActionCancellationReason.ReservationLost, context);
             }
         }
 

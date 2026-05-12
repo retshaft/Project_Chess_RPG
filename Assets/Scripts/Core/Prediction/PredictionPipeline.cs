@@ -48,14 +48,14 @@ namespace CheckmateRPG.Core.Prediction
         /// </param>
         /// <param name="spatialPolicy">
         /// Policy used to resolve simultaneous move collisions.
-        /// Defaults to <see cref="SpatialResolutionPolicy.HigherSpeedWins"/>,
+        /// Defaults to <see cref="SpatialResolutionPolicy.PriorityWin"/>,
         /// which matches the production <see cref="PositionReservationSystem"/>.
         /// </param>
         public PredictionPipeline(
             Func<Vector2Int, bool> isCellValid,
             Func<Guid, int> attackRangeLookup,
             int criticalDamageMultiplier = 2,
-            SpatialResolutionPolicy spatialPolicy = SpatialResolutionPolicy.HigherSpeedWins)
+            SpatialResolutionPolicy spatialPolicy = SpatialResolutionPolicy.PriorityWin)
         {
             _isCellValid = isCellValid ?? throw new ArgumentNullException(nameof(isCellValid));
             _attackRangeLookup = attackRangeLookup ?? throw new ArgumentNullException(nameof(attackRangeLookup));
@@ -104,7 +104,8 @@ namespace CheckmateRPG.Core.Prediction
             RecordResolveOrder(sorted, context);
 
             // ── Spatial reservation snapshot (collision preview) ──────────────────
-            PositionReservationSnapshot spatialSnapshot = _positionReservationSystem.Build(sorted);
+            PositionReservationSnapshot spatialSnapshot =
+                _positionReservationSystem.Build(sorted, context.PredictedRuntime, tick);
 
             // ── [3] Simulate action resolution ────────────────────────────────────
             var battleContext = new PredictionBattleContext(
@@ -206,12 +207,6 @@ namespace CheckmateRPG.Core.Prediction
             {
                 CancelAction(move, ActionCancellationReason.TargetInvalid, resolutionContext, context);
                 return;
-            }
-
-            // Target cell must not be occupied by another unit.
-            if (battleContext.IsCellOccupied(move.To, move.ActorId))
-            {
-                CancelAction(move, ActionCancellationReason.ReservationLost, resolutionContext, context);
             }
         }
 

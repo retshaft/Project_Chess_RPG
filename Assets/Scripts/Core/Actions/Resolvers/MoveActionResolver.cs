@@ -22,8 +22,6 @@ namespace CheckmateRPG.Core.Actions.Resolvers
                 return ActionResolutionResult.Failed();
             if (!battleContext.IsCellValid(action.To))
                 return ActionResolutionResult.Failed();
-            if (battleContext.IsCellOccupied(action.To, action.ActorId))
-                return ActionResolutionResult.Failed();
 
             MovementMutation mutation = new(SeededRandomProvider.Shared.NextGuid(), action.ActorId, action.From, action.To);
             MoveActionResolvedEvent resolvedEvent = new(

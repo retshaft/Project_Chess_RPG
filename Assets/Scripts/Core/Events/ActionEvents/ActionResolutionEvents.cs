@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using CheckmateRPG.Core.Simulation.Spatial;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Events.ActionEvents
@@ -44,6 +46,12 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         Vector2Int From,
         Vector2Int To);
 
+    public readonly record struct SpatialConflictResolvedPayload(
+        SpatialConflictType ConflictType,
+        Guid WinningAction,
+        IReadOnlyList<Guid> LosingActions,
+        int Tick);
+
     public sealed record MoveActionResolvedEvent(MoveActionResolvedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MoveActionResolvedPayload>(Payload, EventCategory.Domain, Source, Target);
 
@@ -61,4 +69,10 @@ namespace CheckmateRPG.Core.Events.ActionEvents
 
     public sealed record MoveCompletedEvent(MoveCompletedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MoveCompletedPayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record SpatialConflictResolvedEvent(
+        SpatialConflictResolvedPayload Payload,
+        string Source = "",
+        string Target = "")
+        : BaseGameEvent<SpatialConflictResolvedPayload>(Payload, EventCategory.Simulation, Source, Target);
 }

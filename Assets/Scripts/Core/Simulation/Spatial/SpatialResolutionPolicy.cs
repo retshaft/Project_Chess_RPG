@@ -2,6 +2,11 @@ namespace CheckmateRPG.Core.Simulation.Spatial
 {
     public enum SpatialResolutionPolicy
     {
-        HigherSpeedWins
+        Reject,
+        PriorityWin,
+        MutualCancel,
+        SwapAllowed,
+        ForceOverride,
+        HigherSpeedWins = PriorityWin
     }
 }
