@@ -46,6 +46,8 @@ namespace CheckmateRPG.Core
         private RuntimeMutationProcessor _mutationProcessor;
         private MutationOrderingService _mutationOrderingService;
         private AbilityExecutionPipeline _abilityPipeline;
+        private IActionCostPolicy _actionCostPolicy;
+        private ActionCostReservation _actionCostReservation;
         private RuntimeBattleContext _battleContext;
         private ResolutionPhasePipeline _resolutionPipeline;
         private PositionReservationSystem _positionReservationSystem;
@@ -92,6 +94,8 @@ namespace CheckmateRPG.Core
             _resolverRegistry = new ActionResolverRegistry();
             _mutationOrderingService = new MutationOrderingService();
             _abilityPipeline = new AbilityExecutionPipeline();
+            _actionCostPolicy = new DefaultActionCostPolicy();
+            _actionCostReservation = new ActionCostReservation();
             _battleContext = new RuntimeBattleContext(this);
             _positionReservationSystem = new PositionReservationSystem(SpatialResolutionPolicy.HigherSpeedWins);
             _effectSystem = BuildEffectSystem();
@@ -129,6 +133,7 @@ namespace CheckmateRPG.Core
             _tickScheduler.OnTick += HandleRuntimeTick;
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Subscribe<ActionInterruptedEvent>(HandleActionInterrupted);
+            _eventBus.Subscribe<ActionStateChangedEvent>(HandleActionStateChanged);
         }
 
         private void OnDestroy()
@@ -142,6 +147,7 @@ namespace CheckmateRPG.Core
             _timelineRecorder?.Detach();
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
+            _eventBus.Unsubscribe<ActionStateChangedEvent>(HandleActionStateChanged);
             Instance = null;
         }
 
@@ -177,10 +183,12 @@ namespace CheckmateRPG.Core
                 return false;
 
             IActionCommand command = CreateMoveCommand(actor, destination);
-            _scheduler.ScheduleAction(command);
-            RecordInput($"MoveInput Actor={actor.ActorId:N} Destination=({destination.x},{destination.y})");
-            BindQueuedAction(actor, command);
-            return true;
+            return TryReserveAndQueueAction(
+                actor,
+                command,
+                null,
+                null,
+                $"MoveInput Actor={actor.ActorId:N} Destination=({destination.x},{destination.y})");
         }
 
         public bool TryEnqueueAttack(UnitBrain actor, GameObject target)
@@ -193,10 +201,12 @@ namespace CheckmateRPG.Core
                 return false;
 
             IActionCommand command = CreateAttackCommand(actor, targetId);
-            _scheduler.ScheduleAction(command);
-            RecordInput($"AttackInput Actor={actor.ActorId:N} Target={targetId:N}");
-            BindQueuedAction(actor, command);
-            return true;
+            return TryReserveAndQueueAction(
+                actor,
+                command,
+                null,
+                null,
+                $"AttackInput Actor={actor.ActorId:N} Target={targetId:N}");
         }
 
         public bool TryEnqueueAbility(UnitBrain actor, AbilityDefinition definition, IReadOnlyList<Guid> targetIds)
@@ -214,10 +224,12 @@ namespace CheckmateRPG.Core
                 _scheduler.CurrentTick,
                 action =>
                 {
-                    _scheduler.ScheduleAction(action);
-                    RecordInput($"AbilityInput Actor={actor.ActorId:N} Ability={definition.name} Targets={action.TargetIds.Count}");
-                    BindQueuedAction(actor, action);
-                    return true;
+                    return TryReserveAndQueueAction(
+                        actor,
+                        action,
+                        definition,
+                        runtimeState,
+                        $"AbilityInput Actor={actor.ActorId:N} Ability={definition.name} Targets={action.TargetIds.Count}");
                 },
                 _unitsById);
 
@@ -524,6 +536,12 @@ namespace CheckmateRPG.Core
                     ValidateAttackActionPreResolve(attack, context);
                     break;
             }
+
+            if (context.IsCancelled(action.ActionId))
+                return;
+
+            if (!_actionCostReservation.Commit(action.ActionId, _scheduler.CurrentTick))
+                CancelResolvingAction(action, ActionCancellationReason.ReservationLost, context);
         }
 
         private void ValidateMoveActionPreResolve(MoveActionCommand move, ActionResolutionContext context)
@@ -584,6 +602,7 @@ namespace CheckmateRPG.Core
                 return;
 
             _scheduler.CancelAction(action.ActionId);
+            _actionCostReservation.Rollback(action.ActionId);
             context.MarkCancelled(action.ActionId, reason);
             context.AddEvent(new ActionCancelledEvent(
                 new ActionCancelledPayload(action.ActionId, action.ActorId, reason, _scheduler.CurrentTick),
@@ -728,6 +747,18 @@ namespace CheckmateRPG.Core
                 SyncRuntimeState(actor);
         }
 
+        private void HandleActionStateChanged(ActionStateChangedEvent actionStateChangedEvent)
+        {
+            ActionLifecyclePayload payload = actionStateChangedEvent.Payload;
+            switch (payload.CurrentState)
+            {
+                case ActionState.Cancelled:
+                case ActionState.Interrupted:
+                    _actionCostReservation.Rollback(payload.ActionId);
+                    break;
+            }
+        }
+
         private void HandleActionInterrupted(ActionInterruptedEvent actionInterruptedEvent)
         {
             ActionInterruptedPayload payload = actionInterruptedEvent.Payload;
@@ -746,6 +777,76 @@ namespace CheckmateRPG.Core
                 new ActionCancelledPayload(payload.TargetActionId, payload.ActorId, ActionCancellationReason.Interrupted, payload.SchedulerTick),
                 payload.ActorId.ToString("N"),
                 payload.TargetActionId.ToString("N")));
+        }
+
+        private bool TryReserveAndQueueAction(
+            UnitBrain actor,
+            IActionCommand action,
+            AbilityDefinition abilityDefinition,
+            AbilityRuntimeState abilityRuntimeState,
+            string inputTrace)
+        {
+            if (actor == null || action == null)
+                return false;
+
+            ActionCostBreakdown cost = _actionCostPolicy.Evaluate(
+                action,
+                new ActionCostContext(actor, abilityDefinition, abilityRuntimeState));
+            if (!_actionCostReservation.CanAfford(actor.ActorId, cost, GetCurrentSp))
+                return false;
+
+            ActionCostReservationHooks hooks = BuildReservationHooks(abilityDefinition, abilityRuntimeState);
+            if (!_actionCostReservation.ReserveCost(action.ActionId, actor.ActorId, cost, hooks))
+                return false;
+
+            try
+            {
+                _scheduler.ScheduleAction(action);
+                RecordInput(inputTrace);
+                BindQueuedAction(actor, action);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _actionCostReservation.Rollback(action.ActionId);
+                Debug.LogWarning($"[ActionRuntimeController] Failed to queue action with reservation: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static ActionCostReservationHooks BuildReservationHooks(
+            AbilityDefinition definition,
+            AbilityRuntimeState runtimeState)
+        {
+            if (definition == null || runtimeState == null)
+                return ActionCostReservationHooks.Empty;
+
+            return new ActionCostReservationHooks(
+                // Ability cooldown/action-state reservation must not overlap with an already pending ability action.
+                CanReserve: () => !runtimeState.PendingActionId.HasValue,
+                Commit: (currentTick, actionId) =>
+                {
+                    runtimeState.SetIdentity(definition.name, runtimeState.Charges);
+                    runtimeState.CommitQueuedAction(
+                        actionId,
+                        currentTick,
+                        definition.Cooldown,
+                        OwnershipOwners.ActionScheduler,
+                        OwnershipOwners.TickScheduler);
+                },
+                // Queue-time ability state is untouched; only reserved AP/SP is rolled back.
+                Rollback: _ => { });
+        }
+
+        private int GetCurrentSp(Guid actorId)
+        {
+            if (_simulationRuntime != null &&
+                _simulationRuntime.TryGetMutableUnit(actorId, out UnitRuntimeState state))
+            {
+                return state.SP;
+            }
+
+            return 0;
         }
 
         private static ActionSpeedTier ToSpeedTier(float actionSpeed)

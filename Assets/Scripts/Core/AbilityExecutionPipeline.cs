@@ -52,12 +52,8 @@ namespace CheckmateRPG.Core
             result = default;
             if (!Validate(request))
                 return false;
-            if (!CostCommit(request))
-                return false;
             if (!ActionQueue(request, out AbilityActionCommand action))
                 return false;
-
-            PostProcessQueue(request, action);
             result = new AbilityQueueResult(true, action);
             return true;
         }
@@ -116,18 +112,6 @@ namespace CheckmateRPG.Core
                 request.Actor.ActorId,
                 request.Action.TargetIds,
                 request.UnitsById);
-        }
-
-        private static bool CostCommit(AbilityQueueRequest request)
-        {
-            float cost = Mathf.Max(0f, request.Definition.Cost);
-            if (cost <= 0f)
-                return true;
-
-            if (APManager.Instance == null)
-                return false;
-
-            return APManager.Instance.TrySpend(new ActionPointCost(cost, APActionReason.Skill), out _);
         }
 
         private static bool ActionQueue(AbilityQueueRequest request, out AbilityActionCommand action)
@@ -194,18 +178,6 @@ namespace CheckmateRPG.Core
             }
 
             return mutations;
-        }
-
-        private static void PostProcessQueue(AbilityQueueRequest request, AbilityActionCommand action)
-        {
-            AbilityRuntimeState runtimeState = request.RuntimeState;
-            runtimeState.SetIdentity(request.Definition.name, runtimeState.Charges);
-            runtimeState.CommitQueuedAction(
-                action.ActionId,
-                request.CurrentTick,
-                request.Definition.Cooldown,
-                OwnershipOwners.ActionScheduler,
-                OwnershipOwners.TickScheduler);
         }
 
         private static IReadOnlyList<IGameEvent> PostProcessResolve(
