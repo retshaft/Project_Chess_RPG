@@ -13,6 +13,7 @@ namespace CheckmateRPG.Core.Actions
             ActionSpeedTier speedTier,
             int recoveryDurationTicks = 1,
             bool isInterruptible = true,
+            ActionDefinition? definition = null,
             ActionLockType intentLockType = ActionLockType.MovementLock,
             ActionConcurrencyPolicy concurrencyPolicy = ActionConcurrencyPolicy.Reject)
             : base(
@@ -22,6 +23,7 @@ namespace CheckmateRPG.Core.Actions
                 startTick + ActionTimelineFormula.ToActionDurationTicks(speedTier) + Math.Max(0, recoveryDurationTicks),
                 speedTier,
                 isInterruptible,
+                definition: definition,
                 intentLockType: intentLockType,
                 concurrencyPolicy: concurrencyPolicy)
         {

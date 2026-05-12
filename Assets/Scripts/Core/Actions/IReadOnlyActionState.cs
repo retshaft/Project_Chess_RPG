@@ -14,8 +14,13 @@ namespace CheckmateRPG.Core.Actions
         ActionSpeedTier SpeedTier { get; }
         bool IsInterruptible { get; }
         bool IsRecoveryInterruptible { get; }
+        bool CanBeInterrupted { get; }
+        bool CanInterruptOthers { get; }
         InterruptPriority InterruptPriority { get; }
         InterruptWindow InterruptWindow { get; }
+        ActionDefinition Definition { get; }
+        ActionInterruptState InterruptState { get; }
+        ActionInterruptPolicy InterruptPolicy { get; }
         ActionLockType IntentLockType { get; }
         ActionConcurrencyPolicy ConcurrencyPolicy { get; }
         bool IsCompleted { get; }

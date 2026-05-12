@@ -14,6 +14,9 @@ namespace CheckmateRPG.Core.Actions
             bool isRecoveryInterruptible = false,
             InterruptPriority interruptPriority = InterruptPriority.Normal,
             InterruptWindow? interruptWindow = null,
+            bool canInterruptOthers = true,
+            InterruptPriority interruptProtection = InterruptPriority.None,
+            ActionDefinition? definition = null,
             ActionLockType intentLockType = ActionLockType.CastLock,
             ActionConcurrencyPolicy concurrencyPolicy = ActionConcurrencyPolicy.Reject)
         {
@@ -34,15 +37,29 @@ namespace CheckmateRPG.Core.Actions
             ResolveTick = resolveTick;
             RecoveryEndTick = recoveryEndTick;
             SpeedTier = speedTier;
-            IsInterruptible = isInterruptible;
-            IsRecoveryInterruptible = isRecoveryInterruptible;
-            InterruptPriority = interruptPriority;
-            InterruptWindow = interruptWindow ??
+            InterruptWindow resolvedWindow = interruptWindow ??
                 (isRecoveryInterruptible
                     ? InterruptWindow.RecoveryInterruptible
                     : isInterruptible
                         ? InterruptWindow.CastingInterruptible
                         : InterruptWindow.Uninterruptible);
+            Definition = definition ??
+                         new ActionDefinition(
+                             interruptPriority,
+                             resolvedWindow,
+                             isInterruptible,
+                             canInterruptOthers);
+            IsInterruptible = Definition.CanBeInterrupted;
+            IsRecoveryInterruptible = Definition.InterruptWindow == InterruptWindow.RecoveryInterruptible;
+            CanBeInterrupted = Definition.CanBeInterrupted;
+            CanInterruptOthers = Definition.CanInterruptOthers;
+            InterruptPriority = Definition.InterruptPriority;
+            InterruptWindow = Definition.InterruptWindow;
+            InterruptState = new ActionInterruptState(
+                Definition.InterruptPriority,
+                Definition.InterruptWindow,
+                interruptProtection,
+                Guid.Empty);
             IntentLockType = intentLockType;
             ConcurrencyPolicy = concurrencyPolicy;
         }
@@ -57,11 +74,15 @@ namespace CheckmateRPG.Core.Actions
         public ActionSpeedTier SpeedTier { get; }
         public bool IsInterruptible { get; }
         public bool IsRecoveryInterruptible { get; }
+        public bool CanBeInterrupted { get; }
+        public bool CanInterruptOthers { get; }
         public InterruptPriority InterruptPriority { get; }
         public InterruptWindow InterruptWindow { get; }
+        public ActionDefinition Definition { get; }
+        public ActionInterruptState InterruptState { get; private set; }
         public ActionLockType IntentLockType { get; }
         public ActionConcurrencyPolicy ConcurrencyPolicy { get; }
-        public ActionInterruptPolicy InterruptPolicy => new(InterruptPriority, InterruptWindow);
+        public ActionInterruptPolicy InterruptPolicy => new(Definition);
         public bool IsCompleted => ActionStateMachine.IsTerminal(State);
 
         internal void MarkQueued(int queuedTick)
@@ -94,6 +115,14 @@ namespace CheckmateRPG.Core.Actions
                     $"Invalid action state transition: {State} → {newState} (ActionId={ActionId:N}).");
 
             State = newState;
+        }
+
+        internal void RegisterInterruptSource(Guid sourceActionId)
+        {
+            InterruptState = InterruptState with
+            {
+                InterruptSource = sourceActionId
+            };
         }
     }
 }
