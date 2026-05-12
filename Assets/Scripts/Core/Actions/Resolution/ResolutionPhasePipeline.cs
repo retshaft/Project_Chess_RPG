@@ -123,7 +123,7 @@ namespace CheckmateRPG.Core.Actions.Resolution
                 if (!result.Success)
                     continue;
 
-                context.AddMutations(result.RuntimeMutations);
+                context.AddMutations(action, result.RuntimeMutations);
                 context.AddEvents(result.Events);
             }
         }

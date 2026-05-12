@@ -16,14 +16,17 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 MovementMutation => MutationOrderingStage.Movement,
+                MoveMutation => MutationOrderingStage.Movement,
                 DamageMutation => MutationOrderingStage.Damage,
+                HealMutation => MutationOrderingStage.Damage,
+                DeathMutation => MutationOrderingStage.Death,
                 _ => MutationOrderingStage.Cleanup
             };
         }
 
         public bool IsPreDeathStage(MutationOrderingStage stage)
         {
-            return stage is MutationOrderingStage.Movement or MutationOrderingStage.Damage;
+            return stage is MutationOrderingStage.Movement or MutationOrderingStage.Damage or MutationOrderingStage.Death;
         }
     }
 }

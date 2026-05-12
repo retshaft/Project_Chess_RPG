@@ -1,0 +1,11 @@
+using System;
+using UnityEngine;
+
+namespace CheckmateRPG.Core.Runtime.Mutations
+{
+    public readonly record struct MoveMutation(
+        Guid MutationId,
+        Guid TargetId,
+        Vector2Int From,
+        Vector2Int To) : IRuntimeMutation;
+}

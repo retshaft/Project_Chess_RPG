@@ -39,8 +39,21 @@ namespace CheckmateRPG.Core.Prediction
                     case DamageMutation damage:
                         ApplyDamage(damage, context);
                         break;
+                    case HealMutation heal:
+                        ApplyHeal(heal, context);
+                        break;
                     case MovementMutation movement:
                         ApplyMovement(movement, context);
+                        break;
+                    case MoveMutation movement:
+                        ApplyMovement(new MovementMutation(
+                            movement.MutationId,
+                            movement.TargetId,
+                            movement.From,
+                            movement.To), context);
+                        break;
+                    case DeathMutation death:
+                        ApplyDeath(death, context);
                         break;
                     // ApplyEffectMutation is registered in the clone for completeness
                     // but does not produce any prediction outcome record on its own.
@@ -79,6 +92,17 @@ namespace CheckmateRPG.Core.Prediction
                 context.RecordDeath(new PredictedDeath(mutation.TargetId, killerActionId));
                 runtime.AddUnitStatusFlag(mutation.TargetId, UnitStatusFlags.Dead);
             }
+        }
+
+        private static void ApplyHeal(HealMutation mutation, PredictionSimulationContext context)
+        {
+            SimulationRuntime runtime = context.PredictedRuntime;
+            if (!runtime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState state))
+                return;
+
+            int amount = Mathf.Max(0, mutation.Amount);
+            int resultingHp = Mathf.Max(0, state.HP + amount);
+            runtime.SetUnitHP(mutation.TargetId, resultingHp, OwnershipOwners.DamageMutationProcessor);
         }
 
         // ── Movement ──────────────────────────────────────────────────────────────
@@ -121,6 +145,20 @@ namespace CheckmateRPG.Core.Prediction
                 mutation.IsReaction);
 
             runtime.RegisterEffect(effectState);
+        }
+
+        private static void ApplyDeath(DeathMutation mutation, PredictionSimulationContext context)
+        {
+            SimulationRuntime runtime = context.PredictedRuntime;
+            if (!runtime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState state))
+                return;
+
+            if ((state.StatusFlags & UnitStatusFlags.Dead) != 0)
+                return;
+
+            Guid killerActionId = ResolveKillerActionId(mutation.SourceId, runtime);
+            context.RecordDeath(new PredictedDeath(mutation.TargetId, killerActionId));
+            runtime.ApplyDeadUnitLifecycle(mutation.TargetId, mutation.Tick, OwnershipOwners.ActionScheduler);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────

@@ -39,5 +39,14 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
             return new IGameEvent[] { moveCompletedEvent };
         }
+
+        public IReadOnlyList<IGameEvent> Apply(MoveMutation mutation)
+        {
+            return Apply(new MovementMutation(
+                mutation.MutationId,
+                mutation.TargetId,
+                mutation.From,
+                mutation.To));
+        }
     }
 }

@@ -118,8 +118,10 @@ namespace CheckmateRPG.Core.Prediction
             RunResolve(sorted, resolutionContext, battleContext);
 
             // ── Apply mutations to the cloned runtime only ────────────────────────
+            var mutationQueue = new MutationQueue();
+            mutationQueue.EnqueueRange(resolutionContext.PendingMutationQueue);
             IReadOnlyList<IRuntimeMutation> orderedMutations =
-                _mutationOrderingService.SortDeterministic(resolutionContext.PendingMutations);
+                mutationQueue.CreateOrderedSnapshot(_mutationOrderingService);
 
             PredictionMutationApplier.Apply(orderedMutations, context);
 
@@ -284,7 +286,7 @@ namespace CheckmateRPG.Core.Prediction
                 if (!result.Success)
                     continue;
 
-                resolutionContext.AddMutations(result.RuntimeMutations);
+                resolutionContext.AddMutations(action, result.RuntimeMutations);
                 // Events are intentionally not broadcast — prediction isolation rule § [4].
             }
         }

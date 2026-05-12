@@ -76,6 +76,8 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 DamageMutation damage => damage.SourceId,
+                HealMutation heal => heal.SourceId,
+                DeathMutation death => death.SourceId,
                 ApplyEffectMutation effect => effect.SourceId,
                 _ => Guid.Empty
             };
@@ -86,6 +88,8 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 ApplyEffectMutation effect => effect.EffectId ?? string.Empty,
+                ReservationMutation reservation => reservation.ReservationKey ?? string.Empty,
+                ResourceMutation resource => resource.Reason ?? string.Empty,
                 _ => string.Empty
             };
         }
@@ -95,8 +99,12 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 MovementMutation movement => movement.From.x,
+                MoveMutation movement => movement.From.x,
                 DamageMutation damage => damage.Amount,
+                HealMutation heal => heal.Amount,
                 ApplyEffectMutation effect => effect.DurationTicks,
+                ResourceMutation resource => resource.Delta,
+                ReservationMutation reservation => (int)reservation.Operation,
                 _ => 0
             };
         }
@@ -106,8 +114,11 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 MovementMutation movement => movement.From.y,
+                MoveMutation movement => movement.From.y,
                 DamageMutation damage => damage.IsCritical ? 1 : 0,
                 ApplyEffectMutation effect => effect.TickInterval,
+                ResourceMutation resource => (int)resource.ResourceType,
+                ReservationMutation reservation => reservation.Tick,
                 _ => 0
             };
         }
@@ -117,6 +128,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 MovementMutation movement => movement.To.x,
+                MoveMutation movement => movement.To.x,
                 ApplyEffectMutation effect => effect.InitialTickIn,
                 _ => 0
             };
@@ -127,6 +139,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 MovementMutation movement => movement.To.y,
+                MoveMutation movement => movement.To.y,
                 ApplyEffectMutation effect => effect.StackCount,
                 _ => 0
             };

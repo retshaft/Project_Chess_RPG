@@ -51,5 +51,29 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
             return new IGameEvent[] { damageAppliedEvent };
         }
+
+        public IReadOnlyList<IGameEvent> Apply(HealMutation mutation)
+        {
+            UnitBrain target = _unitLookup(mutation.TargetId);
+            if (target == null || target.Health == null)
+                return Array.Empty<IGameEvent>();
+
+            int amount = Mathf.Max(0, mutation.Amount);
+            target.Health.Heal(amount);
+            int actualRemainingHp = Mathf.RoundToInt(target.Health.CurrentHealth);
+            _simulationRuntime.SetUnitHP(mutation.TargetId, actualRemainingHp, OwnershipOwners.DamageMutationProcessor);
+            return Array.Empty<IGameEvent>();
+        }
+
+        public IReadOnlyList<IGameEvent> Apply(DeathMutation mutation)
+        {
+            UnitBrain target = _unitLookup(mutation.TargetId);
+            if (target == null)
+                return Array.Empty<IGameEvent>();
+
+            int currentTick = mutation.Tick;
+            _simulationRuntime.ApplyDeadUnitLifecycle(mutation.TargetId, currentTick, OwnershipOwners.ActionScheduler);
+            return Array.Empty<IGameEvent>();
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core;
+using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Simulation;
@@ -47,14 +48,26 @@ namespace CheckmateRPG.Core.Runtime.Processors
             var events = new List<IGameEvent>();
             for (int i = 0; i < mutations.Count; i++)
             {
-                IReadOnlyList<IGameEvent> mutationEvents = mutations[i] switch
+                IRuntimeMutation mutation = mutations[i];
+                if (mutation == null)
+                    continue;
+
+                bool handled = true;
+                IReadOnlyList<IGameEvent> mutationEvents = mutation switch
                 {
-                    DamageMutation dm => _damageProcessor.Apply(dm),
-                    MovementMutation mm => _movementProcessor.Apply(mm),
-                    ApplyEffectMutation em => _effectProcessor.Apply(em),
-                    _ => Array.Empty<IGameEvent>()
+                    DamageMutation damage => _damageProcessor.Apply(damage),
+                    HealMutation heal => _damageProcessor.Apply(heal),
+                    DeathMutation death => _damageProcessor.Apply(death),
+                    MovementMutation movement => _movementProcessor.Apply(movement),
+                    MoveMutation move => _movementProcessor.Apply(move),
+                    ApplyEffectMutation effect => _effectProcessor.Apply(effect),
+                    ReservationMutation => Array.Empty<IGameEvent>(),
+                    ResourceMutation => Array.Empty<IGameEvent>(),
+                    _ => MarkUnhandled(out handled)
                 };
                 events.AddRange(mutationEvents);
+                if (handled)
+                    events.Add(BuildMutationAppliedEvent(mutation));
             }
             return events;
         }
@@ -75,6 +88,50 @@ namespace CheckmateRPG.Core.Runtime.Processors
             IReadOnlyList<IGameEvent> events = Apply(ordered);
             transaction.Commit();
             return events;
+        }
+
+        private static IReadOnlyList<IGameEvent> MarkUnhandled(out bool handled)
+        {
+            handled = false;
+            return Array.Empty<IGameEvent>();
+        }
+
+        private static MutationAppliedEvent BuildMutationAppliedEvent(IRuntimeMutation mutation)
+        {
+            Guid sourceId = ResolveSourceId(mutation);
+            int tick = ResolveTick(mutation);
+            string mutationType = mutation.GetType().Name;
+            return new MutationAppliedEvent(
+                new MutationAppliedPayload(
+                    mutation.MutationId,
+                    mutation.TargetId,
+                    sourceId,
+                    mutationType,
+                    tick),
+                mutation.MutationId.ToString("N"),
+                mutation.TargetId.ToString("N"));
+        }
+
+        private static Guid ResolveSourceId(IRuntimeMutation mutation)
+        {
+            return mutation switch
+            {
+                DamageMutation damage => damage.SourceId,
+                HealMutation heal => heal.SourceId,
+                DeathMutation death => death.SourceId,
+                ApplyEffectMutation effect => effect.SourceId,
+                _ => Guid.Empty
+            };
+        }
+
+        private static int ResolveTick(IRuntimeMutation mutation)
+        {
+            return mutation switch
+            {
+                DeathMutation death => death.Tick,
+                ReservationMutation reservation => reservation.Tick,
+                _ => 0
+            };
         }
     }
 }
