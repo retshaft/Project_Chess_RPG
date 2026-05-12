@@ -5,6 +5,7 @@ using CheckmateRPG.Core.Actions.Resolution;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Core.Simulation.Spatial;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Prediction
@@ -32,6 +33,7 @@ namespace CheckmateRPG.Core.Prediction
         private readonly Func<Guid, int> _attackRangeLookup;
         private readonly int _criticalDamageMultiplier;
         private readonly MutationOrderingService _mutationOrderingService;
+        private readonly PositionReservationSystem _positionReservationSystem;
 
         /// <param name="isCellValid">
         /// Delegate that returns <c>true</c> when a board cell is within bounds.
@@ -44,15 +46,22 @@ namespace CheckmateRPG.Core.Prediction
         /// <param name="criticalDamageMultiplier">
         /// Multiplier applied to critical-hit damage.  Defaults to 2.
         /// </param>
+        /// <param name="spatialPolicy">
+        /// Policy used to resolve simultaneous move collisions.
+        /// Defaults to <see cref="SpatialResolutionPolicy.HigherSpeedWins"/>,
+        /// which matches the production <see cref="PositionReservationSystem"/>.
+        /// </param>
         public PredictionPipeline(
             Func<Vector2Int, bool> isCellValid,
             Func<Guid, int> attackRangeLookup,
-            int criticalDamageMultiplier = 2)
+            int criticalDamageMultiplier = 2,
+            SpatialResolutionPolicy spatialPolicy = SpatialResolutionPolicy.HigherSpeedWins)
         {
             _isCellValid = isCellValid ?? throw new ArgumentNullException(nameof(isCellValid));
             _attackRangeLookup = attackRangeLookup ?? throw new ArgumentNullException(nameof(attackRangeLookup));
             _criticalDamageMultiplier = Math.Max(1, criticalDamageMultiplier);
             _mutationOrderingService = new MutationOrderingService();
+            _positionReservationSystem = new PositionReservationSystem(spatialPolicy);
         }
 
         /// <summary>
@@ -94,6 +103,9 @@ namespace CheckmateRPG.Core.Prediction
             // Record the resolve order before anything is cancelled.
             RecordResolveOrder(sorted, context);
 
+            // ── Spatial reservation snapshot (collision preview) ──────────────────
+            PositionReservationSnapshot spatialSnapshot = _positionReservationSystem.Build(sorted);
+
             // ── [3] Simulate action resolution ────────────────────────────────────
             var battleContext = new PredictionBattleContext(
                 context.PredictedRuntime,
@@ -102,7 +114,7 @@ namespace CheckmateRPG.Core.Prediction
                 _criticalDamageMultiplier);
 
             var resolutionContext = new ActionResolutionContext(tick, sorted);
-            RunPreResolve(sorted, resolutionContext, context);
+            RunPreResolve(sorted, spatialSnapshot, battleContext, resolutionContext, context);
             RunResolve(sorted, resolutionContext, battleContext);
 
             // ── Apply mutations to the cloned runtime only ────────────────────────
@@ -120,10 +132,15 @@ namespace CheckmateRPG.Core.Prediction
         // ── Phase runners ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Records interrupted and cancelled actions into the context before resolve.
+        /// Pre-resolve: marks already-cancelled/interrupted actions, validates spatial
+        /// reservations for moves, and validates attack targets — all matching the
+        /// same checks performed by the production
+        /// <see cref="ResolutionPhasePipeline"/>.
         /// </summary>
         private static void RunPreResolve(
             IReadOnlyList<IActionCommand> sorted,
+            PositionReservationSnapshot spatialSnapshot,
+            PredictionBattleContext battleContext,
             ActionResolutionContext resolutionContext,
             PredictionSimulationContext context)
         {
@@ -135,18 +152,106 @@ namespace CheckmateRPG.Core.Prediction
                 if (action == null)
                     continue;
 
+                // Already in a terminal or cancelled state.
                 if (action.State == ActionState.Cancelled || action.State == ActionState.Interrupted)
                 {
-                    resolutionContext.MarkCancelled(
-                        action.ActionId,
-                        ActionCancellationReason.Interrupted);
+                    CancelAction(action, ActionCancellationReason.Interrupted, resolutionContext, context);
+                    continue;
+                }
 
-                    context.RecordInterrupt(new PredictedInterrupt(
-                        action.ActionId,
-                        action.ActorId,
-                        ActionCancellationReason.Interrupted));
+                if (resolutionContext.IsCancelled(action.ActionId))
+                    continue;
+
+                // Actor must be alive in the cloned runtime.
+                if (!battleContext.TryGetUnit(action.ActorId, out BattleUnitSnapshot actor) ||
+                    (actor.StatusFlags & UnitStatusFlags.Dead) != 0)
+                {
+                    CancelAction(action, ActionCancellationReason.Interrupted, resolutionContext, context);
+                    continue;
+                }
+
+                switch (action)
+                {
+                    case MoveActionCommand move:
+                        ValidateMovePreResolve(move, spatialSnapshot, battleContext, resolutionContext, context);
+                        break;
+                    case AttackActionCommand attack:
+                        ValidateAttackPreResolve(attack, battleContext, resolutionContext, context);
+                        break;
                 }
             }
+        }
+
+        private static void ValidateMovePreResolve(
+            MoveActionCommand move,
+            PositionReservationSnapshot spatialSnapshot,
+            PredictionBattleContext battleContext,
+            ActionResolutionContext resolutionContext,
+            PredictionSimulationContext context)
+        {
+            if (resolutionContext.IsCancelled(move.ActionId))
+                return;
+
+            // Spatial collision: the move must hold the winning reservation for its target cell.
+            if (!spatialSnapshot.HasWinningReservation(move.ActionId))
+            {
+                CancelAction(move, ActionCancellationReason.ReservationLost, resolutionContext, context);
+                return;
+            }
+
+            // Target cell must be within board bounds.
+            if (!battleContext.IsCellValid(move.To))
+            {
+                CancelAction(move, ActionCancellationReason.TargetInvalid, resolutionContext, context);
+                return;
+            }
+
+            // Target cell must not be occupied by another unit.
+            if (battleContext.IsCellOccupied(move.To, move.ActorId))
+            {
+                CancelAction(move, ActionCancellationReason.ReservationLost, resolutionContext, context);
+            }
+        }
+
+        private static void ValidateAttackPreResolve(
+            AttackActionCommand attack,
+            PredictionBattleContext battleContext,
+            ActionResolutionContext resolutionContext,
+            PredictionSimulationContext context)
+        {
+            if (resolutionContext.IsCancelled(attack.ActionId))
+                return;
+
+            // Target must exist and be alive.
+            if (!battleContext.TryGetUnit(attack.TargetId, out BattleUnitSnapshot target) ||
+                (target.StatusFlags & UnitStatusFlags.Dead) != 0)
+            {
+                CancelAction(attack, ActionCancellationReason.TargetInvalid, resolutionContext, context);
+                return;
+            }
+
+            // Target cell must be within board bounds.
+            if (!battleContext.IsCellValid(target.Position))
+            {
+                CancelAction(attack, ActionCancellationReason.TargetInvalid, resolutionContext, context);
+                return;
+            }
+
+            // Target must be within attack range.
+            if (!battleContext.IsTargetInAttackRange(attack.ActorId, attack.TargetId))
+            {
+                CancelAction(attack, ActionCancellationReason.OutOfRange, resolutionContext, context);
+            }
+        }
+
+        private static void CancelAction(
+            IActionCommand action,
+            ActionCancellationReason reason,
+            ActionResolutionContext resolutionContext,
+            PredictionSimulationContext context)
+        {
+            resolutionContext.MarkCancelled(action.ActionId, reason);
+            context.RecordInterrupt(new PredictedInterrupt(action.ActionId, action.ActorId, reason));
         }
 
         /// <summary>
@@ -159,7 +264,7 @@ namespace CheckmateRPG.Core.Prediction
             PredictionBattleContext battleContext)
         {
             resolutionContext.CurrentPhase = ResolutionPhase.Resolve;
-            var resolverRegistry = new Actions.Resolvers.ActionResolverRegistry();
+            var resolverRegistry = new ActionResolverRegistry();
 
             for (int i = 0; i < sorted.Count; i++)
             {
@@ -173,7 +278,7 @@ namespace CheckmateRPG.Core.Prediction
                 if (action.State == ActionState.Cancelled || action.State == ActionState.Interrupted)
                     continue;
 
-                if (!resolverRegistry.TryResolve(action, battleContext, out Actions.Resolvers.ActionResolutionResult result))
+                if (!resolverRegistry.TryResolve(action, battleContext, out ActionResolutionResult result))
                     continue;
 
                 if (!result.Success)

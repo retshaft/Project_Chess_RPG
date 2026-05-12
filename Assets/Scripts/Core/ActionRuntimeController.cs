@@ -6,6 +6,7 @@ using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Effects.Processors;
 using CheckmateRPG.Core.Events.ActionEvents;
+using CheckmateRPG.Core.Prediction;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
@@ -62,6 +63,7 @@ namespace CheckmateRPG.Core
         private SnapshotRecorder _snapshotRecorder;
         private ValidationResult _lastValidationResult = ValidationResult.Valid();
         private bool _validationHalted;
+        private PredictionPipeline _predictionPipeline;
         private bool ShouldRecordReplay => _enableReplayRecording && _replayRecorder != null;
 
         public ActionScheduler Scheduler => _scheduler;
@@ -69,6 +71,12 @@ namespace CheckmateRPG.Core
         public ReplayRecorder ReplayRecorder => _replayRecorder;
         public SimulationTimelineRecorder TimelineRecorder => _timelineRecorder;
         public SnapshotRecorder SnapshotRecorder => _snapshotRecorder;
+
+        /// <summary>
+        /// Returns the prediction pipeline configured for this runtime.
+        /// May be <c>null</c> before <c>Awake</c> has been called.
+        /// </summary>
+        public PredictionPipeline PredictionPipeline => _predictionPipeline;
 
         public static ActionRuntimeController EnsureExists()
         {
@@ -98,6 +106,16 @@ namespace CheckmateRPG.Core
             _actionCostReservation = new ActionCostReservation();
             _battleContext = new RuntimeBattleContext(this);
             _positionReservationSystem = new PositionReservationSystem(SpatialResolutionPolicy.HigherSpeedWins);
+            _predictionPipeline = new PredictionPipeline(
+                isCellValid: cell => GridSystem.Instance != null && GridSystem.Instance.IsValidCell(cell),
+                attackRangeLookup: unitId =>
+                {
+                    if (_unitsById.TryGetValue(unitId, out UnitBrain brain) && brain?.UnitData != null)
+                        return Mathf.Max(1, brain.UnitData.AttackRange);
+                    return 1;
+                },
+                criticalDamageMultiplier: 2,
+                spatialPolicy: SpatialResolutionPolicy.HigherSpeedWins);
             _effectSystem = BuildEffectSystem();
             _mutationProcessor = new RuntimeMutationProcessor(
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
@@ -236,6 +254,34 @@ namespace CheckmateRPG.Core
                 _unitsById);
 
             return _abilityPipeline.TryQueueAbility(request, out _);
+        }
+
+        /// <summary>
+        /// Runs a deterministic, isolated prediction for the given set of actions
+        /// against a deep-clone of the current runtime.
+        /// <para>
+        /// The live runtime is <em>never</em> mutated.
+        /// No events are broadcast and no state is persisted.
+        /// </para>
+        /// </summary>
+        /// <param name="actions">
+        /// Actions to simulate.  Pass <c>null</c> or an empty list to receive
+        /// <see cref="PredictionResult.Empty"/>.
+        /// </param>
+        /// <returns>
+        /// An immutable <see cref="PredictionResult"/> describing the predicted
+        /// outcomes, or <see cref="PredictionResult.Empty"/> when the runtime or
+        /// pipeline is not yet initialised.
+        /// </returns>
+        public PredictionResult Predict(IReadOnlyList<IActionCommand> actions)
+        {
+            if (_predictionPipeline == null || _simulationRuntime == null)
+                return PredictionResult.Empty;
+
+            if (actions == null || actions.Count == 0)
+                return PredictionResult.Empty;
+
+            return _predictionPipeline.Execute(actions, _simulationRuntime, _scheduler?.CurrentTick ?? 0);
         }
 
         public void RegisterAbilityDefinition(AbilityDefinition definition)
