@@ -822,6 +822,7 @@ namespace CheckmateRPG.Core
                 return ActionCostReservationHooks.Empty;
 
             return new ActionCostReservationHooks(
+                // Ability cooldown/action-state reservation must not overlap with an already pending ability action.
                 CanReserve: () => !runtimeState.PendingActionId.HasValue,
                 Commit: (currentTick, actionId) =>
                 {
@@ -833,6 +834,7 @@ namespace CheckmateRPG.Core
                         OwnershipOwners.ActionScheduler,
                         OwnershipOwners.TickScheduler);
                 },
+                // Queue-time ability state is untouched; only reserved AP/SP is rolled back.
                 Rollback: _ => { });
         }
 

@@ -4,9 +4,15 @@ using UnityEngine;
 
 namespace CheckmateRPG.Core.Actions
 {
+    /// <summary>
+    /// Optional callbacks bound to a reservation for non-AP/SP side effects (e.g. ability cooldown state).
+    /// </summary>
     public readonly record struct ActionCostReservationHooks(
+        /// <summary>Called during reservation to validate whether side-effect reservation is allowed.</summary>
         Func<bool> CanReserve,
+        /// <summary>Called when reserved costs are committed right before resolve.</summary>
         Action<int, Guid> Commit,
+        /// <summary>Called when reservation is rolled back due to cancellation/interruption.</summary>
         Action<Guid> Rollback)
     {
         public static ActionCostReservationHooks Empty => new(null, null, null);
@@ -29,7 +35,7 @@ namespace CheckmateRPG.Core.Actions
                     return false;
 
                 float availableAp = Mathf.Max(0f, APManager.Instance.CurrentAP - _reservedAp);
-                if (availableAp + Mathf.Epsilon < cost.APCost)
+                if (availableAp + ComparisonTolerance < cost.APCost)
                     return false;
             }
 
@@ -68,7 +74,7 @@ namespace CheckmateRPG.Core.Actions
         public bool Commit(Guid actionId, int currentTick)
         {
             if (!_reservations.TryGetValue(actionId, out ReservationEntry entry))
-                return true;
+                return false;
 
             if (entry.Cost.APCost > 0f)
             {
@@ -125,3 +131,4 @@ namespace CheckmateRPG.Core.Actions
         }
     }
 }
+        private const float ComparisonTolerance = 0.0001f;
