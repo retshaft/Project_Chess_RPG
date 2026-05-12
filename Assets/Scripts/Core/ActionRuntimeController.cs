@@ -413,16 +413,17 @@ namespace CheckmateRPG.Core
             _positionReservations = _positionReservationSystem.Build(ready);
             ActionResolutionContext resolutionContext =
                 _resolutionPipeline.Execute(_scheduler.CurrentTick, ready, _battleContext);
+            resolutionContext.CurrentPhase = ResolutionPhase.MutationCommit;
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
             IReadOnlyList<IRuntimeMutation> preDeathMutations =
                 mutationApplyInput.PreDeathTransaction.CreateOrderedSnapshot(_mutationOrderingService);
-            _timelineRecorder?.RecordMutations(preDeathMutations, "PreDeath");
+            _timelineRecorder?.RecordMutations(preDeathMutations, MutationCommitPhase.PreDeath.ToString());
             IReadOnlyList<IGameEvent> preDeathMutationEvents =
                 _mutationProcessor.Apply(mutationApplyInput.PreDeathTransaction, _mutationOrderingService);
             ExecuteDeathCheckStage();
             IReadOnlyList<IRuntimeMutation> cleanupMutations =
                 mutationApplyInput.CleanupTransaction.CreateOrderedSnapshot(_mutationOrderingService);
-            _timelineRecorder?.RecordMutations(cleanupMutations, "Cleanup");
+            _timelineRecorder?.RecordMutations(cleanupMutations, MutationCommitPhase.Cleanup.ToString());
             IReadOnlyList<IGameEvent> cleanupMutationEvents =
                 _mutationProcessor.Apply(mutationApplyInput.CleanupTransaction, _mutationOrderingService);
             ExecuteCleanupStage();
@@ -504,11 +505,13 @@ namespace CheckmateRPG.Core
         private MutationApplyInput BuildMutationApplyInput(ActionResolutionContext resolutionContext)
         {
             if (resolutionContext == null ||
-                (resolutionContext.PendingMutations.Count == 0 && resolutionContext.PendingEvents.Count == 0))
+                (resolutionContext.PendingMutationQueue.Count == 0 && resolutionContext.PendingEvents.Count == 0))
                 return MutationApplyInput.Empty;
 
+            var mutationQueue = new MutationQueue();
+            mutationQueue.EnqueueRange(resolutionContext.PendingMutationQueue);
             IReadOnlyList<IRuntimeMutation> orderedMutations =
-                _mutationOrderingService.SortDeterministic(resolutionContext.PendingMutations);
+                mutationQueue.CreateOrderedSnapshot(_mutationOrderingService);
             _mutationOrderingService.SplitByDeathBoundary(
                 orderedMutations,
                 out IReadOnlyList<IRuntimeMutation> preDeathMutations,

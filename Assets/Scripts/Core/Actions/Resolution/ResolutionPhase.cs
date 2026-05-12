@@ -20,7 +20,12 @@ namespace CheckmateRPG.Core.Actions.Resolution
         /// </summary>
         PostResolve = 2,
 
+        /// <summary>
+        /// Commits buffered mutations to runtime in authoritative order.
+        /// </summary>
+        MutationCommit = 3,
+
         /// <summary>Death confirmation, state cleanup, and event flush.</summary>
-        Finalize = 3
+        Finalize = 4
     }
 }
