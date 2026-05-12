@@ -56,10 +56,10 @@ namespace CheckmateRPG.Data
         // ─── Defense ──────────────────────────────────────────────────────────────
 
         [Header("Defense")]
-        [Tooltip("Physical damage reduction (0 = none, 1 = immune).")]
-        [Range(0f, 1f)] public float Defense = 0.1f;
+        [Tooltip("Physical damage reduction (Absolute value. e.g. 10 reduces physical damage by 10).")]
+        [Min(0f)] public float Defense = 0f; // [Range(0f, 1f)] 제거됨. 감산 공식에 맞게 절대값 사용.
 
-        [Tooltip("Magical damage reduction (0 = none, 1 = immune).")]
+        [Tooltip("Magical damage reduction percentage (0 = none, 1 = 100% immune).")]
         [Range(0f, 1f)] public float Resistance = 0.1f;
 
         // ─── Combat ───────────────────────────────────────────────────────────────
