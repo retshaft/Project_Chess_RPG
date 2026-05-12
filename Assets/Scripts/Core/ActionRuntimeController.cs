@@ -131,6 +131,7 @@ namespace CheckmateRPG.Core
                 () => _unitsById));
             _tickScheduler = TickScheduler.EnsureExists();
             _tickScheduler.OnTick += HandleRuntimeTick;
+            _eventBus.Subscribe<ActionQueuedEvent>(HandleActionQueued);
             _eventBus.Subscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Subscribe<ActionInterruptedEvent>(HandleActionInterrupted);
             _eventBus.Subscribe<ActionStateChangedEvent>(HandleActionStateChanged);
@@ -145,6 +146,7 @@ namespace CheckmateRPG.Core
                 _tickScheduler.OnTick -= HandleRuntimeTick;
             _eventTraceRecorder?.Detach();
             _timelineRecorder?.Detach();
+            _eventBus.Unsubscribe<ActionQueuedEvent>(HandleActionQueued);
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
             _eventBus.Unsubscribe<ActionStateChangedEvent>(HandleActionStateChanged);
@@ -303,12 +305,7 @@ namespace CheckmateRPG.Core
                 return false;
 
             SyncRuntimeState(actor);
-            if (!_simulationRuntime.TryGetMutableUnit(actor.ActorId, out UnitRuntimeState state))
-                return false;
-            if (state.CurrentActionId.HasValue)
-                return false;
-
-            return _scheduler.CurrentTick >= state.RecoveryUntilTick;
+            return _simulationRuntime.TryGetMutableUnit(actor.ActorId, out _);
         }
 
         private IActionCommand CreateMoveCommand(UnitBrain actor, Vector2Int destination)
@@ -747,6 +744,23 @@ namespace CheckmateRPG.Core
                 SyncRuntimeState(actor);
         }
 
+        private void HandleActionQueued(ActionQueuedEvent actionQueuedEvent)
+        {
+            ActionLifecyclePayload payload = actionQueuedEvent.Payload;
+            if (_scheduler == null || !_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) || actor == null)
+                return;
+
+            IReadOnlyCollection<IActionCommand> activeActions = _scheduler.GetActiveActions();
+            foreach (IActionCommand action in activeActions)
+            {
+                if (action != null && action.ActionId == payload.ActionId)
+                {
+                    BindQueuedAction(actor, action);
+                    break;
+                }
+            }
+        }
+
         private void HandleActionStateChanged(ActionStateChangedEvent actionStateChangedEvent)
         {
             ActionLifecyclePayload payload = actionStateChangedEvent.Payload;
@@ -801,9 +815,14 @@ namespace CheckmateRPG.Core
 
             try
             {
-                _scheduler.ScheduleAction(action);
+                ActionAdmissionResult admissionResult = _scheduler.ScheduleAction(action);
+                if (admissionResult.Status == ActionAdmissionStatus.Rejected)
+                {
+                    _actionCostReservation.Rollback(action.ActionId);
+                    return false;
+                }
+
                 RecordInput(inputTrace);
-                BindQueuedAction(actor, action);
                 return true;
             }
             catch (Exception ex)

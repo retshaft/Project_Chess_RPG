@@ -5,7 +5,7 @@ namespace CheckmateRPG.Core.Actions
 {
     public interface IActionScheduler
     {
-        void ScheduleAction(IActionCommand action);
+        ActionAdmissionResult ScheduleAction(IActionCommand action);
         void AdvanceTick();
         void InterruptAction(Guid actionId);
         void InterruptAction(Guid targetActionId, Guid sourceActionId, InterruptPriority priority = InterruptPriority.Normal);

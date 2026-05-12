@@ -236,6 +236,8 @@ namespace CheckmateRPG.Core.Simulation
             bool isRecoveryInterruptible,
             InterruptPriority interruptPriority,
             InterruptWindow interruptWindow,
+            ActionLockType intentLockType,
+            ActionConcurrencyPolicy concurrencyPolicy,
             Vector2Int? from,
             Vector2Int? to,
             Guid? targetId,
@@ -257,6 +259,8 @@ namespace CheckmateRPG.Core.Simulation
             IsRecoveryInterruptible = isRecoveryInterruptible;
             InterruptPriority = interruptPriority;
             InterruptWindow = interruptWindow;
+            IntentLockType = intentLockType;
+            ConcurrencyPolicy = concurrencyPolicy;
             From = from;
             To = to;
             TargetId = targetId;
@@ -281,6 +285,8 @@ namespace CheckmateRPG.Core.Simulation
                 source?.IsRecoveryInterruptible ?? false,
                 source?.InterruptPriority ?? InterruptPriority.Normal,
                 source?.InterruptWindow ?? InterruptWindow.CastingInterruptible,
+                source?.IntentLockType ?? ActionLockType.CastLock,
+                source?.ConcurrencyPolicy ?? ActionConcurrencyPolicy.Reject,
                 source?.From,
                 source?.To,
                 source?.TargetId,
@@ -304,6 +310,8 @@ namespace CheckmateRPG.Core.Simulation
         public bool IsRecoveryInterruptible { get; }
         public InterruptPriority InterruptPriority { get; }
         public InterruptWindow InterruptWindow { get; }
+        public ActionLockType IntentLockType { get; }
+        public ActionConcurrencyPolicy ConcurrencyPolicy { get; }
         public bool IsCompleted => ActionStateMachine.IsTerminal(State);
         public Vector2Int? From { get; }
         public Vector2Int? To { get; }
@@ -359,6 +367,8 @@ namespace CheckmateRPG.Core.Simulation
                 action.IsRecoveryInterruptible,
                 action.InterruptPriority,
                 action.InterruptWindow,
+                action.IntentLockType,
+                action.ConcurrencyPolicy,
                 from,
                 to,
                 targetId,

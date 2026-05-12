@@ -10,9 +10,12 @@ namespace CheckmateRPG.Core.Actions
         private readonly Dictionary<Guid, BaseActionCommand> _activeActions = new();
         private readonly Queue<Guid> _pendingResolveQueue = new();
         private readonly Dictionary<Guid, PendingInterruptRequest> _pendingInterrupts = new();
+        private readonly Dictionary<Guid, PendingInterruptRequest> _interruptContextByTarget = new();
+        private readonly Dictionary<Guid, UnitActionLockState> _lockStateByActor = new();
+        private readonly Dictionary<Guid, Queue<BaseActionCommand>> _deferredActionsByActor = new();
+        private readonly HashSet<Guid> _deferredActionIds = new();
         private readonly IEventBus _eventBus;
         private readonly InterruptArbitrationService _interruptArbitrationService;
-        private readonly Dictionary<Guid, PendingInterruptRequest> _interruptContextByTarget = new();
 
         public ActionScheduler(IEventBus eventBus = null)
         {
@@ -22,22 +25,49 @@ namespace CheckmateRPG.Core.Actions
 
         public int CurrentTick { get; private set; }
 
-        public void ScheduleAction(IActionCommand action)
+        public ActionAdmissionResult ScheduleAction(IActionCommand action)
         {
             if (action is not BaseActionCommand command)
-                throw new InvalidOperationException($"Unsupported action type '{action?.GetType().Name ?? "null"}'.");
-            if (_activeActions.ContainsKey(command.ActionId))
-                throw new InvalidOperationException($"Action '{command.ActionId}' is already scheduled.");
-            if (command.StartTick < CurrentTick)
-                throw new ArgumentOutOfRangeException(nameof(action), "StartTick cannot be in the past.");
-            if (command.ResolveTick < command.StartTick)
-                throw new ArgumentOutOfRangeException(nameof(action), "ResolveTick must be greater than or equal to StartTick.");
-            if (command.RecoveryEndTick < command.ResolveTick)
-                throw new ArgumentOutOfRangeException(nameof(action), "RecoveryEndTick must be greater than or equal to ResolveTick.");
+            {
+                return RejectAdmission(
+                    action?.ActionId ?? Guid.Empty,
+                    action?.ActorId ?? Guid.Empty,
+                    ActionAdmissionRejectionReason.InvalidAction,
+                    ActionLockType.None);
+            }
 
-            command.MarkQueued(CurrentTick);
-            _activeActions.Add(command.ActionId, command);
-            PublishLifecycleEvent(command, ActionState.Queued);
+            if (_activeActions.ContainsKey(command.ActionId) || _deferredActionIds.Contains(command.ActionId))
+            {
+                return RejectAdmission(
+                    command.ActionId,
+                    command.ActorId,
+                    ActionAdmissionRejectionReason.DuplicateAction,
+                    GetCurrentLock(command.ActorId));
+            }
+
+            if (command.StartTick < CurrentTick ||
+                command.ResolveTick < command.StartTick ||
+                command.RecoveryEndTick < command.ResolveTick)
+            {
+                return RejectAdmission(
+                    command.ActionId,
+                    command.ActorId,
+                    ActionAdmissionRejectionReason.InvalidTimeline,
+                    GetCurrentLock(command.ActorId));
+            }
+
+            ActionAdmissionResult admissionResult = EvaluateAdmission(command);
+            switch (admissionResult.Status)
+            {
+                case ActionAdmissionStatus.Scheduled:
+                    ActivateAction(command);
+                    return admissionResult;
+                case ActionAdmissionStatus.Deferred:
+                    EnqueueDeferred(command);
+                    return admissionResult;
+                default:
+                    return RejectAdmission(command.ActionId, command.ActorId, admissionResult.Reason, admissionResult.CurrentLock);
+            }
         }
 
         public void AdvanceTick()
@@ -84,6 +114,7 @@ namespace CheckmateRPG.Core.Actions
 
             ProcessPendingInterrupts();
             PruneInactiveActions();
+            TryAdmitDeferredActions();
         }
 
         public void InterruptAction(Guid actionId)
@@ -117,9 +148,7 @@ namespace CheckmateRPG.Core.Actions
             bool shouldReplaceExisting = !_pendingInterrupts.TryGetValue(targetActionId, out PendingInterruptRequest existing) ||
                                          _interruptArbitrationService.IsIncomingRequestHigher(existing, request);
             if (shouldReplaceExisting)
-            {
                 _pendingInterrupts[targetActionId] = request;
-            }
         }
 
         public void CancelAction(Guid actionId)
@@ -128,14 +157,13 @@ namespace CheckmateRPG.Core.Actions
                 return;
             if (!_activeActions.TryGetValue(actionId, out BaseActionCommand action))
                 return;
-
-            // Cancellation is only permitted before the Resolving phase.
             if (!ActionStateMachine.CanCancel(action.State))
                 return;
 
             ActionState previousState = action.State;
             action.TransitionTo(ActionState.Cancelled);
             PublishLifecycleEvent(action, previousState);
+            ReleaseActionLock(action);
             _activeActions.Remove(actionId);
             _pendingInterrupts.Remove(actionId);
             _interruptContextByTarget.Remove(actionId);
@@ -189,6 +217,245 @@ namespace CheckmateRPG.Core.Actions
             }
 
             return false;
+        }
+
+        private ActionAdmissionResult EvaluateAdmission(BaseActionCommand command)
+        {
+            if (!TryGetActiveLock(command.ActorId, out UnitActionLockState currentLockState))
+                return ActionAdmissionResult.Scheduled();
+
+            ActionLockType currentLock = currentLockState.ActiveLock;
+            return command.ConcurrencyPolicy switch
+            {
+                ActionConcurrencyPolicy.Queue => ActionAdmissionResult.Deferred(currentLock),
+                ActionConcurrencyPolicy.Replace => TryReplaceCurrentLock(currentLockState, command.ActionId)
+                    ? ActionAdmissionResult.Scheduled()
+                    : ActionAdmissionResult.Rejected(ActionAdmissionRejectionReason.ReplaceNotAllowed, currentLock),
+                ActionConcurrencyPolicy.ParallelAllowed => CanRunParallel(command, currentLock)
+                    ? ActionAdmissionResult.Scheduled()
+                    : ActionAdmissionResult.Rejected(ActionAdmissionRejectionReason.ParallelNotAllowed, currentLock),
+                _ => ActionAdmissionResult.Rejected(ToLockRejectionReason(currentLock), currentLock)
+            };
+        }
+
+        private static ActionAdmissionRejectionReason ToLockRejectionReason(ActionLockType lockType)
+        {
+            return lockType switch
+            {
+                ActionLockType.CastLock => ActionAdmissionRejectionReason.CastLocked,
+                ActionLockType.RecoveryLock => ActionAdmissionRejectionReason.RecoveryLocked,
+                ActionLockType.MovementLock => ActionAdmissionRejectionReason.MovementLocked,
+                ActionLockType.GlobalLock => ActionAdmissionRejectionReason.GlobalLocked,
+                _ => ActionAdmissionRejectionReason.None
+            };
+        }
+
+        private static bool CanRunParallel(BaseActionCommand command, ActionLockType currentLock)
+        {
+            if (command == null)
+                return false;
+            if (command.IntentLockType != ActionLockType.None)
+                return false;
+            return currentLock != ActionLockType.GlobalLock;
+        }
+
+        private ActionAdmissionResult RejectAdmission(
+            Guid actionId,
+            Guid actorId,
+            ActionAdmissionRejectionReason reason,
+            ActionLockType currentLock)
+        {
+            PublishRejectedEvent(actionId, actorId, reason, currentLock);
+            return ActionAdmissionResult.Rejected(reason, currentLock);
+        }
+
+        private void ActivateAction(BaseActionCommand command)
+        {
+            command.MarkQueued(CurrentTick);
+            _activeActions.Add(command.ActionId, command);
+            AcquireQueuedLock(command);
+            PublishLifecycleEvent(command, ActionState.Queued);
+        }
+
+        private void EnqueueDeferred(BaseActionCommand command)
+        {
+            if (!_deferredActionsByActor.TryGetValue(command.ActorId, out Queue<BaseActionCommand> queue))
+            {
+                queue = new Queue<BaseActionCommand>();
+                _deferredActionsByActor[command.ActorId] = queue;
+            }
+
+            queue.Enqueue(command);
+            _deferredActionIds.Add(command.ActionId);
+        }
+
+        private void TryAdmitDeferredActions()
+        {
+            if (_deferredActionsByActor.Count == 0)
+                return;
+
+            Guid[] actorIds = _deferredActionsByActor.Keys.ToArray();
+            for (int i = 0; i < actorIds.Length; i++)
+            {
+                Guid actorId = actorIds[i];
+                if (!_deferredActionsByActor.TryGetValue(actorId, out Queue<BaseActionCommand> queue) || queue == null || queue.Count == 0)
+                    continue;
+
+                while (queue.Count > 0)
+                {
+                    BaseActionCommand command = queue.Peek();
+                    if (command == null)
+                    {
+                        queue.Dequeue();
+                        continue;
+                    }
+
+                    if (command.StartTick <= CurrentTick)
+                        command.RebaseTimeline(CurrentTick + 1);
+
+                    ActionAdmissionResult admissionResult = EvaluateAdmission(command);
+                    if (admissionResult.Status == ActionAdmissionStatus.Scheduled)
+                    {
+                        queue.Dequeue();
+                        _deferredActionIds.Remove(command.ActionId);
+                        ActivateAction(command);
+                        continue;
+                    }
+
+                    if (admissionResult.Status == ActionAdmissionStatus.Rejected)
+                    {
+                        queue.Dequeue();
+                        _deferredActionIds.Remove(command.ActionId);
+                        PublishRejectedEvent(command.ActionId, command.ActorId, admissionResult.Reason, admissionResult.CurrentLock);
+                        continue;
+                    }
+
+                    break;
+                }
+
+                if (queue.Count == 0)
+                    _deferredActionsByActor.Remove(actorId);
+            }
+        }
+
+        private bool TryReplaceCurrentLock(UnitActionLockState lockState, Guid incomingActionId)
+        {
+            if (lockState == null || !lockState.SourceActionId.HasValue)
+                return true;
+
+            Guid sourceActionId = lockState.SourceActionId.Value;
+            if (sourceActionId == incomingActionId)
+                return true;
+
+            if (!_activeActions.TryGetValue(sourceActionId, out BaseActionCommand sourceAction) || sourceAction == null)
+            {
+                lockState.Release();
+                return true;
+            }
+
+            if (_interruptArbitrationService.CanInterrupt(sourceAction))
+            {
+                _interruptContextByTarget[sourceActionId] =
+                    _interruptArbitrationService.BuildFallbackRequest(sourceAction, CurrentTick);
+                try
+                {
+                    Transition(sourceAction, ActionState.Interrupted);
+                    _activeActions.Remove(sourceActionId);
+                    _pendingInterrupts.Remove(sourceActionId);
+                }
+                finally
+                {
+                    _interruptContextByTarget.Remove(sourceActionId);
+                }
+
+                return true;
+            }
+
+            if (ActionStateMachine.CanCancel(sourceAction.State))
+            {
+                CancelAction(sourceActionId);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryGetActiveLock(Guid actorId, out UnitActionLockState lockState)
+        {
+            if (!_lockStateByActor.TryGetValue(actorId, out lockState) || lockState == null)
+                return false;
+            if (!lockState.IsActiveAt(CurrentTick))
+            {
+                lockState.Release();
+                return false;
+            }
+
+            return true;
+        }
+
+        private ActionLockType GetCurrentLock(Guid actorId)
+        {
+            return TryGetActiveLock(actorId, out UnitActionLockState lockState)
+                ? lockState.ActiveLock
+                : ActionLockType.None;
+        }
+
+        private UnitActionLockState GetOrCreateLockState(Guid actorId)
+        {
+            if (!_lockStateByActor.TryGetValue(actorId, out UnitActionLockState lockState) || lockState == null)
+            {
+                lockState = new UnitActionLockState();
+                _lockStateByActor[actorId] = lockState;
+            }
+
+            return lockState;
+        }
+
+        private void AcquireQueuedLock(BaseActionCommand action)
+        {
+            if (action == null || action.IntentLockType == ActionLockType.None)
+                return;
+
+            int expirationTick = action.IntentLockType switch
+            {
+                ActionLockType.RecoveryLock => action.RecoveryEndTick,
+                ActionLockType.GlobalLock => action.RecoveryEndTick,
+                _ => action.ResolveTick + 1
+            };
+            GetOrCreateLockState(action.ActorId).Acquire(action.IntentLockType, action.ActionId, expirationTick);
+        }
+
+        private void UpdateLockForTransition(BaseActionCommand action, ActionState newState)
+        {
+            if (action == null)
+                return;
+
+            UnitActionLockState lockState = GetOrCreateLockState(action.ActorId);
+            switch (newState)
+            {
+                case ActionState.Queued:
+                case ActionState.Casting:
+                case ActionState.Resolving:
+                    AcquireQueuedLock(action);
+                    break;
+                case ActionState.Recovery:
+                    if (action.IntentLockType != ActionLockType.None)
+                        lockState.Acquire(ActionLockType.RecoveryLock, action.ActionId, action.RecoveryEndTick);
+                    break;
+                case ActionState.Completed:
+                case ActionState.Cancelled:
+                case ActionState.Interrupted:
+                    lockState.ReleaseIfSource(action.ActionId);
+                    break;
+            }
+        }
+
+        private void ReleaseActionLock(BaseActionCommand action)
+        {
+            if (action == null)
+                return;
+            if (_lockStateByActor.TryGetValue(action.ActorId, out UnitActionLockState lockState) && lockState != null)
+                lockState.ReleaseIfSource(action.ActionId);
         }
 
         private void ProcessPendingInterrupts()
@@ -257,6 +524,7 @@ namespace CheckmateRPG.Core.Actions
 
             ActionState previousState = action.State;
             action.TransitionTo(newState);
+            UpdateLockForTransition(action, newState);
             PublishLifecycleEvent(action, previousState);
         }
 
@@ -280,10 +548,8 @@ namespace CheckmateRPG.Core.Actions
             string source = action.ActorId.ToString("N");
             string target = action.ActionId.ToString("N");
 
-            // Always publish the generic state-changed event.
             _eventBus.Publish(new ActionStateChangedEvent(payload, source, target));
 
-            // Publish the specific semantic event for the new state.
             switch (action.State)
             {
                 case ActionState.Queued:
@@ -317,6 +583,23 @@ namespace CheckmateRPG.Core.Actions
                     _eventBus.Publish(new ActionCompletedEvent(payload, source, target));
                     break;
             }
+        }
+
+        private void PublishRejectedEvent(
+            Guid requestedActionId,
+            Guid actorId,
+            ActionAdmissionRejectionReason reason,
+            ActionLockType currentLock)
+        {
+            if (_eventBus == null)
+                return;
+
+            string source = actorId != Guid.Empty ? actorId.ToString("N") : string.Empty;
+            string target = requestedActionId != Guid.Empty ? requestedActionId.ToString("N") : string.Empty;
+            _eventBus.Publish(new ActionRejectedEvent(
+                new ActionRejectedPayload(requestedActionId, actorId, reason, currentLock, CurrentTick),
+                source,
+                target));
         }
     }
 }
