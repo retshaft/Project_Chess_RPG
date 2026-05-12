@@ -26,6 +26,10 @@ namespace CheckmateRPG.Core
         private const float DefaultActionSpeed = 1f;
         private const int DefaultRecoveryTicks = 1;
         private const int DefaultSimulationSeed = 1001;
+        private static readonly ActionDefinition MoveActionDefinition =
+            new(InterruptPriority.Soft, InterruptWindow.CastingInterruptible, true, true);
+        private static readonly ActionDefinition AttackActionDefinition =
+            new(InterruptPriority.Normal, InterruptWindow.CastingInterruptible, true, true);
 
         [SerializeField] private int _simulationSeed = DefaultSimulationSeed;
         [SerializeField] private bool _enableReplayRecording = true;
@@ -367,7 +371,8 @@ namespace CheckmateRPG.Core
                 destination,
                 startTick,
                 ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
-                DefaultRecoveryTicks);
+                DefaultRecoveryTicks,
+                definition: MoveActionDefinition);
         }
 
         private IActionCommand CreateAttackCommand(UnitBrain actor, Guid targetId)
@@ -381,7 +386,8 @@ namespace CheckmateRPG.Core
                 isCritical: false,
                 startTick,
                 ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
-                DefaultRecoveryTicks);
+                DefaultRecoveryTicks,
+                definition: AttackActionDefinition);
         }
 
         private void BindQueuedAction(UnitBrain actor, IActionCommand command)

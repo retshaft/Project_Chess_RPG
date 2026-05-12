@@ -47,6 +47,9 @@ namespace CheckmateRPG.Core
 
     public sealed class AbilityExecutionPipeline : IAbilityExecutor
     {
+        private static readonly ActionDefinition AbilityActionDefinition =
+            new(InterruptPriority.Normal, InterruptWindow.CastingInterruptible, true, true);
+
         public bool TryQueueAbility(AbilityQueueRequest request, out AbilityQueueResult result)
         {
             result = default;
@@ -121,7 +124,8 @@ namespace CheckmateRPG.Core
                 request.Definition.name,
                 request.TargetIds ?? Array.Empty<Guid>(),
                 request.CurrentTick + 1,
-                request.Definition.CastSpeed);
+                request.Definition.CastSpeed,
+                definition: AbilityActionDefinition);
 
             return request.QueueAction(action);
         }

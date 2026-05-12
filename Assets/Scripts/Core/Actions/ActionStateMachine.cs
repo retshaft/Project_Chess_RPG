@@ -48,7 +48,7 @@ namespace CheckmateRPG.Core.Actions
         public static bool CanInterrupt(ActionState state, InterruptWindow window)
         {
             if (window == InterruptWindow.Uninterruptible)
-                return state == ActionState.Queued;
+                return false;
 
             return state switch
             {

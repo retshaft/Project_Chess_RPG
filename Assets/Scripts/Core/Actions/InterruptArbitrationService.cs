@@ -10,7 +10,7 @@ namespace CheckmateRPG.Core.Actions
             if (target == null)
                 return false;
 
-            return ActionStateMachine.CanInterrupt(target.State, target.InterruptWindow);
+            return target.InterruptPolicy.CanBeInterrupted(target);
         }
 
         public bool ShouldInterrupt(
@@ -20,8 +20,13 @@ namespace CheckmateRPG.Core.Actions
         {
             if (targetAction == null)
                 return false;
+            if (sourceAction != null && !sourceAction.InterruptPolicy.CanInterruptOthers(sourceAction))
+                return false;
 
             InterruptPriority targetPriority = targetAction.InterruptPriority;
+            InterruptPriority protection = targetAction.InterruptState.InterruptProtection;
+            if (protection > targetPriority)
+                targetPriority = protection;
             int priorityCompare = sourcePriority.CompareTo(targetPriority);
             if (priorityCompare > 0)
                 return true;

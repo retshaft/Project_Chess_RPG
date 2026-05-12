@@ -153,20 +153,7 @@ namespace CheckmateRPG.Core.Actions
 
         public void CancelAction(Guid actionId)
         {
-            if (actionId == Guid.Empty)
-                return;
-            if (!_activeActions.TryGetValue(actionId, out BaseActionCommand action))
-                return;
-            if (!ActionStateMachine.CanCancel(action.State))
-                return;
-
-            ActionState previousState = action.State;
-            action.TransitionTo(ActionState.Cancelled);
-            PublishLifecycleEvent(action, previousState);
-            ReleaseActionLock(action);
-            _activeActions.Remove(actionId);
-            _pendingInterrupts.Remove(actionId);
-            _interruptContextByTarget.Remove(actionId);
+            InterruptAction(actionId, Guid.Empty, InterruptPriority.Absolute);
         }
 
         public IReadOnlyCollection<IActionCommand> GetActiveActions()
@@ -371,12 +358,6 @@ namespace CheckmateRPG.Core.Actions
                 return true;
             }
 
-            if (ActionStateMachine.CanCancel(sourceAction.State))
-            {
-                CancelAction(sourceActionId);
-                return true;
-            }
-
             return false;
         }
 
@@ -483,6 +464,7 @@ namespace CheckmateRPG.Core.Actions
                     continue;
 
                 _interruptContextByTarget[request.TargetActionId] = request;
+                action.RegisterInterruptSource(request.SourceActionId);
                 try
                 {
                     Transition(action, ActionState.Interrupted);
