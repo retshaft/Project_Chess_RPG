@@ -141,9 +141,11 @@ namespace CheckmateRPG.Core.Prediction
                 mutation.TickInterval,
                 mutation.InitialTickIn,
                 mutation.Magnitude,
-                mutation.TimingPhase,
-                mutation.ActionSpeedLevel,
-                mutation.IsReaction);
+                timingPhase: mutation.TimingPhase,
+                actionSpeedLevel: mutation.ActionSpeedLevel,
+                isReaction: mutation.IsReaction,
+                stackPolicy: mutation.StackPolicy,
+                maxStackCap: mutation.MaxStackCap);
 
             runtime.RegisterEffect(effectState);
         }

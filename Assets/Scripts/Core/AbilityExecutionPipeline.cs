@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Actions.Resolvers;
+using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Units;
@@ -42,7 +43,9 @@ namespace CheckmateRPG.Core
         int TickInterval,
         int InitialTickIn,
         int StackCount,
-        float Magnitude);
+        float Magnitude,
+        EffectStackPolicy StackPolicy,
+        int MaxStackCap);
 
     public sealed class AbilityExecutionPipeline : IAbilityExecutor
     {
@@ -180,6 +183,8 @@ namespace CheckmateRPG.Core
                     intent.InitialTickIn,
                     intent.StackCount,
                     intent.Magnitude,
+                    intent.StackPolicy,
+                    intent.MaxStackCap,
                     Context: new MutationContext(
                         request.Action.ResolveTick,
                         request.Action.ActionId,
@@ -309,7 +314,9 @@ namespace CheckmateRPG.Core
                 interval,
                 Mathf.Clamp(effect.InitialTickIn, 1, interval),
                 Mathf.Max(1, effect.StackCount),
-                Mathf.Max(0f, effect.Magnitude));
+                Mathf.Max(0f, effect.Magnitude),
+                effect.StackPolicy,
+                Mathf.Max(1, effect.MaxStackCap));
         }
     }
 }

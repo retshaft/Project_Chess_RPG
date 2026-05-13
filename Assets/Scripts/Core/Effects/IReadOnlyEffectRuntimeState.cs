@@ -48,5 +48,7 @@ namespace CheckmateRPG.Core.Effects
         /// <see cref="EffectTimingPhase.OnPostResolve"/> phase.
         /// </summary>
         bool IsReaction { get; }
+        EffectStackPolicy StackPolicy { get; }
+        int MaxStackCap { get; }
     }
 }
