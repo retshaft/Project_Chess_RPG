@@ -12,6 +12,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
 
     public sealed class MutationQueue
     {
+        private const int DefaultResolveOrder = int.MaxValue;
         private readonly List<QueuedMutation> _queued = new();
         private int _nextSequence;
 
@@ -22,7 +23,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             if (mutation is not IRuntimeMutation runtimeMutation)
                 return;
 
-            Enqueue(runtimeMutation, ActionSpeedTier.Normal, int.MaxValue);
+            Enqueue(runtimeMutation, ActionSpeedTier.Normal, DefaultResolveOrder);
         }
 
         public void Enqueue(IRuntimeMutation mutation, ActionSpeedTier actionSpeedLevel, int resolveOrder)
