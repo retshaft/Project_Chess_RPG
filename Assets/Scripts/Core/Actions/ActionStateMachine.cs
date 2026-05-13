@@ -53,7 +53,8 @@ namespace CheckmateRPG.Core.Actions
             return state switch
             {
                 ActionState.Queued => true,
-                ActionState.Casting => window == InterruptWindow.CastingInterruptible,
+                ActionState.Casting => window == InterruptWindow.CastingInterruptible ||
+                                       window == InterruptWindow.ResolveLocked,
                 ActionState.Resolving => false,
                 ActionState.Recovery => window == InterruptWindow.RecoveryInterruptible,
                 _ => false
