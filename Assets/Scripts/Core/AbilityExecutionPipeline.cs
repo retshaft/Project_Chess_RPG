@@ -4,7 +4,6 @@ using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
-using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Units;
 using UnityEngine;
 
@@ -70,7 +69,9 @@ namespace CheckmateRPG.Core
             if (!resolveResult.Succeeded)
                 return ActionResolutionResult.Failed();
 
-            IReadOnlyList<IRuntimeMutation> mutations = EffectApply(request, resolveResult);
+            IReadOnlyList<IRuntimeMutation> effectMutations = EffectApply(request, resolveResult);
+            IReadOnlyList<IRuntimeMutation> stateMutations = PostProcessResolveMutations(request, resolveResult);
+            IReadOnlyList<IRuntimeMutation> mutations = MergeMutations(effectMutations, stateMutations);
             IReadOnlyList<IGameEvent> events = PostProcessResolve(request, resolveResult);
             return new ActionResolutionResult(true, mutations, events);
         }
@@ -189,16 +190,33 @@ namespace CheckmateRPG.Core
             return mutations;
         }
 
+        private static IReadOnlyList<IRuntimeMutation> PostProcessResolveMutations(
+            AbilityResolveRequest request,
+            AbilityResolveResult resolveResult)
+        {
+            if (!resolveResult.Succeeded || request.Action == null)
+                return Array.Empty<IRuntimeMutation>();
+
+            return new IRuntimeMutation[]
+            {
+                new AbilityActionCompleteMutation(
+                    SeededRandomProvider.Shared.NextGuid(),
+                    request.Action.ActorId,
+                    request.Action.ActionId,
+                    request.Action.AbilityId,
+                    request.CurrentTick,
+                    Context: new MutationContext(
+                        request.Action.ResolveTick,
+                        request.Action.ActionId,
+                        request.Action.ActorId,
+                        nameof(AbilityActionCompleteMutation)))
+            };
+        }
+
         private static IReadOnlyList<IGameEvent> PostProcessResolve(
             AbilityResolveRequest request,
             AbilityResolveResult resolveResult)
         {
-            request.RuntimeState?.CompleteQueuedAction(
-                request.Action.ActionId,
-                request.CurrentTick,
-                OwnershipOwners.ActionScheduler,
-                OwnershipOwners.TickScheduler);
-
             int primaryTargetCount = request.Action.TargetIds?.Count ?? 0;
             AbilityActionResolvedEvent resolvedEvent = new(
                 new AbilityActionResolvedPayload(
@@ -212,6 +230,33 @@ namespace CheckmateRPG.Core
                 request.Action.ActionId.ToString("N"));
 
             return new IGameEvent[] { resolvedEvent };
+        }
+
+        private static IReadOnlyList<IRuntimeMutation> MergeMutations(
+            IReadOnlyList<IRuntimeMutation> first,
+            IReadOnlyList<IRuntimeMutation> second)
+        {
+            int firstCount = first?.Count ?? 0;
+            int secondCount = second?.Count ?? 0;
+            if (firstCount == 0)
+                return second ?? Array.Empty<IRuntimeMutation>();
+            if (secondCount == 0)
+                return first;
+
+            var merged = new List<IRuntimeMutation>(firstCount + secondCount);
+            for (int i = 0; i < firstCount; i++)
+            {
+                if (first[i] != null)
+                    merged.Add(first[i]);
+            }
+
+            for (int i = 0; i < secondCount; i++)
+            {
+                if (second[i] != null)
+                    merged.Add(second[i]);
+            }
+
+            return merged;
         }
 
         private static bool ValidateTargets(

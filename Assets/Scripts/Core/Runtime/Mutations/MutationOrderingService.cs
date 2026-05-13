@@ -88,6 +88,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 ApplyEffectMutation effect => effect.EffectId ?? string.Empty,
+                AbilityActionCompleteMutation abilityComplete => abilityComplete.AbilityId ?? string.Empty,
                 ReservationMutation reservation => reservation.ReservationKey ?? string.Empty,
                 ResourceMutation resource => resource.Reason ?? string.Empty,
                 _ => string.Empty

@@ -124,7 +124,8 @@ namespace CheckmateRPG.Core
             _mutationProcessor = new RuntimeMutationProcessor(
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
                 _simulationRuntime,
-                state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state));
+                state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state),
+                TryApplyAbilityActionCompleteMutation);
             _resolutionPipeline = new ResolutionPhasePipeline(
                 resolveAction: (action, _) =>
                 {
@@ -1146,6 +1147,47 @@ namespace CheckmateRPG.Core
                     state.UpdateCooldown(currentTick, OwnershipOwners.TickScheduler);
                 }
             }
+        }
+
+        private bool TryApplyAbilityActionCompleteMutation(AbilityActionCompleteMutation mutation)
+        {
+            if (mutation.TargetId == Guid.Empty || mutation.ActionId == Guid.Empty)
+                return false;
+            if (!_abilityStatesByActor.TryGetValue(mutation.TargetId, out Dictionary<string, AbilityRuntimeState> byAbility))
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(mutation.AbilityId))
+            {
+                if (!byAbility.TryGetValue(mutation.AbilityId, out AbilityRuntimeState keyedState))
+                    return false;
+                if (keyedState == null)
+                    return false;
+
+                keyedState.CompleteQueuedAction(
+                    mutation.ActionId,
+                    mutation.Tick,
+                    OwnershipOwners.ActionScheduler,
+                    OwnershipOwners.TickScheduler);
+                return true;
+            }
+
+            foreach (KeyValuePair<string, AbilityRuntimeState> entry in byAbility)
+            {
+                AbilityRuntimeState state = entry.Value;
+                if (state == null || state.PendingActionId != mutation.ActionId)
+                    continue;
+
+                state.CompleteQueuedAction(
+                    mutation.ActionId,
+                    mutation.Tick,
+                    OwnershipOwners.ActionScheduler,
+                    OwnershipOwners.TickScheduler);
+                return true;
+            }
+
+            return false;
         }
 
         private sealed class RuntimeBattleContext : IBattleContext
