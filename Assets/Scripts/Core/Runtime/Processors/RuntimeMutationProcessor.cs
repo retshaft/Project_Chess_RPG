@@ -19,11 +19,13 @@ namespace CheckmateRPG.Core.Runtime.Processors
         private readonly DamageMutationProcessor _damageProcessor;
         private readonly MovementMutationProcessor _movementProcessor;
         private readonly EffectMutationProcessor _effectProcessor;
+        private readonly Func<AbilityActionCompleteMutation, bool> _applyAbilityActionComplete;
 
         public RuntimeMutationProcessor(
             Func<Guid, UnitBrain> unitLookup,
             SimulationRuntime simulationRuntime,
-            Func<EffectRuntimeState, bool> applyEffect)
+            Func<EffectRuntimeState, bool> applyEffect,
+            Func<AbilityActionCompleteMutation, bool> applyAbilityActionComplete)
         {
             if (unitLookup == null)
                 throw new ArgumentNullException(nameof(unitLookup));
@@ -31,10 +33,13 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 throw new ArgumentNullException(nameof(simulationRuntime));
             if (applyEffect == null)
                 throw new ArgumentNullException(nameof(applyEffect));
+            if (applyAbilityActionComplete == null)
+                throw new ArgumentNullException(nameof(applyAbilityActionComplete));
 
             _damageProcessor = new DamageMutationProcessor(unitLookup, simulationRuntime);
             _movementProcessor = new MovementMutationProcessor(unitLookup, simulationRuntime);
             _effectProcessor = new EffectMutationProcessor(applyEffect);
+            _applyAbilityActionComplete = applyAbilityActionComplete;
         }
 
         /// <summary>
@@ -61,6 +66,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                     MovementMutation movement => _movementProcessor.Apply(movement),
                     MoveMutation move => _movementProcessor.Apply(move),
                     ApplyEffectMutation effect => _effectProcessor.Apply(effect),
+                    AbilityActionCompleteMutation abilityComplete => ApplyAbilityStateMutation(abilityComplete),
                     ReservationMutation => Array.Empty<IGameEvent>(),
                     ResourceMutation => Array.Empty<IGameEvent>(),
                     _ => MarkUnhandled(out handled)
@@ -96,6 +102,12 @@ namespace CheckmateRPG.Core.Runtime.Processors
             return Array.Empty<IGameEvent>();
         }
 
+        private IReadOnlyList<IGameEvent> ApplyAbilityStateMutation(AbilityActionCompleteMutation mutation)
+        {
+            _ = _applyAbilityActionComplete(mutation);
+            return Array.Empty<IGameEvent>();
+        }
+
         private static MutationAppliedEvent BuildMutationAppliedEvent(IRuntimeMutation mutation)
         {
             Guid sourceId = ResolveSourceId(mutation);
@@ -120,6 +132,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 HealMutation heal => heal.SourceId,
                 DeathMutation death => death.SourceId,
                 ApplyEffectMutation effect => effect.SourceId,
+                AbilityActionCompleteMutation abilityComplete => abilityComplete.TargetId,
                 _ => Guid.Empty
             };
         }
@@ -133,6 +146,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
             {
                 DeathMutation death => death.Tick,
                 ReservationMutation reservation => reservation.Tick,
+                AbilityActionCompleteMutation abilityComplete => abilityComplete.Tick,
                 _ => 0
             };
         }
