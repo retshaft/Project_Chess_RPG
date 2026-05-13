@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CheckmateRPG.Core;
 
 namespace CheckmateRPG.Core.Actions
@@ -53,10 +54,7 @@ namespace CheckmateRPG.Core.Actions
             if (requests == null || requests.Count == 0)
                 return InterruptResult.Empty;
 
-            PendingInterruptRequest[] orderedRequests = new PendingInterruptRequest[requests.Count];
-            for (int i = 0; i < requests.Count; i++)
-                orderedRequests[i] = requests[i];
-
+            PendingInterruptRequest[] orderedRequests = requests.ToArray();
             Array.Sort(orderedRequests, ComparePendingRequestOrder);
             winningRequest = orderedRequests[0];
 
@@ -64,7 +62,7 @@ namespace CheckmateRPG.Core.Actions
                 ? ResolveReason(winningRequest, orderedRequests[1])
                 : InterruptArbitrationReason.DeterministicActionIdOrdering;
 
-            var interruptedActions = new Guid[1] { winningRequest.TargetActionId };
+            Guid[] interruptedActions = { winningRequest.TargetActionId };
             var ignoredInterrupts = new List<Guid>();
             for (int i = 1; i < orderedRequests.Length; i++)
             {

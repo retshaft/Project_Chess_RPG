@@ -474,9 +474,7 @@ namespace CheckmateRPG.Core.Actions
                 if (requests == null || requests.Count == 0)
                     continue;
 
-                var copied = new List<PendingInterruptRequest>(requests.Count);
-                for (int i = 0; i < requests.Count; i++)
-                    copied.Add(requests[i]);
+                var copied = new List<PendingInterruptRequest>(requests);
                 pendingByTarget[targetActionId] = copied;
             }
 
@@ -502,6 +500,7 @@ namespace CheckmateRPG.Core.Actions
                 for (int j = 0; j < requestsForTarget.Count; j++)
                 {
                     PendingInterruptRequest candidate = requestsForTarget[j];
+                    // Ignore self-interrupt requests to avoid invalid self-cancellation paths.
                     if (candidate.SourceActionId == targetActionId)
                         continue;
                     // Prevent same-tick recursive chains (A interrupts B, then B interrupts C).
