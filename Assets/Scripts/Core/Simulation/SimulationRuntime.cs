@@ -153,11 +153,28 @@ namespace CheckmateRPG.Core.Simulation
             return ActiveEffects.TryGetValue(effectKey, out effect);
         }
 
+        /// <summary>
+        /// Builds and returns an <see cref="EffectContainer"/> scoped to <paramref name="unitId"/>,
+        /// populated with every active effect whose <see cref="IReadOnlyEffectRuntimeState.TargetId"/>
+        /// matches.  The container is a snapshot; it is not kept in sync with subsequent mutations.
+        /// </summary>
+        public EffectContainer GetEffectContainer(Guid unitId)
+        {
+            var container = new EffectContainer(unitId);
+            foreach (KeyValuePair<string, EffectRuntimeState> pair in _activeEffects)
+            {
+                if (pair.Value != null && pair.Value.TargetId == unitId)
+                    container.Add(pair.Key, pair.Value);
+            }
+
+            return container;
+        }
+
         internal bool TryGetMutableEffect(string effectKey, out EffectRuntimeState effect)
         {
             if (string.IsNullOrWhiteSpace(effectKey))
             {
-                effect = null; // ¿¹¿Ü »óÈ²¿¡¼­µµ out ¸Å°³º¯¼ö¿¡ °ªÀ» ¹Ýµå½Ã ÇÒ´ç
+                effect = null; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ out ï¿½Å°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ýµï¿½ï¿½ ï¿½Ò´ï¿½
                 return false;
             }
 
@@ -557,8 +574,9 @@ namespace CheckmateRPG.Core.Simulation
                 NextTickIn = source.NextTickIn;
                 Magnitude = source.Magnitude;
                 IsExpired = source.IsExpired;
-
-                // Ãß°¡µÈ ÀÎÅÍÆäÀÌ½º ¼Ó¼º ÃÊ±âÈ­
+                RemainingDuration = source.RemainingDuration;
+                AppliedTick = source.AppliedTick;
+                Lifecycle = source.Lifecycle;
                 TimingPhase = source.TimingPhase;
                 ActionSpeedLevel = source.ActionSpeedLevel;
                 IsReaction = source.IsReaction;
@@ -573,8 +591,9 @@ namespace CheckmateRPG.Core.Simulation
             public int NextTickIn { get; }
             public float Magnitude { get; }
             public bool IsExpired { get; }
-
-            // ´©¶ôµÈ ÀÎÅÍÆäÀÌ½º ¼Ó¼º ±¸Çö Ãß°¡
+            public int RemainingDuration { get; }
+            public int AppliedTick { get; }
+            public EffectLifecycle Lifecycle { get; }
             public EffectTimingPhase TimingPhase { get; }
             public ActionSpeedTier ActionSpeedLevel { get; }
             public bool IsReaction { get; }

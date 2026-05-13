@@ -6,7 +6,7 @@ using UnityEngine;
 namespace CheckmateRPG.Core.Effects
 {
     [Serializable]
-    public sealed class EffectRuntimeState : IReadOnlyEffectRuntimeState
+    public sealed class EffectRuntimeState : IEffectRuntime
     {
         public EffectRuntimeState()
         {
@@ -23,9 +23,10 @@ namespace CheckmateRPG.Core.Effects
             float magnitude = 1f,
             EffectTimingPhase timingPhase = EffectTimingPhase.OnTickEnd,
             ActionSpeedTier actionSpeedLevel = ActionSpeedTier.Normal,
-            bool isReaction = false)
+            bool isReaction = false,
+            int appliedTick = 0)
         {
-            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction);
+            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction, appliedTick);
         }
 
         public EffectRuntimeState(EffectRuntimeState source)
@@ -44,7 +45,11 @@ namespace CheckmateRPG.Core.Effects
                 source.Magnitude,
                 source.TimingPhase,
                 source.ActionSpeedLevel,
-                source.IsReaction);
+                source.IsReaction,
+                source.AppliedTick);
+
+            RemainingDuration = source.RemainingDuration;
+            Lifecycle = source.Lifecycle;
         }
 
         public string EffectId { get; private set; } = string.Empty;
@@ -60,6 +65,15 @@ namespace CheckmateRPG.Core.Effects
         public ActionSpeedTier ActionSpeedLevel { get; private set; } = ActionSpeedTier.Normal;
         public bool IsReaction { get; private set; }
 
+        /// <inheritdoc/>
+        public int RemainingDuration { get; private set; }
+
+        /// <inheritdoc/>
+        public int AppliedTick { get; private set; }
+
+        /// <inheritdoc/>
+        public EffectLifecycle Lifecycle { get; private set; } = EffectLifecycle.Applied;
+
         internal void Seed(
             string effectId,
             Guid sourceId,
@@ -71,12 +85,14 @@ namespace CheckmateRPG.Core.Effects
             float magnitude = 1f,
             EffectTimingPhase timingPhase = EffectTimingPhase.OnTickEnd,
             ActionSpeedTier actionSpeedLevel = ActionSpeedTier.Normal,
-            bool isReaction = false)
+            bool isReaction = false,
+            int appliedTick = 0)
         {
             EffectId = effectId ?? string.Empty;
             SourceId = sourceId;
             TargetId = targetId;
             RemainingTick = remainingTick;
+            RemainingDuration = remainingTick;
             StackCount = Mathf.Max(1, stackCount);
             TickInterval = Mathf.Max(1, tickInterval);
             NextTickIn = Mathf.Max(1, nextTickIn);
@@ -84,6 +100,8 @@ namespace CheckmateRPG.Core.Effects
             TimingPhase = timingPhase;
             ActionSpeedLevel = actionSpeedLevel;
             IsReaction = isReaction;
+            AppliedTick = appliedTick;
+            Lifecycle = EffectLifecycle.Applied;
         }
 
         internal void RefreshFromApplication(
@@ -103,6 +121,7 @@ namespace CheckmateRPG.Core.Effects
             TickInterval = Mathf.Max(1, tickInterval);
             NextTickIn = Mathf.Clamp(nextTickIn, 1, TickInterval);
             Magnitude = Mathf.Max(0f, magnitude);
+            Lifecycle = EffectLifecycle.Applied;
         }
 
         internal void AdvanceTick(string ownerName)
@@ -116,6 +135,23 @@ namespace CheckmateRPG.Core.Effects
         {
             OwnershipValidationService.Default.EnsureAuthorized(ownerName, OwnershipStateKeys.EffectStack);
             NextTickIn = TickInterval;
+        }
+
+        /// <summary>
+        /// Transitions this effect to <paramref name="next"/> lifecycle stage.
+        /// <para>
+        /// Transitions from <see cref="EffectLifecycle.Removed"/> are silently ignored to
+        /// prevent accidental resurrection of a removed effect.
+        /// </para>
+        /// </summary>
+        internal void TransitionLifecycle(string ownerName, EffectLifecycle next)
+        {
+            OwnershipValidationService.Default.EnsureAuthorized(ownerName, OwnershipStateKeys.EffectLifecycle);
+
+            if (Lifecycle == EffectLifecycle.Removed)
+                return;
+
+            Lifecycle = next;
         }
     }
 }

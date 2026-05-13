@@ -76,6 +76,7 @@ namespace CheckmateRPG.Core.Effects
                 Debug.LogWarning($"[EffectSystem] No processor registered for effect '{runtimeState.EffectId}'.");
             }
             processor?.OnApplied(_context, runtimeState);
+            runtimeState.TransitionLifecycle(OwnershipOwners.EffectSystem, EffectLifecycle.Active);
 
             PublishApplied(runtimeState);
             return true;
@@ -119,7 +120,10 @@ namespace CheckmateRPG.Core.Effects
             _expirationQueue.Flush(effectKey =>
             {
                 if (runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState expired))
+                {
+                    expired.TransitionLifecycle(OwnershipOwners.EffectSystem, EffectLifecycle.Removed);
                     PublishExpired(expired);
+                }
 
                 runtime.UnregisterEffect(effectKey);
             });
@@ -160,7 +164,10 @@ namespace CheckmateRPG.Core.Effects
             _expirationQueue.Flush(effectKey =>
             {
                 if (runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState expired))
+                {
+                    expired.TransitionLifecycle(OwnershipOwners.EffectSystem, EffectLifecycle.Removed);
                     PublishExpired(expired);
+                }
 
                 runtime.UnregisterEffect(effectKey);
             });
@@ -200,7 +207,8 @@ namespace CheckmateRPG.Core.Effects
                 requested.Magnitude,
                 requested.TimingPhase,
                 requested.ActionSpeedLevel,
-                requested.IsReaction);
+                requested.IsReaction,
+                runtime.CurrentTick);
 
             runtime.RegisterEffect(effectKey, created);
             if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState runtimeEffect))
