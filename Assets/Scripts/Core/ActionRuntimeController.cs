@@ -540,13 +540,14 @@ namespace CheckmateRPG.Core
                     continue;
 
                 deadUnitIds.Add(entry.Key);
+                int currentTick = _scheduler.CurrentTick;
                 deathMutations.Add(new DeathMutation(
                     SeededRandomProvider.Shared.NextGuid(),
                     entry.Key,
                     Guid.Empty,
-                    _scheduler.CurrentTick,
+                    currentTick,
                     new MutationContext(
-                        _scheduler.CurrentTick,
+                        currentTick,
                         Guid.Empty,
                         entry.Key,
                         nameof(DeathMutation))));

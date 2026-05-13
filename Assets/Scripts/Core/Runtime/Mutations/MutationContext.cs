@@ -9,7 +9,5 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         string MutationReason)
     {
         public static MutationContext Empty => new(0, Guid.Empty, Guid.Empty, string.Empty);
-
-        public string Reason => MutationReason ?? string.Empty;
     }
 }
