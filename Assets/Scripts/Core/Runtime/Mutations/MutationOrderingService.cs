@@ -104,7 +104,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 DamageMutation damage => damage.Amount,
                 HealMutation heal => heal.Amount,
                 ApplyEffectMutation effect => effect.DurationTicks,
-                AbilityActionCompleteMutation abilityComplete => abilityComplete.Tick,
                 ResourceMutation resource => resource.Delta,
                 ReservationMutation reservation => (int)reservation.Operation,
                 _ => 0

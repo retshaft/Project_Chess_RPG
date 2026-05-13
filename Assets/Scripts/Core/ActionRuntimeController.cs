@@ -1153,16 +1153,16 @@ namespace CheckmateRPG.Core
         {
             if (mutation.TargetId == Guid.Empty || mutation.ActionId == Guid.Empty)
                 return false;
-            if (!_abilityStatesByActor.TryGetValue(mutation.TargetId, out Dictionary<string, AbilityRuntimeState> byAbility) ||
-                byAbility == null)
+            if (!_abilityStatesByActor.TryGetValue(mutation.TargetId, out Dictionary<string, AbilityRuntimeState> byAbility))
             {
                 return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(mutation.AbilityId) &&
-                byAbility.TryGetValue(mutation.AbilityId, out AbilityRuntimeState keyedState) &&
-                keyedState != null)
+            if (!string.IsNullOrWhiteSpace(mutation.AbilityId))
             {
+                if (!byAbility.TryGetValue(mutation.AbilityId, out AbilityRuntimeState keyedState) || keyedState == null)
+                    return false;
+
                 keyedState.CompleteQueuedAction(
                     mutation.ActionId,
                     mutation.Tick,
