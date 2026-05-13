@@ -423,16 +423,16 @@ namespace CheckmateRPG.Core
             resolutionContext.CurrentPhase = ResolutionPhase.MutationCommit;
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
             IReadOnlyList<IRuntimeMutation> preDeathMutations =
-                mutationApplyInput.PreDeathTransaction.CreateOrderedSnapshot(_mutationOrderingService);
+                mutationApplyInput.PreDeathQueue.CreateSnapshot();
             _timelineRecorder?.RecordMutations(preDeathMutations, MutationCommitPhase.PreDeath.ToString());
             IReadOnlyList<IGameEvent> preDeathMutationEvents =
-                _mutationProcessor.Apply(mutationApplyInput.PreDeathTransaction, _mutationOrderingService);
+                _mutationProcessor.Apply(mutationApplyInput.PreDeathQueue);
             ExecuteDeathCheckStage();
             IReadOnlyList<IRuntimeMutation> cleanupMutations =
-                mutationApplyInput.CleanupTransaction.CreateOrderedSnapshot(_mutationOrderingService);
+                mutationApplyInput.CleanupQueue.CreateSnapshot();
             _timelineRecorder?.RecordMutations(cleanupMutations, MutationCommitPhase.Cleanup.ToString());
             IReadOnlyList<IGameEvent> cleanupMutationEvents =
-                _mutationProcessor.Apply(mutationApplyInput.CleanupTransaction, _mutationOrderingService);
+                _mutationProcessor.Apply(mutationApplyInput.CleanupQueue);
             ExecuteCleanupStage();
 
             if (_enableRuntimeValidation)
@@ -524,17 +524,23 @@ namespace CheckmateRPG.Core
                 orderedMutations,
                 out IReadOnlyList<IRuntimeMutation> preDeathMutations,
                 out IReadOnlyList<IRuntimeMutation> cleanupMutations);
+            var preDeathQueue = new MutationQueue();
+            var cleanupQueue = new MutationQueue();
+            foreach (IRuntimeMutation mutation in preDeathMutations)
+                preDeathQueue.Enqueue(mutation);
+            foreach (IRuntimeMutation mutation in cleanupMutations)
+                cleanupQueue.Enqueue(mutation);
 
             return new MutationApplyInput(
                 resolutionContext.PendingEvents,
-                RuntimeTransaction.From(preDeathMutations),
-                RuntimeTransaction.From(cleanupMutations));
+                preDeathQueue,
+                cleanupQueue);
         }
 
         private void ExecuteDeathCheckStage()
         {
             var deadUnitIds = new HashSet<Guid>();
-            var deathMutations = new List<IRuntimeMutation>();
+            var deathMutationQueue = new MutationQueue();
             foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
             {
                 if (entry.Value == null || !entry.Value.IsDead)
@@ -542,7 +548,7 @@ namespace CheckmateRPG.Core
 
                 deadUnitIds.Add(entry.Key);
                 int currentTick = _scheduler.CurrentTick;
-                deathMutations.Add(new DeathMutation(
+                deathMutationQueue.Enqueue(new DeathMutation(
                     SeededRandomProvider.Shared.NextGuid(),
                     entry.Key,
                     Guid.Empty,
@@ -554,10 +560,14 @@ namespace CheckmateRPG.Core
                         nameof(DeathMutation))));
             }
 
-            if (deathMutations.Count > 0 && _mutationProcessor != null)
+            if (deathMutationQueue.Count > 0 && _mutationProcessor != null)
             {
-                RuntimeTransaction deathTransaction = RuntimeTransaction.From(deathMutations);
-                _ = _mutationProcessor.Apply(deathTransaction, _mutationOrderingService);
+                IReadOnlyList<IRuntimeMutation> orderedDeathMutations =
+                    deathMutationQueue.CreateOrderedSnapshot(_mutationOrderingService);
+                var orderedDeathQueue = new MutationQueue();
+                foreach (IRuntimeMutation mutation in orderedDeathMutations)
+                    orderedDeathQueue.Enqueue(mutation);
+                _ = _mutationProcessor.Apply(orderedDeathQueue);
             }
 
             _scheduler.TerminateActionsForActors(deadUnitIds);
@@ -952,11 +962,11 @@ namespace CheckmateRPG.Core
 
         private readonly record struct MutationApplyInput(
             IReadOnlyList<IGameEvent> ActionEvents,
-            RuntimeTransaction PreDeathTransaction,
-            RuntimeTransaction CleanupTransaction)
+            MutationQueue PreDeathQueue,
+            MutationQueue CleanupQueue)
         {
             public static MutationApplyInput Empty =>
-                new(Array.Empty<IGameEvent>(), new RuntimeTransaction(), new RuntimeTransaction());
+                new(Array.Empty<IGameEvent>(), new MutationQueue(), new MutationQueue());
         }
 
         private static bool TryGetActorId(GameObject target, out Guid actorId)

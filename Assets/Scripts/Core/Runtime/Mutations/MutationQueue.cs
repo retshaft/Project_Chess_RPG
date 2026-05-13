@@ -12,10 +12,21 @@ namespace CheckmateRPG.Core.Runtime.Mutations
 
     public sealed class MutationQueue
     {
+        private const int DefaultResolveOrder = int.MaxValue;
         private readonly List<QueuedMutation> _queued = new();
         private int _nextSequence;
 
         public int Count => _queued.Count;
+
+        public void Enqueue(IMutation mutation)
+        {
+            if (mutation == null)
+                return;
+            if (mutation is not IRuntimeMutation runtimeMutation)
+                throw new ArgumentException("MutationQueue only accepts IRuntimeMutation entries.", nameof(mutation));
+
+            Enqueue(runtimeMutation, ActionSpeedTier.Normal, DefaultResolveOrder);
+        }
 
         public void Enqueue(IRuntimeMutation mutation, ActionSpeedTier actionSpeedLevel, int resolveOrder)
         {
@@ -46,6 +57,38 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                     queuedMutation.ResolveOrder,
                     _nextSequence++));
             }
+        }
+
+        public IRuntimeMutation Peek()
+        {
+            return _queued.Count == 0 ? null : _queued[0].Mutation;
+        }
+
+        public IRuntimeMutation Dequeue()
+        {
+            if (_queued.Count == 0)
+                return null;
+
+            IRuntimeMutation mutation = _queued[0].Mutation;
+            _queued.RemoveAt(0);
+            return mutation;
+        }
+
+        public void Clear()
+        {
+            _queued.Clear();
+            _nextSequence = 0;
+        }
+
+        public IReadOnlyList<IRuntimeMutation> CreateSnapshot()
+        {
+            if (_queued.Count == 0)
+                return Array.Empty<IRuntimeMutation>();
+
+            var snapshot = new IRuntimeMutation[_queued.Count];
+            for (int i = 0; i < _queued.Count; i++)
+                snapshot[i] = _queued[i].Mutation;
+            return snapshot;
         }
 
         public IReadOnlyList<IRuntimeMutation> CreateOrderedSnapshot(MutationOrderingService orderingService)
