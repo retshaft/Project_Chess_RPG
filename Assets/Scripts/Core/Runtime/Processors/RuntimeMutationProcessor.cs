@@ -137,29 +137,28 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
         private static MutationAppliedEvent BuildMutationAppliedEvent(IRuntimeMutation mutation)
         {
-            Guid sourceId = ResolveSourceId(mutation);
+            Guid sourceAction = ResolveSourceAction(mutation);
             int tick = ResolveTick(mutation);
             string mutationType = mutation.GetType().Name;
             return new MutationAppliedEvent(
                 new MutationAppliedPayload(
                     mutation.MutationId,
                     mutation.TargetId,
-                    sourceId,
                     mutationType,
+                    sourceAction,
                     tick),
                 mutation.MutationId.ToString("N"),
                 mutation.TargetId.ToString("N"));
         }
 
-        private static Guid ResolveSourceId(IRuntimeMutation mutation)
+        private static Guid ResolveSourceAction(IRuntimeMutation mutation)
         {
+            if (mutation.Context.SourceAction != Guid.Empty)
+                return mutation.Context.SourceAction;
+
             return mutation switch
             {
-                DamageMutation damage => damage.SourceId,
-                HealMutation heal => heal.SourceId,
-                DeathMutation death => death.SourceId,
-                ApplyEffectMutation effect => effect.SourceId,
-                AbilityActionCompleteMutation abilityComplete => abilityComplete.TargetId,
+                AbilityActionCompleteMutation abilityComplete => abilityComplete.ActionId,
                 _ => Guid.Empty
             };
         }

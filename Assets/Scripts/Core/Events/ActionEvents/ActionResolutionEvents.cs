@@ -29,8 +29,8 @@ namespace CheckmateRPG.Core.Events.ActionEvents
     public readonly record struct MutationAppliedPayload(
         Guid MutationId,
         Guid TargetId,
-        Guid SourceId,
         string MutationType,
+        Guid SourceAction,
         int Tick);
 
     public readonly record struct AbilityActionResolvedPayload(
