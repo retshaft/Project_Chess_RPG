@@ -57,24 +57,33 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 if (mutation == null)
                     continue;
 
-                bool handled = true;
-                IReadOnlyList<IGameEvent> mutationEvents = mutation switch
-                {
-                    DamageMutation damage => _damageProcessor.Apply(damage),
-                    HealMutation heal => _damageProcessor.Apply(heal),
-                    DeathMutation death => _damageProcessor.Apply(death),
-                    MovementMutation movement => _movementProcessor.Apply(movement),
-                    MoveMutation move => _movementProcessor.Apply(move),
-                    ApplyEffectMutation effect => _effectProcessor.Apply(effect),
-                    AbilityActionCompleteMutation abilityComplete => ApplyAbilityStateMutation(abilityComplete),
-                    ReservationMutation => Array.Empty<IGameEvent>(),
-                    ResourceMutation => Array.Empty<IGameEvent>(),
-                    _ => MarkUnhandled(out handled)
-                };
+                IReadOnlyList<IGameEvent> mutationEvents = ApplySingle(mutation, out bool handled);
                 events.AddRange(mutationEvents);
                 if (handled)
                     events.Add(BuildMutationAppliedEvent(mutation));
             }
+            return events;
+        }
+
+        public IReadOnlyList<IGameEvent> Apply(MutationQueue queue)
+        {
+            if (queue == null)
+                throw new ArgumentNullException(nameof(queue));
+            if (queue.Count == 0)
+                return Array.Empty<IGameEvent>();
+
+            var events = new List<IGameEvent>();
+            while (queue.Count > 0)
+            {
+                if (queue.Dequeue() is not IRuntimeMutation mutation || mutation == null)
+                    continue;
+
+                IReadOnlyList<IGameEvent> mutationEvents = ApplySingle(mutation, out bool handled);
+                events.AddRange(mutationEvents);
+                if (handled)
+                    events.Add(BuildMutationAppliedEvent(mutation));
+            }
+
             return events;
         }
 
@@ -94,6 +103,24 @@ namespace CheckmateRPG.Core.Runtime.Processors
             IReadOnlyList<IGameEvent> events = Apply(ordered);
             transaction.Commit();
             return events;
+        }
+
+        private IReadOnlyList<IGameEvent> ApplySingle(IRuntimeMutation mutation, out bool handled)
+        {
+            handled = true;
+            return mutation switch
+            {
+                DamageMutation damage => _damageProcessor.Apply(damage),
+                HealMutation heal => _damageProcessor.Apply(heal),
+                DeathMutation death => _damageProcessor.Apply(death),
+                MovementMutation movement => _movementProcessor.Apply(movement),
+                MoveMutation move => _movementProcessor.Apply(move),
+                ApplyEffectMutation effect => _effectProcessor.Apply(effect),
+                AbilityActionCompleteMutation abilityComplete => ApplyAbilityStateMutation(abilityComplete),
+                ReservationMutation => Array.Empty<IGameEvent>(),
+                ResourceMutation => Array.Empty<IGameEvent>(),
+                _ => MarkUnhandled(out handled)
+            };
         }
 
         private static IReadOnlyList<IGameEvent> MarkUnhandled(out bool handled)

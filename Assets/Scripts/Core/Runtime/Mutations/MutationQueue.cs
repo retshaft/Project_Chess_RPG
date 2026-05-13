@@ -17,6 +17,14 @@ namespace CheckmateRPG.Core.Runtime.Mutations
 
         public int Count => _queued.Count;
 
+        public void Enqueue(IMutation mutation)
+        {
+            if (mutation is not IRuntimeMutation runtimeMutation)
+                return;
+
+            Enqueue(runtimeMutation, ActionSpeedTier.Normal, int.MaxValue);
+        }
+
         public void Enqueue(IRuntimeMutation mutation, ActionSpeedTier actionSpeedLevel, int resolveOrder)
         {
             if (mutation == null)
@@ -46,6 +54,27 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                     queuedMutation.ResolveOrder,
                     _nextSequence++));
             }
+        }
+
+        public IMutation Peek()
+        {
+            return _queued.Count == 0 ? null : _queued[0].Mutation;
+        }
+
+        public IMutation Dequeue()
+        {
+            if (_queued.Count == 0)
+                return null;
+
+            IMutation mutation = _queued[0].Mutation;
+            _queued.RemoveAt(0);
+            return mutation;
+        }
+
+        public void Clear()
+        {
+            _queued.Clear();
+            _nextSequence = 0;
         }
 
         public IReadOnlyList<IRuntimeMutation> CreateOrderedSnapshot(MutationOrderingService orderingService)
