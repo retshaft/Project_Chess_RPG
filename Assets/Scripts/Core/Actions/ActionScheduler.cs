@@ -9,8 +9,9 @@ namespace CheckmateRPG.Core.Actions
     {
         private readonly Dictionary<Guid, BaseActionCommand> _activeActions = new();
         private readonly Queue<Guid> _pendingResolveQueue = new();
-        private readonly Dictionary<Guid, PendingInterruptRequest> _pendingInterrupts = new();
+        private readonly Dictionary<Guid, List<PendingInterruptRequest>> _pendingInterrupts = new();
         private readonly Dictionary<Guid, PendingInterruptRequest> _interruptContextByTarget = new();
+        private readonly Dictionary<Guid, InterruptArbitrationReason> _interruptReasonByTarget = new();
         private readonly Dictionary<Guid, UnitActionLockState> _lockStateByActor = new();
         private readonly Dictionary<Guid, Queue<BaseActionCommand>> _deferredActionsByActor = new();
         private readonly HashSet<Guid> _deferredActionIds = new();
@@ -145,10 +146,30 @@ namespace CheckmateRPG.Core.Actions
                 CurrentTick,
                 sourceAction);
 
-            bool shouldReplaceExisting = !_pendingInterrupts.TryGetValue(targetActionId, out PendingInterruptRequest existing) ||
-                                         _interruptArbitrationService.IsIncomingRequestHigher(existing, request);
-            if (shouldReplaceExisting)
-                _pendingInterrupts[targetActionId] = request;
+            if (!_pendingInterrupts.TryGetValue(targetActionId, out List<PendingInterruptRequest> requests))
+            {
+                requests = new List<PendingInterruptRequest>();
+                _pendingInterrupts[targetActionId] = requests;
+            }
+
+            int existingRequestIndex = -1;
+            for (int i = 0; i < requests.Count; i++)
+            {
+                if (requests[i].SourceActionId == request.SourceActionId)
+                {
+                    existingRequestIndex = i;
+                    break;
+                }
+            }
+
+            if (existingRequestIndex < 0)
+            {
+                requests.Add(request);
+                return;
+            }
+
+            if (_interruptArbitrationService.IsIncomingRequestHigher(requests[existingRequestIndex], request))
+                requests[existingRequestIndex] = request;
         }
 
         public void CancelAction(Guid actionId)
@@ -192,6 +213,7 @@ namespace CheckmateRPG.Core.Actions
                 _activeActions.Remove(action.ActionId);
                 _pendingInterrupts.Remove(action.ActionId);
                 _interruptContextByTarget.Remove(action.ActionId);
+                _interruptReasonByTarget.Remove(action.ActionId);
             }
         }
 
@@ -344,6 +366,7 @@ namespace CheckmateRPG.Core.Actions
             {
                 _interruptContextByTarget[sourceActionId] =
                     _interruptArbitrationService.BuildFallbackRequest(sourceAction, CurrentTick);
+                _interruptReasonByTarget[sourceActionId] = InterruptArbitrationReason.DeterministicActionIdOrdering;
                 try
                 {
                     Transition(sourceAction, ActionState.Interrupted);
@@ -353,6 +376,7 @@ namespace CheckmateRPG.Core.Actions
                 finally
                 {
                     _interruptContextByTarget.Remove(sourceActionId);
+                    _interruptReasonByTarget.Remove(sourceActionId);
                 }
 
                 return true;
@@ -444,35 +468,80 @@ namespace CheckmateRPG.Core.Actions
             if (_pendingInterrupts.Count == 0)
                 return;
 
-            PendingInterruptRequest[] requests = _pendingInterrupts.Values.ToArray();
-            _pendingInterrupts.Clear();
-            Array.Sort(requests, _interruptArbitrationService.ComparePendingRequestOrder);
-
-            for (int i = 0; i < requests.Length; i++)
+            var pendingByTarget = new Dictionary<Guid, List<PendingInterruptRequest>>(_pendingInterrupts.Count);
+            foreach ((Guid targetActionId, List<PendingInterruptRequest> requests) in _pendingInterrupts)
             {
-                PendingInterruptRequest request = requests[i];
-                if (!_activeActions.TryGetValue(request.TargetActionId, out BaseActionCommand action))
+                if (requests == null || requests.Count == 0)
+                    continue;
+
+                var copied = new List<PendingInterruptRequest>(requests.Count);
+                for (int i = 0; i < requests.Count; i++)
+                    copied.Add(requests[i]);
+                pendingByTarget[targetActionId] = copied;
+            }
+
+            Guid[] targetActionIds = pendingByTarget.Keys.ToArray();
+            Array.Sort(targetActionIds);
+            var interruptedThisPass = new HashSet<Guid>();
+            _pendingInterrupts.Clear();
+
+            for (int i = 0; i < targetActionIds.Length; i++)
+            {
+                Guid targetActionId = targetActionIds[i];
+                if (!_activeActions.TryGetValue(targetActionId, out BaseActionCommand action))
                     continue;
                 if (!_interruptArbitrationService.CanInterrupt(action))
                     continue;
 
-                IActionCommand sourceAction = request.SourceActionId != Guid.Empty &&
-                                              _activeActions.TryGetValue(request.SourceActionId, out BaseActionCommand source)
-                    ? source
-                    : null;
-                if (!_interruptArbitrationService.ShouldInterrupt(request.Priority, sourceAction, action))
+                if (!pendingByTarget.TryGetValue(targetActionId, out List<PendingInterruptRequest> requestsForTarget) ||
+                    requestsForTarget == null ||
+                    requestsForTarget.Count == 0)
                     continue;
 
-                _interruptContextByTarget[request.TargetActionId] = request;
-                action.RegisterInterruptSource(request.SourceActionId);
+                var candidates = new List<PendingInterruptRequest>(requestsForTarget.Count);
+                for (int j = 0; j < requestsForTarget.Count; j++)
+                {
+                    PendingInterruptRequest candidate = requestsForTarget[j];
+                    if (candidate.TargetActionId != targetActionId)
+                        continue;
+                    if (candidate.SourceActionId == targetActionId)
+                        continue;
+                    if (candidate.SourceActionId != Guid.Empty && interruptedThisPass.Contains(candidate.SourceActionId))
+                        continue;
+
+                    candidates.Add(candidate);
+                }
+
+                if (candidates.Count == 0)
+                    continue;
+
+                InterruptResult arbitrationResult = _interruptArbitrationService.Arbitrate(candidates, out PendingInterruptRequest winningRequest);
+                IActionCommand sourceAction = null;
+                if (winningRequest.SourceActionId != Guid.Empty)
+                {
+                    if (!_activeActions.TryGetValue(winningRequest.SourceActionId, out BaseActionCommand source))
+                        continue;
+                    if (!_interruptArbitrationService.CanInterruptOthers(source))
+                        continue;
+                    sourceAction = source;
+                }
+
+                if (!_interruptArbitrationService.ShouldInterrupt(winningRequest.Priority, sourceAction, action))
+                    continue;
+
+                _interruptContextByTarget[targetActionId] = winningRequest;
+                _interruptReasonByTarget[targetActionId] = arbitrationResult.Reason;
+                action.RegisterInterruptSource(winningRequest.SourceActionId);
                 try
                 {
                     Transition(action, ActionState.Interrupted);
-                    _activeActions.Remove(request.TargetActionId);
+                    _activeActions.Remove(targetActionId);
+                    interruptedThisPass.Add(targetActionId);
                 }
                 finally
                 {
-                    _interruptContextByTarget.Remove(request.TargetActionId);
+                    _interruptContextByTarget.Remove(targetActionId);
+                    _interruptReasonByTarget.Remove(targetActionId);
                 }
             }
         }
@@ -496,6 +565,7 @@ namespace CheckmateRPG.Core.Actions
             {
                 _activeActions.Remove(inactiveIds[i]);
                 _interruptContextByTarget.Remove(inactiveIds[i]);
+                _interruptReasonByTarget.Remove(inactiveIds[i]);
             }
         }
 
@@ -551,12 +621,16 @@ namespace CheckmateRPG.Core.Actions
                         _interruptContextByTarget.TryGetValue(action.ActionId, out PendingInterruptRequest request)
                             ? request
                             : _interruptArbitrationService.BuildFallbackRequest(action, CurrentTick);
+                    InterruptArbitrationReason interruptReason =
+                        _interruptReasonByTarget.TryGetValue(action.ActionId, out InterruptArbitrationReason reason)
+                            ? reason
+                            : InterruptArbitrationReason.DeterministicActionIdOrdering;
                     _eventBus.Publish(new ActionInterruptedEvent(
                         new ActionInterruptedPayload(
                             interruptContext.SourceActionId,
                             interruptContext.TargetActionId,
                             action.ActorId,
-                            interruptContext.Priority,
+                            interruptReason,
                             CurrentTick),
                         interruptContext.SourceActionId != Guid.Empty ? interruptContext.SourceActionId.ToString("N") : source,
                         target));

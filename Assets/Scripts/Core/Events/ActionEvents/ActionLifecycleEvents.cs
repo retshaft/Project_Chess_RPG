@@ -22,11 +22,11 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         bool IsInterruptible);
 
     public readonly record struct ActionInterruptedPayload(
-        Guid SourceActionId,
-        Guid TargetActionId,
+        Guid SourceAction,
+        Guid InterruptedAction,
         Guid ActorId,
-        InterruptPriority InterruptPriority,
-        int SchedulerTick);
+        InterruptArbitrationReason InterruptReason,
+        int Tick);
 
     public readonly record struct ActionRejectedPayload(
         Guid RequestedActionId,

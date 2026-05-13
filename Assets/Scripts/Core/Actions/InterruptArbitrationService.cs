@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CheckmateRPG.Core;
 
 namespace CheckmateRPG.Core.Actions
@@ -11,6 +12,14 @@ namespace CheckmateRPG.Core.Actions
                 return false;
 
             return target.InterruptPolicy.CanBeInterrupted(target);
+        }
+
+        public bool CanInterruptOthers(IReadOnlyActionState sourceAction)
+        {
+            if (sourceAction == null)
+                return false;
+
+            return sourceAction.InterruptPolicy.CanInterruptOthers(sourceAction);
         }
 
         public bool ShouldInterrupt(
@@ -34,6 +43,40 @@ namespace CheckmateRPG.Core.Actions
                 return false;
 
             return CompareActionOrder(sourceAction, targetAction) < 0;
+        }
+
+        public InterruptResult Arbitrate(
+            IReadOnlyList<PendingInterruptRequest> requests,
+            out PendingInterruptRequest winningRequest)
+        {
+            winningRequest = default;
+            if (requests == null || requests.Count == 0)
+                return InterruptResult.Empty;
+
+            PendingInterruptRequest[] orderedRequests = new PendingInterruptRequest[requests.Count];
+            for (int i = 0; i < requests.Count; i++)
+                orderedRequests[i] = requests[i];
+
+            Array.Sort(orderedRequests, ComparePendingRequestOrder);
+            winningRequest = orderedRequests[0];
+
+            InterruptArbitrationReason reason = orderedRequests.Length > 1
+                ? ResolveReason(winningRequest, orderedRequests[1])
+                : InterruptArbitrationReason.DeterministicActionIdOrdering;
+
+            var interruptedActions = new Guid[1] { winningRequest.TargetActionId };
+            var ignoredInterrupts = new List<Guid>();
+            for (int i = 1; i < orderedRequests.Length; i++)
+            {
+                if (orderedRequests[i].SourceActionId != Guid.Empty)
+                    ignoredInterrupts.Add(orderedRequests[i].SourceActionId);
+            }
+
+            return new InterruptResult(
+                winningRequest.SourceActionId,
+                interruptedActions,
+                ignoredInterrupts,
+                reason);
         }
 
         public bool IsIncomingRequestHigher(
@@ -73,11 +116,11 @@ namespace CheckmateRPG.Core.Actions
             if (tickCompare != 0)
                 return tickCompare;
 
-            int targetCompare = left.TargetActionId.CompareTo(right.TargetActionId);
-            if (targetCompare != 0)
-                return targetCompare;
+            int sourceCompare = left.SourceActionId.CompareTo(right.SourceActionId);
+            if (sourceCompare != 0)
+                return sourceCompare;
 
-            return left.SourceActionId.CompareTo(right.SourceActionId);
+            return left.TargetActionId.CompareTo(right.TargetActionId);
         }
 
         public PendingInterruptRequest BuildRequest(
@@ -144,6 +187,25 @@ namespace CheckmateRPG.Core.Actions
         {
             // ActionSpeedTier enum is ordered from fastest (0) to slowest (4).
             return ((int)left).CompareTo((int)right);
+        }
+
+        private static InterruptArbitrationReason ResolveReason(
+            PendingInterruptRequest winner,
+            PendingInterruptRequest runnerUp)
+        {
+            int priorityCompare = winner.Priority.CompareTo(runnerUp.Priority);
+            if (priorityCompare != 0)
+                return InterruptArbitrationReason.HigherInterruptPriority;
+
+            int speedCompare = CompareSpeed(winner.SourceSpeedTier, runnerUp.SourceSpeedTier);
+            if (speedCompare != 0)
+                return InterruptArbitrationReason.HigherActionSpeedLevel;
+
+            int tickCompare = winner.ScheduledTick.CompareTo(runnerUp.ScheduledTick);
+            if (tickCompare != 0)
+                return InterruptArbitrationReason.EarlierScheduledTick;
+
+            return InterruptArbitrationReason.DeterministicActionIdOrdering;
         }
     }
 

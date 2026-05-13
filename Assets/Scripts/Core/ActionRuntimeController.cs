@@ -832,16 +832,16 @@ namespace CheckmateRPG.Core
 
             _simulationRuntime.SetUnitActionState(
                 payload.ActorId,
-                state.CurrentActionId == payload.TargetActionId ? null : state.CurrentActionId,
-                payload.SchedulerTick,
+                state.CurrentActionId == payload.InterruptedAction ? null : state.CurrentActionId,
+                payload.Tick,
                 OwnershipOwners.ActionScheduler);
-            _simulationRuntime.UnregisterAction(payload.TargetActionId);
+            _simulationRuntime.UnregisterAction(payload.InterruptedAction);
             if (_unitsById.TryGetValue(payload.ActorId, out UnitBrain actor) && actor != null)
                 SyncRuntimeState(actor);
             _eventBus.Publish(new ActionCancelledEvent(
-                new ActionCancelledPayload(payload.TargetActionId, payload.ActorId, ActionCancellationReason.Interrupted, payload.SchedulerTick),
+                new ActionCancelledPayload(payload.InterruptedAction, payload.ActorId, ActionCancellationReason.Interrupted, payload.Tick),
                 payload.ActorId.ToString("N"),
-                payload.TargetActionId.ToString("N")));
+                payload.InterruptedAction.ToString("N")));
         }
 
         private bool TryReserveAndQueueAction(
