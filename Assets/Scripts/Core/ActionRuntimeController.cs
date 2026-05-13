@@ -1160,7 +1160,9 @@ namespace CheckmateRPG.Core
 
             if (!string.IsNullOrWhiteSpace(mutation.AbilityId))
             {
-                if (!byAbility.TryGetValue(mutation.AbilityId, out AbilityRuntimeState keyedState) || keyedState == null)
+                if (!byAbility.TryGetValue(mutation.AbilityId, out AbilityRuntimeState keyedState))
+                    return false;
+                if (keyedState == null)
                     return false;
 
                 keyedState.CompleteQueuedAction(

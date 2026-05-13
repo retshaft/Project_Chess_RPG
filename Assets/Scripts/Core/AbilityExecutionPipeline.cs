@@ -203,7 +203,7 @@ namespace CheckmateRPG.Core
                     SeededRandomProvider.Shared.NextGuid(),
                     request.Action.ActorId,
                     request.Action.ActionId,
-                    request.Action.AbilityId ?? string.Empty,
+                    request.Action.AbilityId,
                     request.CurrentTick,
                     Context: new MutationContext(
                         request.Action.ResolveTick,
