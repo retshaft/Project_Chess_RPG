@@ -116,6 +116,7 @@ namespace CheckmateRPG.Core.Actions
             if (tickCompare != 0)
                 return tickCompare;
 
+            // Rule #4: deterministic ActionId tie-break (source first, then target).
             int sourceCompare = left.SourceActionId.CompareTo(right.SourceActionId);
             if (sourceCompare != 0)
                 return sourceCompare;

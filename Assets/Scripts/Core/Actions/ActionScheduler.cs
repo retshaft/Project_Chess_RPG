@@ -502,10 +502,9 @@ namespace CheckmateRPG.Core.Actions
                 for (int j = 0; j < requestsForTarget.Count; j++)
                 {
                     PendingInterruptRequest candidate = requestsForTarget[j];
-                    if (candidate.TargetActionId != targetActionId)
-                        continue;
                     if (candidate.SourceActionId == targetActionId)
                         continue;
+                    // Prevent same-tick recursive chains (A interrupts B, then B interrupts C).
                     if (candidate.SourceActionId != Guid.Empty && interruptedThisPass.Contains(candidate.SourceActionId))
                         continue;
 
