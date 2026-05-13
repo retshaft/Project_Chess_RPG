@@ -75,7 +75,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
             var events = new List<IGameEvent>();
             while (queue.Count > 0)
             {
-                if (queue.Dequeue() is not IRuntimeMutation mutation || mutation == null)
+                if (queue.Dequeue() is not IRuntimeMutation mutation)
                     continue;
 
                 IReadOnlyList<IGameEvent> mutationEvents = ApplySingle(mutation, out bool handled);

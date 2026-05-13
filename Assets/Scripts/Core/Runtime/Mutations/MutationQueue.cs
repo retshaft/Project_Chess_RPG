@@ -56,17 +56,17 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             }
         }
 
-        public IMutation Peek()
+        public IRuntimeMutation Peek()
         {
             return _queued.Count == 0 ? null : _queued[0].Mutation;
         }
 
-        public IMutation Dequeue()
+        public IRuntimeMutation Dequeue()
         {
             if (_queued.Count == 0)
                 return null;
 
-            IMutation mutation = _queued[0].Mutation;
+            IRuntimeMutation mutation = _queued[0].Mutation;
             _queued.RemoveAt(0);
             return mutation;
         }
