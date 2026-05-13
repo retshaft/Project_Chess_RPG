@@ -423,13 +423,13 @@ namespace CheckmateRPG.Core
             resolutionContext.CurrentPhase = ResolutionPhase.MutationCommit;
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
             IReadOnlyList<IRuntimeMutation> preDeathMutations =
-                mutationApplyInput.PreDeathQueue.CreateOrderedSnapshot(_mutationOrderingService);
+                mutationApplyInput.PreDeathQueue.CreateSnapshot();
             _timelineRecorder?.RecordMutations(preDeathMutations, MutationCommitPhase.PreDeath.ToString());
             IReadOnlyList<IGameEvent> preDeathMutationEvents =
                 _mutationProcessor.Apply(mutationApplyInput.PreDeathQueue);
             ExecuteDeathCheckStage();
             IReadOnlyList<IRuntimeMutation> cleanupMutations =
-                mutationApplyInput.CleanupQueue.CreateOrderedSnapshot(_mutationOrderingService);
+                mutationApplyInput.CleanupQueue.CreateSnapshot();
             _timelineRecorder?.RecordMutations(cleanupMutations, MutationCommitPhase.Cleanup.ToString());
             IReadOnlyList<IGameEvent> cleanupMutationEvents =
                 _mutationProcessor.Apply(mutationApplyInput.CleanupQueue);

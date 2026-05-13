@@ -20,8 +20,10 @@ namespace CheckmateRPG.Core.Runtime.Mutations
 
         public void Enqueue(IMutation mutation)
         {
-            if (mutation is not IRuntimeMutation runtimeMutation)
+            if (mutation == null)
                 return;
+            if (mutation is not IRuntimeMutation runtimeMutation)
+                throw new ArgumentException("MutationQueue only accepts IRuntimeMutation entries.", nameof(mutation));
 
             Enqueue(runtimeMutation, ActionSpeedTier.Normal, DefaultResolveOrder);
         }
@@ -76,6 +78,17 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         {
             _queued.Clear();
             _nextSequence = 0;
+        }
+
+        public IReadOnlyList<IRuntimeMutation> CreateSnapshot()
+        {
+            if (_queued.Count == 0)
+                return Array.Empty<IRuntimeMutation>();
+
+            var snapshot = new IRuntimeMutation[_queued.Count];
+            for (int i = 0; i < _queued.Count; i++)
+                snapshot[i] = _queued[i].Mutation;
+            return snapshot;
         }
 
         public IReadOnlyList<IRuntimeMutation> CreateOrderedSnapshot(MutationOrderingService orderingService)
