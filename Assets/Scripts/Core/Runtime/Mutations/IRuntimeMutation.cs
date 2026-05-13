@@ -6,6 +6,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
     {
         Guid MutationId { get; }
         Guid TargetId { get; }
+        MutationContext Context { get; }
     }
 
     public interface IRuntimeMutation : IMutation

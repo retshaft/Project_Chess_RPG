@@ -15,5 +15,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         float Magnitude,
         CheckmateRPG.Core.Effects.EffectTimingPhase TimingPhase = CheckmateRPG.Core.Effects.EffectTimingPhase.OnTickEnd,
         ActionSpeedTier ActionSpeedLevel = ActionSpeedTier.Normal,
-        bool IsReaction = false) : IRuntimeMutation;
+        bool IsReaction = false,
+        MutationContext Context = default) : IRuntimeMutation;
 }

@@ -533,13 +533,30 @@ namespace CheckmateRPG.Core
         private void ExecuteDeathCheckStage()
         {
             var deadUnitIds = new HashSet<Guid>();
+            var deathMutations = new List<IRuntimeMutation>();
             foreach (KeyValuePair<Guid, UnitBrain> entry in _unitsById)
             {
                 if (entry.Value == null || !entry.Value.IsDead)
                     continue;
 
                 deadUnitIds.Add(entry.Key);
-                _simulationRuntime?.ApplyDeadUnitLifecycle(entry.Key, _scheduler.CurrentTick, OwnershipOwners.ActionScheduler);
+                int currentTick = _scheduler.CurrentTick;
+                deathMutations.Add(new DeathMutation(
+                    SeededRandomProvider.Shared.NextGuid(),
+                    entry.Key,
+                    Guid.Empty,
+                    currentTick,
+                    new MutationContext(
+                        currentTick,
+                        Guid.Empty,
+                        entry.Key,
+                        nameof(DeathMutation))));
+            }
+
+            if (deathMutations.Count > 0 && _mutationProcessor != null)
+            {
+                RuntimeTransaction deathTransaction = RuntimeTransaction.From(deathMutations);
+                _ = _mutationProcessor.Apply(deathTransaction, _mutationOrderingService);
             }
 
             _scheduler.TerminateActionsForActors(deadUnitIds);

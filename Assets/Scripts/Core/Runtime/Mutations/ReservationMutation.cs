@@ -16,5 +16,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         string ReservationKey,
         ReservationMutationOperation Operation,
         int Tick,
-        string Scope = "") : IRuntimeMutation;
+        string Scope = "",
+        MutationContext Context = default) : IRuntimeMutation;
 }

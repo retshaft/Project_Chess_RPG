@@ -7,5 +7,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         Guid TargetId,
         Guid SourceId,
         int Amount,
-        bool IsCritical) : IRuntimeMutation;
+        bool IsCritical,
+        MutationContext Context = default) : IRuntimeMutation;
 }
