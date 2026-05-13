@@ -5,6 +5,7 @@
 
 using UnityEngine;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 namespace CheckmateRPG.Data
 {
@@ -37,6 +38,8 @@ namespace CheckmateRPG.Data
         [Tooltip("Display name of the unit archetype (e.g. Knight, Archer).")]
         public string UnitName = "Unit";
 
+        public GameObject Prefab;
+
         [Header("Chess")]
         [Tooltip("Chess piece archetype used for role defaults and promotion checks.")]
         public ChessPieceType PieceType = ChessPieceType.Pawn;
@@ -52,6 +55,7 @@ namespace CheckmateRPG.Data
         [Header("Health")]
         [Tooltip("Maximum hit points.")]
         [Min(1f)] public float MaxHealth = 100f;
+
 
         // ─── Defense ──────────────────────────────────────────────────────────────
 
@@ -80,19 +84,20 @@ namespace CheckmateRPG.Data
         // ─── Resources ───────────────────────────────────────────────────────────
 
         [Header("Resources")]
-        [Tooltip("Maximum SP (used for elemental and skill interactions).")]
-        [Min(0f)] public float MaxSP = 100f;
+        [Tooltip("Skill Points")]
+        [Min(1f)] public float MaxSP = 24f;
+        [Min(0f)] public float InitSP = 4f;
 
         // ─── Action Costs ────────────────────────────────────────────────────────
 
         [Header("Action Costs")]
         [Tooltip("AP cost to perform one move action (before multipliers).")]
         [FormerlySerializedAs("MoveAPCost")]
-        [Min(0f)] public float MoveCostAP = 4f;
+        [Min(0f)] public float MoveCostAP = 8f;
 
         [Tooltip("AP cost to perform one attack action (before multipliers).")]
         [FormerlySerializedAs("AttackAPCost")]
-        [Min(0f)] public float AttackCostAP = 6f;
+        [Min(0f)] public float AttackCostAP = 8f;
 
         [Tooltip("Base action speed multiplier for movement and attack cooldowns.")]
         [Min(0.1f)] public float ActionSpeed = 1f;
@@ -103,8 +108,12 @@ namespace CheckmateRPG.Data
         [Tooltip("Maximum grid cells moved per action.")]
         [Min(1)] public int MoveRange = 3;
 
-        [Tooltip("World-units per second used when lerping to the target cell.")]
-        [Min(0.1f)] public float MoveSpeed = 5f;
+        [Tooltip("Tooltip(\"행동 속도 등급 (5: 가장 빠름 ~ 1: 가장 느림, 0/6 시스템적 최하/최상)\")")]
+        [Range(0, 6)] public int SpeedLevel= 1;
+        [Tooltip("Target Cell로 Lerp할 때 초당 이동하는 거리(World-units). Level에 따라 자동 계산됩니다.")]
+        [Min(0.1f)] public float MoveSpeed = 0.8f;
+        [Tooltip("유닛의 공격/스킬 사용 시 발생하는 선딜레이")]
+        [Min(0.1f)] public float ActionDelay = 2.5f;
 
         // ─── Physics ─────────────────────────────────────────────────────────────
 
@@ -112,7 +121,7 @@ namespace CheckmateRPG.Data
         [Tooltip("Weight grade used for knockback calculations (0 = light, 4 = heavy).")]
         [Range(0, 4)] public int Weight = 1;
 
-        [Tooltip("Bosses ignore weight reduction from stagger and resist freeze.")]
+        [Tooltip("Bosses ignore weight reduction from stagger and resist freeze.")] 
         public bool IsBoss = false;
 
         public void SyncDefaultChessMetadata()
@@ -152,6 +161,33 @@ namespace CheckmateRPG.Data
         private void OnValidate()
         {
             SyncDefaultChessMetadata();
+            UpdateMoveSpeed();
+        }
+
+        public void UpdateMoveSpeed()
+        {
+            MoveSpeed = SpeedLevel switch
+            {
+                0 => 0.5f,
+                1 => 0.8f,
+                2 => 1.1f,
+                3 => 1.5f,
+                4 => 2.0f,
+                5 => 2.5f,
+                6 => 3.0f,
+                _ => 1.0f
+            };
+            ActionDelay = SpeedLevel switch
+            {
+                0 => 3.0f,
+                1 => 2.5f,
+                2 => 2.0f,
+                3 => 1.5f,
+                4 => 1.1f,
+                5 => 0.8f,
+                6 => 0.5f,
+                _ => 1.0f
+            };
         }
 
         // ─── Future Extensions ────────────────────────────────────────────────────
