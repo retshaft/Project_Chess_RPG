@@ -46,7 +46,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
 
             SpatialArbitrationOutcome outcome = _arbitrationService.Resolve(moveReservations, runtime, currentTick);
             IReadOnlyList<SpatialConflictResolvedEvent> conflictEvents =
-                BuildConflictEvents(outcome.ConflictDecisions);
+                BuildConflictEvents(outcome.ConflictResults);
 
             return new PositionReservationSnapshot(
                 outcome.WinningReservationsByAction,
@@ -56,23 +56,24 @@ namespace CheckmateRPG.Core.Simulation.Spatial
         }
 
         private static IReadOnlyList<SpatialConflictResolvedEvent> BuildConflictEvents(
-            IReadOnlyList<SpatialConflictDecision> conflictDecisions)
+            IReadOnlyList<SpatialConflictResult> conflictResults)
         {
-            if (conflictDecisions == null || conflictDecisions.Count == 0)
+            if (conflictResults == null || conflictResults.Count == 0)
                 return Array.Empty<SpatialConflictResolvedEvent>();
 
-            var events = new List<SpatialConflictResolvedEvent>(conflictDecisions.Count);
-            for (int i = 0; i < conflictDecisions.Count; i++)
+            var events = new List<SpatialConflictResolvedEvent>(conflictResults.Count);
+            for (int i = 0; i < conflictResults.Count; i++)
             {
-                SpatialConflictDecision decision = conflictDecisions[i];
+                SpatialConflictResult result = conflictResults[i];
                 var payload = new SpatialConflictResolvedPayload(
-                    decision.ConflictType,
-                    decision.WinningAction,
-                    decision.LosingActions ?? Array.Empty<Guid>(),
-                    decision.Tick);
+                    result.ConflictType,
+                    result.WinningAction,
+                    result.RejectedActions ?? Array.Empty<Guid>(),
+                    result.ResolutionPolicy,
+                    result.Tick);
                 events.Add(new SpatialConflictResolvedEvent(
                     payload,
-                    source: decision.WinningAction != Guid.Empty ? decision.WinningAction.ToString("N") : string.Empty,
+                    source: result.WinningAction != Guid.Empty ? result.WinningAction.ToString("N") : string.Empty,
                     target: payload.ConflictType.ToString()));
             }
 

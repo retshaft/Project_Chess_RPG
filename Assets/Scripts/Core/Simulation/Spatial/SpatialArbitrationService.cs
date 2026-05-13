@@ -27,7 +27,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             var byTarget = new Dictionary<Vector2Int, List<ReservedPosition>>();
             var winners = new HashSet<Guid>();
             var losers = new HashSet<Guid>();
-            var conflicts = new List<SpatialConflictDecision>();
+            var conflicts = new List<SpatialConflictResult>();
 
             for (int i = 0; i < moveReservations.Count; i++)
             {
@@ -71,7 +71,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                 orderedLost.Add(actionId);
             }
 
-            conflicts.Sort(CompareConflictDecisionOrder);
+            conflicts.Sort(CompareConflictResultOrder);
             return new SpatialArbitrationOutcome(winnerActions, winnerPositions, orderedLost, conflicts);
         }
 
@@ -79,7 +79,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             IReadOnlyDictionary<Vector2Int, List<ReservedPosition>> byTarget,
             HashSet<Guid> winners,
             HashSet<Guid> losers,
-            List<SpatialConflictDecision> conflicts,
+            List<SpatialConflictResult> conflicts,
             int tick)
         {
             foreach (KeyValuePair<Vector2Int, List<ReservedPosition>> group in byTarget)
@@ -95,18 +95,19 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                     case SpatialResolutionPolicy.Reject:
                     case SpatialResolutionPolicy.MutualCancel:
                         CancelAll(contenders, winners, losers);
-                        conflicts.Add(new SpatialConflictDecision(
-                            SpatialConflictType.SameTarget,
+                        conflicts.Add(new SpatialConflictResult(
                             Guid.Empty,
                             ToOrderedActionIds(contenders),
+                            SpatialConflictType.SameTarget,
+                            _policy,
                             tick));
                         break;
                     case SpatialResolutionPolicy.PriorityWin:
                     case SpatialResolutionPolicy.SwapAllowed:
-                        ResolvePriorityWinner(contenders, winners, losers, conflicts, tick, SpatialConflictType.SameTarget);
+                        ResolvePriorityWinner(contenders, winners, losers, conflicts, tick, SpatialConflictType.SameTarget, _policy);
                         break;
                     case SpatialResolutionPolicy.ForceOverride:
-                        ResolveForcedOverrideWinner(contenders, winners, losers, conflicts, tick, SpatialConflictType.ForcedOverride);
+                        ResolveForcedOverrideWinner(contenders, winners, losers, conflicts, tick, SpatialConflictType.ForcedOverride, _policy);
                         break;
                 }
             }
@@ -116,7 +117,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             IReadOnlyDictionary<Guid, (MoveActionCommand Action, ReservedPosition Reservation)> byAction,
             HashSet<Guid> winners,
             HashSet<Guid> losers,
-            List<SpatialConflictDecision> conflicts,
+            List<SpatialConflictResult> conflicts,
             int tick)
         {
             if (winners.Count < 2)
@@ -148,17 +149,18 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                     case SpatialResolutionPolicy.Reject:
                     case SpatialResolutionPolicy.MutualCancel:
                         CancelAll(pair, winners, losers);
-                        conflicts.Add(new SpatialConflictDecision(
-                            SpatialConflictType.CrossSwap,
+                        conflicts.Add(new SpatialConflictResult(
                             Guid.Empty,
                             ToOrderedActionIds(pair),
+                            SpatialConflictType.CrossSwap,
+                            _policy,
                             tick));
                         break;
                     case SpatialResolutionPolicy.PriorityWin:
-                        ResolvePriorityWinner(pair, winners, losers, conflicts, tick, SpatialConflictType.CrossSwap);
+                        ResolvePriorityWinner(pair, winners, losers, conflicts, tick, SpatialConflictType.CrossSwap, _policy);
                         break;
                     case SpatialResolutionPolicy.ForceOverride:
-                        ResolveForcedOverrideWinner(pair, winners, losers, conflicts, tick, SpatialConflictType.ForcedOverride);
+                        ResolveForcedOverrideWinner(pair, winners, losers, conflicts, tick, SpatialConflictType.ForcedOverride, _policy);
                         break;
                 }
             }
@@ -168,7 +170,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             IReadOnlyDictionary<Guid, (MoveActionCommand Action, ReservedPosition Reservation)> byAction,
             HashSet<Guid> winners,
             HashSet<Guid> losers,
-            List<SpatialConflictDecision> conflicts,
+            List<SpatialConflictResult> conflicts,
             IReadOnlySimulationRuntime runtime,
             int tick)
         {
@@ -218,10 +220,11 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                     {
                         winners.Remove(actionId);
                         losers.Add(actionId);
-                        conflicts.Add(new SpatialConflictDecision(
-                            SpatialConflictType.DeadOccupancy,
+                        conflicts.Add(new SpatialConflictResult(
                             Guid.Empty,
                             new Guid[] { actionId },
+                            SpatialConflictType.DeadOccupancy,
+                            _policy,
                             tick));
                     }
 
@@ -230,20 +233,22 @@ namespace CheckmateRPG.Core.Simulation.Spatial
 
                 if (_policy == SpatialResolutionPolicy.ForceOverride && reservation.IsForcedMovement)
                 {
-                    conflicts.Add(new SpatialConflictDecision(
-                        SpatialConflictType.ForcedOverride,
+                    conflicts.Add(new SpatialConflictResult(
                         actionId,
                         Array.Empty<Guid>(),
+                        SpatialConflictType.ForcedOverride,
+                        _policy,
                         tick));
                     continue;
                 }
 
                 winners.Remove(actionId);
                 losers.Add(actionId);
-                conflicts.Add(new SpatialConflictDecision(
-                    SpatialConflictType.BlockedPath,
+                conflicts.Add(new SpatialConflictResult(
                     Guid.Empty,
                     new Guid[] { actionId },
+                    SpatialConflictType.BlockedPath,
+                    _policy,
                     tick));
             }
         }
@@ -252,9 +257,10 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             IReadOnlyList<ReservedPosition> contenders,
             HashSet<Guid> winners,
             HashSet<Guid> losers,
-            List<SpatialConflictDecision> conflicts,
+            List<SpatialConflictResult> conflicts,
             int tick,
-            SpatialConflictType type)
+            SpatialConflictType type,
+            SpatialResolutionPolicy resolutionPolicy)
         {
             if (contenders == null || contenders.Count == 0)
                 return;
@@ -272,10 +278,11 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             if (losingActions.Count == 0)
                 return;
 
-            conflicts.Add(new SpatialConflictDecision(
-                type,
+            conflicts.Add(new SpatialConflictResult(
                 winningActionId,
                 losingActions,
+                type,
+                resolutionPolicy,
                 tick));
         }
 
@@ -283,9 +290,10 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             IReadOnlyList<ReservedPosition> contenders,
             HashSet<Guid> winners,
             HashSet<Guid> losers,
-            List<SpatialConflictDecision> conflicts,
+            List<SpatialConflictResult> conflicts,
             int tick,
-            SpatialConflictType type)
+            SpatialConflictType type,
+            SpatialResolutionPolicy resolutionPolicy)
         {
             if (contenders == null || contenders.Count == 0)
                 return;
@@ -305,7 +313,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
 
             if (forcedWinnerIndex < 0)
             {
-                ResolvePriorityWinner(contenders, winners, losers, conflicts, tick, type);
+                ResolvePriorityWinner(contenders, winners, losers, conflicts, tick, type, resolutionPolicy);
                 return;
             }
 
@@ -322,7 +330,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                 losingActions.Add(loser);
             }
 
-            conflicts.Add(new SpatialConflictDecision(type, winnerActionId, losingActions, tick));
+            conflicts.Add(new SpatialConflictResult(winnerActionId, losingActions, type, resolutionPolicy, tick));
         }
 
         private static void CancelAll(
@@ -390,7 +398,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             return x.ActionId.CompareTo(y.ActionId);
         }
 
-        private static int CompareConflictDecisionOrder(SpatialConflictDecision x, SpatialConflictDecision y)
+        private static int CompareConflictResultOrder(SpatialConflictResult x, SpatialConflictResult y)
         {
             int tickCompare = x.Tick.CompareTo(y.Tick);
             if (tickCompare != 0)
@@ -404,8 +412,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             if (winCompare != 0)
                 return winCompare;
 
-            IReadOnlyList<Guid> xLosers = x.LosingActions ?? Array.Empty<Guid>();
-            IReadOnlyList<Guid> yLosers = y.LosingActions ?? Array.Empty<Guid>();
+            IReadOnlyList<Guid> xLosers = x.RejectedActions ?? Array.Empty<Guid>();
+            IReadOnlyList<Guid> yLosers = y.RejectedActions ?? Array.Empty<Guid>();
             int countCompare = xLosers.Count.CompareTo(yLosers.Count);
             if (countCompare != 0)
                 return countCompare;
@@ -430,12 +438,6 @@ namespace CheckmateRPG.Core.Simulation.Spatial
         }
     }
 
-    public readonly record struct SpatialConflictDecision(
-        SpatialConflictType ConflictType,
-        Guid WinningAction,
-        IReadOnlyList<Guid> LosingActions,
-        int Tick);
-
     public sealed class SpatialArbitrationOutcome
     {
         private static readonly IReadOnlyDictionary<Guid, ReservedPosition> EmptyActionReservations =
@@ -443,29 +445,29 @@ namespace CheckmateRPG.Core.Simulation.Spatial
         private static readonly IReadOnlyDictionary<Vector2Int, ReservedPosition> EmptyPositionReservations =
             new Dictionary<Vector2Int, ReservedPosition>();
         private static readonly IReadOnlyList<Guid> EmptyLostActions = Array.Empty<Guid>();
-        private static readonly IReadOnlyList<SpatialConflictDecision> EmptyConflictDecisions = Array.Empty<SpatialConflictDecision>();
+        private static readonly IReadOnlyList<SpatialConflictResult> EmptyConflictResults = Array.Empty<SpatialConflictResult>();
 
         public static SpatialArbitrationOutcome Empty { get; } = new(
             EmptyActionReservations,
             EmptyPositionReservations,
             EmptyLostActions,
-            EmptyConflictDecisions);
+            EmptyConflictResults);
 
         public SpatialArbitrationOutcome(
             IReadOnlyDictionary<Guid, ReservedPosition> winningReservationsByAction,
             IReadOnlyDictionary<Vector2Int, ReservedPosition> winningReservationsByPosition,
             IReadOnlyList<Guid> reservationLostActions,
-            IReadOnlyList<SpatialConflictDecision> conflictDecisions)
+            IReadOnlyList<SpatialConflictResult> conflictResults)
         {
             WinningReservationsByAction = winningReservationsByAction ?? EmptyActionReservations;
             WinningReservationsByPosition = winningReservationsByPosition ?? EmptyPositionReservations;
             ReservationLostActions = reservationLostActions ?? EmptyLostActions;
-            ConflictDecisions = conflictDecisions ?? EmptyConflictDecisions;
+            ConflictResults = conflictResults ?? EmptyConflictResults;
         }
 
         public IReadOnlyDictionary<Guid, ReservedPosition> WinningReservationsByAction { get; }
         public IReadOnlyDictionary<Vector2Int, ReservedPosition> WinningReservationsByPosition { get; }
         public IReadOnlyList<Guid> ReservationLostActions { get; }
-        public IReadOnlyList<SpatialConflictDecision> ConflictDecisions { get; }
+        public IReadOnlyList<SpatialConflictResult> ConflictResults { get; }
     }
 }
