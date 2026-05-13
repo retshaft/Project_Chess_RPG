@@ -95,6 +95,11 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         {
             if (orderingService == null)
                 throw new ArgumentNullException(nameof(orderingService));
+            return CreateOrderedSnapshot();
+        }
+
+        public IReadOnlyList<IRuntimeMutation> CreateOrderedSnapshot()
+        {
             if (_queued.Count == 0)
                 return Array.Empty<IRuntimeMutation>();
 
@@ -103,6 +108,9 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 .ThenBy(entry => entry.ResolveOrder)
                 .ThenBy(entry => entry.Sequence);
 
+            // Determinism guarantee:
+            // Sequence is assigned monotonically at enqueue-time and is unique in this queue,
+            // so equal speed/resolve buckets still produce a deterministic order.
             var ordered = new List<IRuntimeMutation>(_queued.Count);
             foreach (QueuedMutation entry in actionOrdered)
             {

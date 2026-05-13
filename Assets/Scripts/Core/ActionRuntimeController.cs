@@ -50,7 +50,6 @@ namespace CheckmateRPG.Core
         private ActionResolverRegistry _resolverRegistry;
         private RuntimeMutationProcessor _mutationProcessor;
         private MutationCommitService _mutationCommitService;
-        private MutationOrderingService _mutationOrderingService;
         private AbilityExecutionPipeline _abilityPipeline;
         private IActionCostPolicy _actionCostPolicy;
         private ActionCostReservation _actionCostReservation;
@@ -105,7 +104,6 @@ namespace CheckmateRPG.Core
             _scheduler = new ActionScheduler(_eventBus);
             _simulationRuntime = new SimulationRuntime(_scheduler.CurrentTick);
             _resolverRegistry = new ActionResolverRegistry();
-            _mutationOrderingService = new MutationOrderingService();
             _abilityPipeline = new AbilityExecutionPipeline();
             _actionCostPolicy = new DefaultActionCostPolicy();
             _actionCostReservation = new ActionCostReservation();
@@ -426,9 +424,7 @@ namespace CheckmateRPG.Core
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
             IReadOnlyList<IRuntimeMutation> queuedMutations = mutationApplyInput.CommitQueue.CreateSnapshot();
             _timelineRecorder?.RecordMutations(queuedMutations, MutationCommitPhase.QueueMutation.ToString());
-            MutationCommitResult commitResult = _mutationCommitService.Commit(
-                mutationApplyInput.CommitQueue,
-                _mutationOrderingService);
+            MutationCommitResult commitResult = _mutationCommitService.Commit(mutationApplyInput.CommitQueue);
             _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
             ExecuteDeathCheckStage();
             ExecuteCleanupStage();
@@ -545,7 +541,7 @@ namespace CheckmateRPG.Core
             }
 
             if (deathMutationQueue.Count > 0 && _mutationCommitService != null)
-                _ = _mutationCommitService.Commit(deathMutationQueue, _mutationOrderingService);
+                _ = _mutationCommitService.Commit(deathMutationQueue);
 
             _scheduler.TerminateActionsForActors(deadUnitIds);
             SyncActiveActionsRuntime();

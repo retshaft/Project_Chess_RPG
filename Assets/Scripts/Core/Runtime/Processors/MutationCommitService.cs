@@ -25,12 +25,10 @@ namespace CheckmateRPG.Core.Runtime.Processors
             _mutationProcessor = mutationProcessor ?? throw new ArgumentNullException(nameof(mutationProcessor));
         }
 
-        public MutationCommitResult Commit(MutationQueue queue, MutationOrderingService orderingService)
+        public MutationCommitResult Commit(MutationQueue queue)
         {
             if (queue == null)
                 throw new ArgumentNullException(nameof(queue));
-            if (orderingService == null)
-                throw new ArgumentNullException(nameof(orderingService));
             if (queue.Count == 0)
                 return MutationCommitResult.Empty;
             if (_isCommitting)
@@ -39,7 +37,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
             _isCommitting = true;
             try
             {
-                IReadOnlyList<IRuntimeMutation> ordered = queue.CreateOrderedSnapshot(orderingService);
+                IReadOnlyList<IRuntimeMutation> ordered = queue.CreateOrderedSnapshot();
                 if (ordered.Count == 0)
                     return MutationCommitResult.Empty;
 
