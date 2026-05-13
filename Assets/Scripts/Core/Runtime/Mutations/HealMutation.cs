@@ -6,5 +6,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         Guid MutationId,
         Guid TargetId,
         Guid SourceId,
-        int Amount) : IRuntimeMutation;
+        int Amount,
+        MutationContext Context = default) : IRuntimeMutation;
 }

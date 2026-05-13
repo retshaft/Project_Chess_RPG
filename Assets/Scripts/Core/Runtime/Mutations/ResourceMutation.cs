@@ -15,5 +15,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         Guid TargetId,
         ResourceMutationType ResourceType,
         int Delta,
-        string Reason = "") : IRuntimeMutation;
+        string Reason = "",
+        MutationContext Context = default) : IRuntimeMutation;
 }

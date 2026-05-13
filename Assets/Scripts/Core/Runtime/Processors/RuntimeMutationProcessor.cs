@@ -126,6 +126,9 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
         private static int ResolveTick(IRuntimeMutation mutation)
         {
+            if (mutation.Context.Tick > 0)
+                return mutation.Context.Tick;
+
             return mutation switch
             {
                 DeathMutation death => death.Tick,

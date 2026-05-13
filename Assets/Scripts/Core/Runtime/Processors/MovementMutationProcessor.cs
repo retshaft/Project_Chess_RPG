@@ -46,7 +46,8 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 mutation.MutationId,
                 mutation.TargetId,
                 mutation.From,
-                mutation.To));
+                mutation.To,
+                mutation.Context));
         }
     }
 }

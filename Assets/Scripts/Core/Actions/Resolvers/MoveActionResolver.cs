@@ -23,7 +23,16 @@ namespace CheckmateRPG.Core.Actions.Resolvers
             if (!battleContext.IsCellValid(action.To))
                 return ActionResolutionResult.Failed();
 
-            MovementMutation mutation = new(SeededRandomProvider.Shared.NextGuid(), action.ActorId, action.From, action.To);
+            MovementMutation mutation = new(
+                SeededRandomProvider.Shared.NextGuid(),
+                action.ActorId,
+                action.From,
+                action.To,
+                new MutationContext(
+                    action.ResolveTick,
+                    action.ActionId,
+                    action.ActorId,
+                    nameof(MovementMutation)));
             MoveActionResolvedEvent resolvedEvent = new(
                 new MoveActionResolvedPayload(action.ActionId, action.ActorId, action.From, action.To),
                 action.ActionId.ToString("N"),

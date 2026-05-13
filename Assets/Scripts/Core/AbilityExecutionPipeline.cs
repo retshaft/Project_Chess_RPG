@@ -70,7 +70,7 @@ namespace CheckmateRPG.Core
             if (!resolveResult.Succeeded)
                 return ActionResolutionResult.Failed();
 
-            IReadOnlyList<IRuntimeMutation> mutations = EffectApply(resolveResult);
+            IReadOnlyList<IRuntimeMutation> mutations = EffectApply(request, resolveResult);
             IReadOnlyList<IGameEvent> events = PostProcessResolve(request, resolveResult);
             return new ActionResolutionResult(true, mutations, events);
         }
@@ -160,7 +160,7 @@ namespace CheckmateRPG.Core
             return new AbilityResolveResult(true, intents);
         }
 
-        private static IReadOnlyList<IRuntimeMutation> EffectApply(AbilityResolveResult resolveResult)
+        private static IReadOnlyList<IRuntimeMutation> EffectApply(AbilityResolveRequest request, AbilityResolveResult resolveResult)
         {
             if (!resolveResult.Succeeded || resolveResult.EffectIntents.Count == 0)
                 return Array.Empty<IRuntimeMutation>();
@@ -178,7 +178,12 @@ namespace CheckmateRPG.Core
                     intent.TickInterval,
                     intent.InitialTickIn,
                     intent.StackCount,
-                    intent.Magnitude));
+                    intent.Magnitude,
+                    Context: new MutationContext(
+                        request.Action.ResolveTick,
+                        request.Action.ActionId,
+                        intent.TargetActorId,
+                        nameof(ApplyEffectMutation))));
             }
 
             return mutations;

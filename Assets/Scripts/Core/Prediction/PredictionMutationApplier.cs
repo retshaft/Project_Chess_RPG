@@ -50,7 +50,8 @@ namespace CheckmateRPG.Core.Prediction
                             movement.MutationId,
                             movement.TargetId,
                             movement.From,
-                            movement.To), context);
+                            movement.To,
+                            movement.Context), context);
                         break;
                     case DeathMutation death:
                         ApplyDeath(death, context);
