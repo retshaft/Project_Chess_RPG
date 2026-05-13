@@ -49,6 +49,7 @@ namespace CheckmateRPG.Core
         private EffectSystem _effectSystem;
         private ActionResolverRegistry _resolverRegistry;
         private RuntimeMutationProcessor _mutationProcessor;
+        private MutationCommitService _mutationCommitService;
         private MutationOrderingService _mutationOrderingService;
         private AbilityExecutionPipeline _abilityPipeline;
         private IActionCostPolicy _actionCostPolicy;
@@ -126,6 +127,7 @@ namespace CheckmateRPG.Core
                 _simulationRuntime,
                 state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state),
                 TryApplyAbilityActionCompleteMutation);
+            _mutationCommitService = new MutationCommitService(_mutationProcessor);
             _resolutionPipeline = new ResolutionPhasePipeline(
                 resolveAction: (action, _) =>
                 {
@@ -422,17 +424,13 @@ namespace CheckmateRPG.Core
                 _resolutionPipeline.Execute(_scheduler.CurrentTick, ready, _battleContext);
             resolutionContext.CurrentPhase = ResolutionPhase.MutationCommit;
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
-            IReadOnlyList<IRuntimeMutation> preDeathMutations =
-                mutationApplyInput.PreDeathQueue.CreateSnapshot();
-            _timelineRecorder?.RecordMutations(preDeathMutations, MutationCommitPhase.PreDeath.ToString());
-            IReadOnlyList<IGameEvent> preDeathMutationEvents =
-                _mutationProcessor.Apply(mutationApplyInput.PreDeathQueue);
+            IReadOnlyList<IRuntimeMutation> queuedMutations = mutationApplyInput.CommitQueue.CreateSnapshot();
+            _timelineRecorder?.RecordMutations(queuedMutations, MutationCommitPhase.QueueMutation.ToString());
+            MutationCommitResult commitResult = _mutationCommitService.Commit(
+                mutationApplyInput.CommitQueue,
+                _mutationOrderingService);
+            _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
             ExecuteDeathCheckStage();
-            IReadOnlyList<IRuntimeMutation> cleanupMutations =
-                mutationApplyInput.CleanupQueue.CreateSnapshot();
-            _timelineRecorder?.RecordMutations(cleanupMutations, MutationCommitPhase.Cleanup.ToString());
-            IReadOnlyList<IGameEvent> cleanupMutationEvents =
-                _mutationProcessor.Apply(mutationApplyInput.CleanupQueue);
             ExecuteCleanupStage();
 
             if (_enableRuntimeValidation)
@@ -450,8 +448,7 @@ namespace CheckmateRPG.Core
             var stagedEvents = new List<IGameEvent>();
             AppendEvents(stagedEvents, _positionReservations.ConflictEvents);
             AppendEvents(stagedEvents, mutationApplyInput.ActionEvents);
-            AppendEvents(stagedEvents, preDeathMutationEvents);
-            AppendEvents(stagedEvents, cleanupMutationEvents);
+            AppendEvents(stagedEvents, commitResult.StagedEvents);
             EnqueueResolvedEvents(stagedEvents);
             _eventBus.ProcessQueue();
             RecordSimulationSnapshot();
@@ -518,23 +515,10 @@ namespace CheckmateRPG.Core
 
             var mutationQueue = new MutationQueue();
             mutationQueue.EnqueueRange(resolutionContext.PendingMutationQueue);
-            IReadOnlyList<IRuntimeMutation> orderedMutations =
-                mutationQueue.CreateOrderedSnapshot(_mutationOrderingService);
-            _mutationOrderingService.SplitByDeathBoundary(
-                orderedMutations,
-                out IReadOnlyList<IRuntimeMutation> preDeathMutations,
-                out IReadOnlyList<IRuntimeMutation> cleanupMutations);
-            var preDeathQueue = new MutationQueue();
-            var cleanupQueue = new MutationQueue();
-            foreach (IRuntimeMutation mutation in preDeathMutations)
-                preDeathQueue.Enqueue(mutation);
-            foreach (IRuntimeMutation mutation in cleanupMutations)
-                cleanupQueue.Enqueue(mutation);
 
             return new MutationApplyInput(
                 resolutionContext.PendingEvents,
-                preDeathQueue,
-                cleanupQueue);
+                mutationQueue);
         }
 
         private void ExecuteDeathCheckStage()
@@ -560,15 +544,8 @@ namespace CheckmateRPG.Core
                         nameof(DeathMutation))));
             }
 
-            if (deathMutationQueue.Count > 0 && _mutationProcessor != null)
-            {
-                IReadOnlyList<IRuntimeMutation> orderedDeathMutations =
-                    deathMutationQueue.CreateOrderedSnapshot(_mutationOrderingService);
-                var orderedDeathQueue = new MutationQueue();
-                foreach (IRuntimeMutation mutation in orderedDeathMutations)
-                    orderedDeathQueue.Enqueue(mutation);
-                _ = _mutationProcessor.Apply(orderedDeathQueue);
-            }
+            if (deathMutationQueue.Count > 0 && _mutationCommitService != null)
+                _ = _mutationCommitService.Commit(deathMutationQueue, _mutationOrderingService);
 
             _scheduler.TerminateActionsForActors(deadUnitIds);
             SyncActiveActionsRuntime();
@@ -962,11 +939,10 @@ namespace CheckmateRPG.Core
 
         private readonly record struct MutationApplyInput(
             IReadOnlyList<IGameEvent> ActionEvents,
-            MutationQueue PreDeathQueue,
-            MutationQueue CleanupQueue)
+            MutationQueue CommitQueue)
         {
             public static MutationApplyInput Empty =>
-                new(Array.Empty<IGameEvent>(), new MutationQueue(), new MutationQueue());
+                new(Array.Empty<IGameEvent>(), new MutationQueue());
         }
 
         private static bool TryGetActorId(GameObject target, out Guid actorId)

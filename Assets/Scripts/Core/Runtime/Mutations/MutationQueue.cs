@@ -103,28 +103,14 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 .ThenBy(entry => entry.ResolveOrder)
                 .ThenBy(entry => entry.Sequence);
 
-            var grouped = actionOrdered
-                .GroupBy(entry => new ActionMutationOrderingKey(entry.ActionSpeedLevel, entry.ResolveOrder))
-                .ToArray();
-
-            var merged = new List<IRuntimeMutation>(_queued.Count);
-            for (int i = 0; i < grouped.Length; i++)
+            var ordered = new List<IRuntimeMutation>(_queued.Count);
+            foreach (QueuedMutation entry in actionOrdered)
             {
-                var perActionMutations = new List<IRuntimeMutation>();
-                foreach (QueuedMutation entry in grouped[i])
-                {
-                    if (entry.Mutation != null)
-                        perActionMutations.Add(entry.Mutation);
-                }
-
-                IReadOnlyList<IRuntimeMutation> deterministic = orderingService.SortDeterministic(perActionMutations);
-                for (int m = 0; m < deterministic.Count; m++)
-                    merged.Add(deterministic[m]);
+                if (entry.Mutation != null)
+                    ordered.Add(entry.Mutation);
             }
 
-            return merged;
+            return ordered;
         }
-
-        private readonly record struct ActionMutationOrderingKey(ActionSpeedTier Speed, int ResolveOrder);
     }
 }
