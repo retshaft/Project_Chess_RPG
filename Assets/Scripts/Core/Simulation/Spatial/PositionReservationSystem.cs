@@ -69,7 +69,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                     result.ConflictType,
                     result.WinningAction,
                     result.RejectedActions ?? Array.Empty<Guid>(),
-                    result.ResolutionPolicy);
+                    result.ResolutionPolicy,
+                    result.Tick);
                 events.Add(new SpatialConflictResolvedEvent(
                     payload,
                     source: result.WinningAction != Guid.Empty ? result.WinningAction.ToString("N") : string.Empty,

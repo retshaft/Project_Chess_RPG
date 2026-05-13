@@ -50,7 +50,8 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         SpatialConflictType ConflictType,
         Guid WinningAction,
         IReadOnlyList<Guid> RejectedActions,
-        SpatialResolutionPolicy ResolutionPolicy);
+        SpatialResolutionPolicy ResolutionPolicy,
+        int Tick);
 
     public sealed record MoveActionResolvedEvent(MoveActionResolvedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MoveActionResolvedPayload>(Payload, EventCategory.Domain, Source, Target);

@@ -99,7 +99,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                             Guid.Empty,
                             ToOrderedActionIds(contenders),
                             SpatialConflictType.SameTarget,
-                            _policy));
+                            _policy,
+                            tick));
                         break;
                     case SpatialResolutionPolicy.PriorityWin:
                     case SpatialResolutionPolicy.SwapAllowed:
@@ -152,7 +153,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                             Guid.Empty,
                             ToOrderedActionIds(pair),
                             SpatialConflictType.CrossSwap,
-                            _policy));
+                            _policy,
+                            tick));
                         break;
                     case SpatialResolutionPolicy.PriorityWin:
                         ResolvePriorityWinner(pair, winners, losers, conflicts, tick, SpatialConflictType.CrossSwap, _policy);
@@ -222,7 +224,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                             Guid.Empty,
                             new Guid[] { actionId },
                             SpatialConflictType.DeadOccupancy,
-                            _policy));
+                            _policy,
+                            tick));
                     }
 
                     continue;
@@ -234,7 +237,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                         actionId,
                         Array.Empty<Guid>(),
                         SpatialConflictType.ForcedOverride,
-                        _policy));
+                        _policy,
+                        tick));
                     continue;
                 }
 
@@ -244,7 +248,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                     Guid.Empty,
                     new Guid[] { actionId },
                     SpatialConflictType.BlockedPath,
-                    _policy));
+                    _policy,
+                    tick));
             }
         }
 
@@ -277,7 +282,8 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                 winningActionId,
                 losingActions,
                 type,
-                resolutionPolicy));
+                resolutionPolicy,
+                tick));
         }
 
         private static void ResolveForcedOverrideWinner(
@@ -324,7 +330,7 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                 losingActions.Add(loser);
             }
 
-            conflicts.Add(new SpatialConflictResult(winnerActionId, losingActions, type, resolutionPolicy));
+            conflicts.Add(new SpatialConflictResult(winnerActionId, losingActions, type, resolutionPolicy, tick));
         }
 
         private static void CancelAll(
@@ -394,6 +400,10 @@ namespace CheckmateRPG.Core.Simulation.Spatial
 
         private static int CompareConflictResultOrder(SpatialConflictResult x, SpatialConflictResult y)
         {
+            int tickCompare = x.Tick.CompareTo(y.Tick);
+            if (tickCompare != 0)
+                return tickCompare;
+
             int typeCompare = x.ConflictType.CompareTo(y.ConflictType);
             if (typeCompare != 0)
                 return typeCompare;

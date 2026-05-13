@@ -7,5 +7,6 @@ namespace CheckmateRPG.Core.Simulation.Spatial
         Guid WinningAction,
         IReadOnlyList<Guid> RejectedActions,
         SpatialConflictType ConflictType,
-        SpatialResolutionPolicy ResolutionPolicy);
+        SpatialResolutionPolicy ResolutionPolicy,
+        int Tick);
 }
