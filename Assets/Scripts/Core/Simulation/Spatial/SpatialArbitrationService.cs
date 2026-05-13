@@ -408,10 +408,6 @@ namespace CheckmateRPG.Core.Simulation.Spatial
             if (typeCompare != 0)
                 return typeCompare;
 
-            int policyCompare = x.ResolutionPolicy.CompareTo(y.ResolutionPolicy);
-            if (policyCompare != 0)
-                return policyCompare;
-
             int winCompare = x.WinningAction.CompareTo(y.WinningAction);
             if (winCompare != 0)
                 return winCompare;
