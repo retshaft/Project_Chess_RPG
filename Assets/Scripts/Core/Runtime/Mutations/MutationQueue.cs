@@ -91,10 +91,14 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return snapshot;
         }
 
+        /// <summary>
+        /// Backward-compatible overload retained for existing call sites.
+        /// Queue ordering is authoritative and based only on:
+        /// ActionSpeedLevel → ResolveOrder → enqueue sequence.
+        /// </summary>
         public IReadOnlyList<IRuntimeMutation> CreateOrderedSnapshot(MutationOrderingService orderingService)
         {
-            if (orderingService == null)
-                throw new ArgumentNullException(nameof(orderingService));
+            _ = orderingService;
             return CreateOrderedSnapshot();
         }
 
