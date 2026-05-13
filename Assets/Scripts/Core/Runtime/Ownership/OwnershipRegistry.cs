@@ -29,6 +29,7 @@ namespace CheckmateRPG.Core.Runtime.Ownership
                 new OwnershipRule(OwnershipStateKeys.Position, OwnershipOwners.MovementMutationProcessor),
                 new OwnershipRule(OwnershipStateKeys.Cooldown, OwnershipOwners.TickScheduler),
                 new OwnershipRule(OwnershipStateKeys.EffectStack, OwnershipOwners.EffectSystem),
+                new OwnershipRule(OwnershipStateKeys.EffectLifecycle, OwnershipOwners.EffectSystem),
                 new OwnershipRule(OwnershipStateKeys.ActionState, OwnershipOwners.ActionScheduler)
             });
         }

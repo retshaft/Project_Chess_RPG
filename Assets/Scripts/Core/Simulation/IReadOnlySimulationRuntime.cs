@@ -20,6 +20,13 @@ namespace CheckmateRPG.Core.Simulation
         IReadOnlyActionState GetAction(Guid actionId);
         bool TryGetAction(Guid actionId, out IReadOnlyActionState action);
         bool TryGetEffect(string effectKey, out IReadOnlyEffectRuntimeState effect);
+
+        /// <summary>
+        /// Returns an <see cref="EffectContainer"/> scoped to <paramref name="unitId"/>,
+        /// providing per-unit access to all active effects as <see cref="IEffectRuntime"/> objects.
+        /// </summary>
+        EffectContainer GetEffectContainer(Guid unitId);
+
         IReadOnlyList<IReadOnlyUnitRuntimeState> GetUnitsAtPosition(Vector2Int position);
         bool IsOccupied(Vector2Int position);
     }

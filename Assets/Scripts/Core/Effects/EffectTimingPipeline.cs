@@ -113,6 +113,7 @@ namespace CheckmateRPG.Core.Effects
 
                     if (processor != null && effect.NextTickIn <= 0)
                     {
+                        effect.TransitionLifecycle(OwnershipOwners.EffectSystem, EffectLifecycle.Ticking);
                         int deltaHp = processor.OnTick(effectContext, effect);
                         effect.ResetTickCountdown(OwnershipOwners.EffectSystem);
                         tickResults.Add(new EffectTickResult(key, effect, deltaHp, timingContext));
@@ -120,8 +121,13 @@ namespace CheckmateRPG.Core.Effects
 
                     if (effect.IsExpired)
                     {
+                        effect.TransitionLifecycle(OwnershipOwners.EffectSystem, EffectLifecycle.Expired);
                         processor?.OnExpired(effectContext, effect);
                         _expirationQueue.Enqueue(key);
+                    }
+                    else if (effect.Lifecycle == EffectLifecycle.Ticking)
+                    {
+                        effect.TransitionLifecycle(OwnershipOwners.EffectSystem, EffectLifecycle.Active);
                     }
                 }
                 else

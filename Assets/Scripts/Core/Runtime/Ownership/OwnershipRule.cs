@@ -10,6 +10,7 @@ namespace CheckmateRPG.Core.Runtime.Ownership
         public const string Position = nameof(Position);
         public const string Cooldown = nameof(Cooldown);
         public const string EffectStack = nameof(EffectStack);
+        public const string EffectLifecycle = nameof(EffectLifecycle);
         public const string ActionState = nameof(ActionState);
     }
 

@@ -16,6 +16,22 @@ namespace CheckmateRPG.Core.Effects
         bool IsExpired { get; }
 
         /// <summary>
+        /// The total tick duration that was set when the effect was first applied.
+        /// This value does not change as the effect counts down, making it useful for
+        /// computing completion progress: <c>1 - RemainingTick / (float)RemainingDuration</c>.
+        /// </summary>
+        int RemainingDuration { get; }
+
+        /// <summary>
+        /// The simulation tick at which this effect was first applied to the target.
+        /// Not updated on subsequent refreshes.
+        /// </summary>
+        int AppliedTick { get; }
+
+        /// <summary>Current lifecycle stage of this effect.</summary>
+        EffectLifecycle Lifecycle { get; }
+
+        /// <summary>
         /// The timing phase in which this effect is evaluated by the
         /// <see cref="EffectTimingPipeline"/>. Defaults to <see cref="EffectTimingPhase.OnTickEnd"/>.
         /// </summary>
