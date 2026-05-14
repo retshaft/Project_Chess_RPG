@@ -7,6 +7,7 @@ using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Effects.Processors;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Prediction;
+using CheckmateRPG.Core.Replay;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
@@ -33,6 +34,7 @@ namespace CheckmateRPG.Core
 
         [SerializeField] private int _simulationSeed = DefaultSimulationSeed;
         [SerializeField] private bool _enableReplayRecording = true;
+        [SerializeField] private bool _enableJournalRecording = true;
         [SerializeField] private bool _enableSimulationTimelineDebug;
         [SerializeField] private bool _enableRuntimeValidation = true;
         [SerializeField] private bool _haltSimulationOnCriticalValidation;
@@ -61,6 +63,8 @@ namespace CheckmateRPG.Core
         private readonly Dictionary<string, AbilityDefinition> _abilityDefinitions = new(StringComparer.Ordinal);
         private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
         private ReplayRecorder _replayRecorder;
+        private ActionJournal _actionJournal;
+        private MutationJournal _mutationJournal;
         private EventTraceRecorder _eventTraceRecorder;
         private SimulationTimelineRecorder _timelineRecorder;
         private RuntimeValidationSystem _runtimeValidationSystem;
@@ -73,10 +77,13 @@ namespace CheckmateRPG.Core
         private UIPredictionAdapter _uiPredictionAdapter;
         private AIPredictionAdapter _aiPredictionAdapter;
         private bool ShouldRecordReplay => _enableReplayRecording && _replayRecorder != null;
+        private bool ShouldRecordJournal => _enableJournalRecording && _actionJournal != null && _mutationJournal != null;
 
         public ActionScheduler Scheduler => _scheduler;
         public IEventBus EventBus => _eventBus;
         public ReplayRecorder ReplayRecorder => _replayRecorder;
+        public ActionJournal ActionJournal => _actionJournal;
+        public MutationJournal MutationJournal => _mutationJournal;
         public SimulationTimelineRecorder TimelineRecorder => _timelineRecorder;
         public SnapshotRecorder SnapshotRecorder => _snapshotRecorder;
 
@@ -161,6 +168,8 @@ namespace CheckmateRPG.Core
                 },
                 onPreResolveAction: HandlePreResolveAction);
             _replayRecorder = new ReplayRecorder();
+            _actionJournal = new ActionJournal();
+            _mutationJournal = new MutationJournal();
             _eventTraceRecorder = new EventTraceRecorder(_replayRecorder, GetCurrentTickSafe);
             _runtimeValidationSystem = BuildRuntimeValidationSystem();
             _validationExecutionStage = new ValidationExecutionStage(_runtimeValidationSystem);
@@ -232,6 +241,7 @@ namespace CheckmateRPG.Core
                     nameof(ApplyEffectMutation))));
 
             MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
+            RecordMutationCommitJournal(commitResult);
             EnqueueResolvedEvents(commitResult.StagedEvents);
             _eventBus.ProcessQueue();
             return commitResult.AppliedMutations.Count > 0;
@@ -487,11 +497,15 @@ namespace CheckmateRPG.Core
             _scheduler.AdvanceTick();
             if (ShouldRecordReplay)
                 _replayRecorder.EnsureFrame(_scheduler.CurrentTick);
+            if (ShouldRecordJournal)
+                _actionJournal.RecordTick(_scheduler.CurrentTick);
             _timelineRecorder?.RecordTick(_scheduler.CurrentTick);
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
+            RecordResolveOrderJournal(ready);
             SyncAllRuntimeStates();
             _positionReservations = _positionReservationSystem.Build(ready, _simulationRuntime, _scheduler.CurrentTick);
+            RecordReservationJournal(ready, _positionReservations);
             ActionResolutionContext resolutionContext =
                 _resolutionPipeline.Execute(_scheduler.CurrentTick, ready, _battleContext);
             resolutionContext.CurrentPhase = ResolutionPhase.MutationCommit;
@@ -499,6 +513,7 @@ namespace CheckmateRPG.Core
             IReadOnlyList<IRuntimeMutation> queuedMutations = mutationApplyInput.CommitQueue.CreateSnapshot();
             _timelineRecorder?.RecordMutations(queuedMutations, MutationCommitPhase.QueueMutation.ToString());
             MutationCommitResult commitResult = _mutationCommitService.Commit(mutationApplyInput.CommitQueue);
+            RecordMutationCommitJournal(commitResult);
             _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
             ExecuteDeathCheckStage();
             CleanupStageResult cleanupResult = ExecuteCleanupStage();
@@ -616,7 +631,10 @@ namespace CheckmateRPG.Core
             }
 
             if (deathMutationQueue.Count > 0 && _mutationCommitService != null)
-                _ = _mutationCommitService.Commit(deathMutationQueue);
+            {
+                MutationCommitResult deathCommitResult = _mutationCommitService.Commit(deathMutationQueue);
+                RecordMutationCommitJournal(deathCommitResult);
+            }
 
             _scheduler.TerminateActionsForActors(deadUnitIds);
             SyncActiveActionsRuntime();
@@ -643,6 +661,7 @@ namespace CheckmateRPG.Core
             IReadOnlyList<IRuntimeMutation> queuedSnapshot = queue.CreateSnapshot();
             _timelineRecorder?.RecordMutations(queuedSnapshot, MutationCommitPhase.QueueMutation.ToString());
             MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
+            RecordMutationCommitJournal(commitResult);
             _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
             UpdateAbilityCooldownState(_scheduler.CurrentTick);
             return new CleanupStageResult(commitResult.StagedEvents);
@@ -953,15 +972,24 @@ namespace CheckmateRPG.Core
                 action,
                 new ActionCostContext(actor, abilityDefinition, abilityRuntimeState));
             if (!_actionCostReservation.CanAfford(actor.ActorId, cost, GetCurrentSp))
+            {
+                RecordActionRequestJournal(action, $"Rejected:InsufficientCost|{inputTrace}");
                 return false;
+            }
 
             ActionCostReservationHooks hooks = BuildReservationHooks(abilityDefinition, abilityRuntimeState);
             if (!_actionCostReservation.ReserveCost(action.ActionId, actor.ActorId, cost, hooks))
+            {
+                RecordActionRequestJournal(action, $"Rejected:ReservationFailed|{inputTrace}");
                 return false;
+            }
 
             try
             {
                 ActionAdmissionResult admissionResult = _scheduler.ScheduleAction(action);
+                RecordActionRequestJournal(
+                    action,
+                    $"Admission={admissionResult.Status}|Reason={admissionResult.Reason}|Lock={admissionResult.CurrentLock}|{inputTrace}");
                 if (admissionResult.Status == ActionAdmissionStatus.Rejected)
                 {
                     _actionCostReservation.Rollback(action.ActionId);
@@ -974,6 +1002,7 @@ namespace CheckmateRPG.Core
             catch (Exception ex)
             {
                 _actionCostReservation.Rollback(action.ActionId);
+                RecordActionRequestJournal(action, $"Rejected:Exception|{ex.Message}|{inputTrace}");
                 Debug.LogWarning($"[ActionRuntimeController] Failed to queue action with reservation: {ex.Message}");
                 return false;
             }
@@ -1012,6 +1041,103 @@ namespace CheckmateRPG.Core
             }
 
             return 0;
+        }
+
+        private void RecordActionRequestJournal(IActionCommand action, string details)
+        {
+            if (!ShouldRecordJournal || action == null || _scheduler == null)
+                return;
+
+            _actionJournal.RecordActionRequest(
+                _scheduler.CurrentTick,
+                action.ActionId,
+                action.ActorId,
+                details ?? string.Empty);
+        }
+
+        private void RecordResolveOrderJournal(IReadOnlyList<IActionCommand> readyActions)
+        {
+            if (!ShouldRecordJournal || readyActions == null || readyActions.Count == 0 || _scheduler == null)
+                return;
+
+            var sorted = new List<IActionCommand>(readyActions.Count);
+            for (int i = 0; i < readyActions.Count; i++)
+            {
+                IActionCommand action = readyActions[i];
+                if (action != null)
+                    sorted.Add(action);
+            }
+
+            sorted.Sort(ResolutionOrderComparer.Default);
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                IActionCommand action = sorted[i];
+                _actionJournal.RecordResolveOrder(
+                    _scheduler.CurrentTick,
+                    action.ActionId,
+                    action.ActorId,
+                    i,
+                    $"Speed={action.SpeedTier}|ResolveTick={action.ResolveTick}");
+            }
+        }
+
+        private void RecordReservationJournal(IReadOnlyList<IActionCommand> readyActions, PositionReservationSnapshot reservations)
+        {
+            if (!ShouldRecordJournal || _scheduler == null || reservations == null)
+                return;
+
+            foreach (KeyValuePair<Guid, ReservedPosition> pair in reservations.WinningReservationsByAction)
+            {
+                Guid actionId = pair.Key;
+                ReservedPosition reserved = pair.Value;
+                Guid actorId = ResolveActorId(actionId, readyActions);
+                _actionJournal.RecordReservation(
+                    _scheduler.CurrentTick,
+                    actionId,
+                    actorId,
+                    $"Status=Granted|Pos=({reserved.Position.x},{reserved.Position.y})|Speed={reserved.ActionSpeedLevel}|ReservationTick={reserved.ReservationTick}");
+            }
+
+            foreach (Guid actionId in reservations.ReservationLostActions)
+            {
+                Guid actorId = ResolveActorId(actionId, readyActions);
+                _actionJournal.RecordReservation(
+                    _scheduler.CurrentTick,
+                    actionId,
+                    actorId,
+                    "Status=Lost");
+            }
+        }
+
+        private Guid ResolveActorId(Guid actionId, IReadOnlyList<IActionCommand> readyActions)
+        {
+            if (actionId == Guid.Empty)
+                return Guid.Empty;
+
+            if (readyActions != null)
+            {
+                for (int i = 0; i < readyActions.Count; i++)
+                {
+                    IActionCommand action = readyActions[i];
+                    if (action != null && action.ActionId == actionId)
+                        return action.ActorId;
+                }
+            }
+
+            if (_simulationRuntime != null && _simulationRuntime.ActiveActions.TryGetValue(actionId, out IReadOnlyActionState activeAction))
+                return activeAction.ActorId;
+
+            return Guid.Empty;
+        }
+
+        private void RecordMutationCommitJournal(MutationCommitResult commitResult)
+        {
+            if (!ShouldRecordJournal || _scheduler == null)
+                return;
+            if (commitResult.AppliedMutations == null || commitResult.AppliedMutations.Count == 0)
+                return;
+
+            _mutationJournal.RecordCommit(_scheduler.CurrentTick, commitResult.AppliedMutations);
         }
 
         private static ActionSpeedTier ToSpeedTier(float actionSpeed)
