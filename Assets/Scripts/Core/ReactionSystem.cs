@@ -59,7 +59,7 @@ namespace CheckmateRPG.Core
         public void Register(IReactionTrigger trigger)
         {
             if (trigger == null)
-                return;
+                throw new ArgumentNullException(nameof(trigger));
 
             if (_registeredTriggers.Exists(entry => ReferenceEquals(entry.Trigger, trigger)))
                 return;
@@ -70,7 +70,7 @@ namespace CheckmateRPG.Core
         public void Unregister(IReactionTrigger trigger)
         {
             if (trigger == null)
-                return;
+                throw new ArgumentNullException(nameof(trigger));
 
             _registeredTriggers.RemoveAll(entry => ReferenceEquals(entry.Trigger, trigger));
         }
