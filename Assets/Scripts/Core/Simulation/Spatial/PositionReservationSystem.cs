@@ -71,10 +71,12 @@ namespace CheckmateRPG.Core.Simulation.Spatial
                     result.RejectedActions ?? Array.Empty<Guid>(),
                     result.ResolutionPolicy,
                     result.Tick);
+                
+                // source:, target: 명명된 매개변수 제거
                 events.Add(new SpatialConflictResolvedEvent(
                     payload,
-                    source: result.WinningAction != Guid.Empty ? result.WinningAction.ToString("N") : string.Empty,
-                    target: payload.ConflictType.ToString()));
+                    result.WinningAction != Guid.Empty ? result.WinningAction.ToString("N") : string.Empty,
+                    payload.ConflictType.ToString()));
             }
 
             return events;
