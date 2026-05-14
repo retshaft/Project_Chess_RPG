@@ -10,5 +10,7 @@ namespace CheckmateRPG.Core.Replay
         Guid MutationId,
         Guid TargetId,
         string MutationType,
+        Guid SourceAction,
+        string TargetRuntime,
         MutationJournalResult Result);
 }
