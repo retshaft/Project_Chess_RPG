@@ -4,6 +4,8 @@ namespace CheckmateRPG.Core.Prediction
     {
         Unknown = 0,
         ActionRuntimeController = 1,
-        Legacy = 2
+        Legacy = 2,
+        UI = 3,
+        AI = 4
     }
 }

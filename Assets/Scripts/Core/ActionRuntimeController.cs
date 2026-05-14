@@ -69,6 +69,9 @@ namespace CheckmateRPG.Core
         private ValidationResult _lastValidationResult = ValidationResult.Valid();
         private bool _validationHalted;
         private PredictionPipeline _predictionPipeline;
+        private PredictionQueryService _predictionQueryService;
+        private UIPredictionAdapter _uiPredictionAdapter;
+        private AIPredictionAdapter _aiPredictionAdapter;
         private bool ShouldRecordReplay => _enableReplayRecording && _replayRecorder != null;
 
         public ActionScheduler Scheduler => _scheduler;
@@ -82,6 +85,8 @@ namespace CheckmateRPG.Core
         /// May be <c>null</c> before <c>Awake</c> has been called.
         /// </summary>
         public PredictionPipeline PredictionPipeline => _predictionPipeline;
+        public IReadOnlyPredictionQueryAdapter UIPrediction => _uiPredictionAdapter;
+        public AIPredictionAdapter AIPrediction => _aiPredictionAdapter;
 
         public static ActionRuntimeController EnsureExists()
         {
@@ -120,6 +125,22 @@ namespace CheckmateRPG.Core
                 },
                 criticalDamageMultiplier: 2,
                 spatialPolicy: SpatialResolutionPolicy.PriorityWin);
+            _predictionQueryService = new PredictionQueryService(
+                tickProvider: () => _scheduler != null ? _scheduler.CurrentTick : 0,
+                runtimeProvider: () => BuildSimulationRuntime(_scheduler != null ? _scheduler.CurrentTick : 0),
+                predictionExecutor: (actions, source) =>
+                {
+                    if (_predictionPipeline == null || _simulationRuntime == null || actions == null || actions.Count == 0)
+                        return PredictionResult.Empty;
+
+                    return _predictionPipeline.Execute(
+                        actions,
+                        _simulationRuntime,
+                        _scheduler != null ? _scheduler.CurrentTick : 0,
+                        source);
+                });
+            _uiPredictionAdapter = new UIPredictionAdapter(_predictionQueryService);
+            _aiPredictionAdapter = new AIPredictionAdapter(_predictionQueryService);
             _effectSystem = BuildEffectSystem();
             _mutationProcessor = new RuntimeMutationProcessor(
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
@@ -326,6 +347,20 @@ namespace CheckmateRPG.Core
                 _simulationRuntime,
                 _scheduler?.CurrentTick ?? 0,
                 PredictionSource.ActionRuntimeController);
+        }
+
+        public IActionCommand BuildMovePredictionCommand(UnitBrain actor, Vector2Int destination)
+        {
+            if (!CanQueueAction(actor))
+                return null;
+            return CreateMoveCommand(actor, destination);
+        }
+
+        public IActionCommand BuildAttackPredictionCommand(UnitBrain actor, Guid targetId)
+        {
+            if (!CanQueueAction(actor) || targetId == Guid.Empty)
+                return null;
+            return CreateAttackCommand(actor, targetId);
         }
 
         public void RegisterAbilityDefinition(AbilityDefinition definition)
