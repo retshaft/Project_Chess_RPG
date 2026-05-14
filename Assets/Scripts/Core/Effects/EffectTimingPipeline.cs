@@ -20,7 +20,7 @@ namespace CheckmateRPG.Core.Effects
     ///   <item>Effects whose duration reaches 0 are enqueued in the
     ///         <see cref="EffectExpirationQueue"/> and never removed inline.</item>
     ///   <item>Within a phase, effects are ordered by
-    ///         <see cref="EffectTimingOrderComparer"/>: ActionSpeedLevel → RemainingTick → EffectId.</item>
+    ///         <see cref="EffectTimingOrderComparer"/>: AppliedTick → SpeedPriority → EffectId.</item>
     /// </list>
     /// </para>
     /// </summary>

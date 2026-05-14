@@ -29,6 +29,8 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 .ThenBy(entry => GetTertiaryNumericSortKey(entry.Mutation))
                 .ThenBy(entry => GetQuaternaryNumericSortKey(entry.Mutation))
                 .ThenBy(entry => GetQuinaryNumericSortKey(entry.Mutation))
+                .ThenBy(entry => GetSenaryNumericSortKey(entry.Mutation))
+                .ThenBy(entry => GetSeptenaryNumericSortKey(entry.Mutation))
                 .ThenBy(entry => entry.OriginalIndex)
                 .Select(entry => entry.Mutation)
                 .ToArray();
@@ -151,6 +153,24 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             return mutation switch
             {
                 ApplyEffectMutation effect => BitConverter.SingleToInt32Bits(effect.Magnitude),
+                _ => 0
+            };
+        }
+
+        private static int GetSenaryNumericSortKey(IRuntimeMutation mutation)
+        {
+            return mutation switch
+            {
+                ApplyEffectMutation effect => (int)effect.StackPolicy,
+                _ => 0
+            };
+        }
+
+        private static int GetSeptenaryNumericSortKey(IRuntimeMutation mutation)
+        {
+            return mutation switch
+            {
+                ApplyEffectMutation effect => effect.MaxStackCap,
                 _ => 0
             };
         }

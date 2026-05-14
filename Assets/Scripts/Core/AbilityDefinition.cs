@@ -22,7 +22,7 @@ namespace CheckmateRPG.Core
         [Min(1)] public int InitialTickIn = 1;
         [Min(1)] public int StackCount = 1;
         public EffectStackPolicy StackPolicy = EffectStackPolicy.Refresh;
-        [Min(1)] public int MaxStackCap = 1;
+        [Min(1)] public int MaxStackCap = int.MaxValue;
         [Min(0f)] public float Magnitude = 1f;
         public bool ApplyToCaster;
     }

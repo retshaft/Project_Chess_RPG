@@ -32,6 +32,7 @@ namespace CheckmateRPG.Core.Effects
         private readonly List<IEffectProcessor> _processors = new();
         private readonly EffectExpirationQueue _expirationQueue = new();
         private readonly EffectTimingPipeline _timingPipeline;
+        private readonly EffectTickScheduler _tickScheduler;
 
         public EffectSystem(IEventBus eventBus, Func<Guid, UnitBrain> unitResolver, Func<SimulationRuntime> runtimeProvider)
         {
@@ -39,6 +40,7 @@ namespace CheckmateRPG.Core.Effects
             _context = new EffectSystemContext(unitResolver);
             _runtimeProvider = runtimeProvider ?? throw new ArgumentNullException(nameof(runtimeProvider));
             _timingPipeline = new EffectTimingPipeline(_expirationQueue);
+            _tickScheduler = new EffectTickScheduler(_timingPipeline);
         }
 
         public void RegisterProcessor(IEffectProcessor processor)
@@ -60,15 +62,7 @@ namespace CheckmateRPG.Core.Effects
                 return false;
             }
 
-            EffectRuntimeState runtimeState = FindOrCreate(runtime, state);
-            runtimeState.RefreshFromApplication(
-                state.SourceId,
-                state.StackCount,
-                state.RemainingTick,
-                state.TickInterval,
-                state.NextTickIn,
-                state.Magnitude,
-                OwnershipOwners.EffectSystem);
+            EffectRuntimeState runtimeState = ApplyByStackPolicy(runtime, state);
 
             IEffectProcessor processor = ResolveProcessor(runtimeState);
             if (processor == null)
@@ -101,8 +95,7 @@ namespace CheckmateRPG.Core.Effects
 
             // Run only the OnTickEnd phase here; other phases are invoked by the
             // ResolutionPhasePipeline at the appropriate moment.
-            IReadOnlyList<EffectTickResult> tickResults = _timingPipeline.RunPhase(
-                EffectTimingPhase.OnTickEnd,
+            IReadOnlyList<EffectTickResult> tickResults = _tickScheduler.ExecuteTick(
                 schedulerTick,
                 mutableSnapshot,
                 ResolveProcessor,
@@ -112,7 +105,7 @@ namespace CheckmateRPG.Core.Effects
             for (int i = 0; i < tickResults.Count; i++)
             {
                 EffectTickResult result = tickResults[i];
-                PublishTick(result.Effect, result.DeltaHp);
+                PublishTick(result.Effect, result.DeltaHp, schedulerTick, i);
             }
 
             // Flush expired effects – deferred removal guarantees that no effect is
@@ -190,31 +183,61 @@ namespace CheckmateRPG.Core.Effects
             return snapshot;
         }
 
-        private EffectRuntimeState FindOrCreate(SimulationRuntime runtime, EffectRuntimeState requested)
+        private EffectRuntimeState ApplyByStackPolicy(SimulationRuntime runtime, EffectRuntimeState requested)
         {
-            string effectKey = BuildSnapshotKey(requested);
-            if (runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState active))
-                return active;
+            int appliedTick = runtime.CurrentTick;
+            string baseKey = BuildBaseEffectKey(requested);
 
-            var created = new EffectRuntimeState(
-                requested.EffectId,
-                requested.SourceId,
-                requested.TargetId,
-                requested.RemainingTick,
-                requested.StackCount,
-                requested.TickInterval,
-                requested.NextTickIn,
-                requested.Magnitude,
-                requested.TimingPhase,
-                requested.ActionSpeedLevel,
-                requested.IsReaction,
-                runtime.CurrentTick);
+            if (requested.StackPolicy == EffectStackPolicy.Independent)
+            {
+                string independentKey = BuildIndependentEffectKey(runtime, requested, appliedTick);
+                return CreateEffect(runtime, independentKey, requested, appliedTick);
+            }
 
-            runtime.RegisterEffect(effectKey, created);
-            if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState runtimeEffect))
-                return created;
+            if (!runtime.TryGetMutableEffect(baseKey, out EffectRuntimeState active))
+                return CreateEffect(runtime, baseKey, requested, appliedTick);
 
-            return runtimeEffect;
+            switch (requested.StackPolicy)
+            {
+                case EffectStackPolicy.Replace:
+                    active.ReplaceFromApplication(
+                        requested.SourceId,
+                        requested.StackCount,
+                        requested.RemainingTick,
+                        requested.TickInterval,
+                        requested.NextTickIn,
+                        requested.Magnitude,
+                        appliedTick,
+                        requested.StackPolicy,
+                        requested.MaxStackCap,
+                        OwnershipOwners.EffectSystem);
+                    break;
+                case EffectStackPolicy.MaxStackCap:
+                    active.RefreshFromApplication(
+                        requested.SourceId,
+                        requested.StackCount,
+                        requested.RemainingTick,
+                        requested.TickInterval,
+                        requested.NextTickIn,
+                        requested.Magnitude,
+                        requested.MaxStackCap,
+                        OwnershipOwners.EffectSystem);
+                    break;
+                case EffectStackPolicy.Refresh:
+                default:
+                    active.RefreshFromApplication(
+                        requested.SourceId,
+                        0,
+                        requested.RemainingTick,
+                        requested.TickInterval,
+                        requested.NextTickIn,
+                        requested.Magnitude,
+                        requested.MaxStackCap,
+                        OwnershipOwners.EffectSystem);
+                    break;
+            }
+
+            return active;
         }
 
         private SimulationRuntime GetRuntime()
@@ -267,13 +290,15 @@ namespace CheckmateRPG.Core.Effects
                 state.TargetId.ToString("N")));
         }
 
-        private void PublishTick(IReadOnlyEffectRuntimeState state, int deltaHp)
+        private void PublishTick(IReadOnlyEffectRuntimeState state, int deltaHp, int schedulerTick, int tickIndex)
         {
             _eventBus.Publish(new EffectTickEvent(
                 new EffectTickPayload(
                     state.EffectId,
                     state.SourceId,
                     state.TargetId,
+                    schedulerTick,
+                    tickIndex,
                     state.RemainingTick,
                     state.StackCount,
                     deltaHp),
@@ -293,9 +318,56 @@ namespace CheckmateRPG.Core.Effects
                 state.TargetId.ToString("N")));
         }
 
-        private static string BuildSnapshotKey(EffectRuntimeState effect)
+        private static EffectRuntimeState CreateEffect(
+            SimulationRuntime runtime,
+            string effectKey,
+            EffectRuntimeState requested,
+            int appliedTick)
+        {
+            var created = new EffectRuntimeState(
+                requested.EffectId,
+                requested.SourceId,
+                requested.TargetId,
+                requested.RemainingTick,
+                requested.StackCount,
+                requested.TickInterval,
+                requested.NextTickIn,
+                requested.Magnitude,
+                requested.TimingPhase,
+                requested.ActionSpeedLevel,
+                requested.IsReaction,
+                appliedTick,
+                requested.StackPolicy,
+                requested.MaxStackCap);
+
+            runtime.RegisterEffect(effectKey, created);
+            if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState runtimeEffect))
+                return created;
+
+            return runtimeEffect;
+        }
+
+        private static string BuildBaseEffectKey(EffectRuntimeState effect)
         {
             return SimulationRuntime.BuildEffectKey(effect);
+        }
+
+        private static string BuildIndependentEffectKey(
+            SimulationRuntime runtime,
+            EffectRuntimeState requested,
+            int appliedTick)
+        {
+            string baseKey = BuildBaseEffectKey(requested);
+            string seed = $"{baseKey}:{requested.SourceId:N}:{appliedTick:D8}";
+            string key = seed;
+            int collisionIndex = 0;
+            while (runtime.ActiveEffects.ContainsKey(key))
+            {
+                collisionIndex++;
+                key = $"{seed}:{collisionIndex:D4}";
+            }
+
+            return key;
         }
     }
 }
