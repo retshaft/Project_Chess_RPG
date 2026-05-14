@@ -41,6 +41,11 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         int EffectCount,
         bool Succeeded);
 
+    public readonly record struct UnitKilledPayload(
+        Guid VictimId,
+        Guid KillerId,
+        int Tick);
+
     public readonly record struct MoveCompletedPayload(
         Guid UnitId,
         Vector2Int From,
@@ -67,6 +72,9 @@ namespace CheckmateRPG.Core.Events.ActionEvents
 
     public sealed record AbilityActionResolvedEvent(AbilityActionResolvedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<AbilityActionResolvedPayload>(Payload, EventCategory.Simulation, Source, Target);
+
+    public sealed record UnitKilledEvent(UnitKilledPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<UnitKilledPayload>(Payload, EventCategory.Simulation, Source, Target);
 
     public sealed record MoveCompletedEvent(MoveCompletedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MoveCompletedPayload>(Payload, EventCategory.Domain, Source, Target);
