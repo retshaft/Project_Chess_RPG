@@ -10,6 +10,8 @@ namespace CheckmateRPG.Core.Prediction
 {
     public sealed class PredictionQueryService
     {
+        private const int EstimatedCharsPerAction = 96;
+
         private readonly Func<int> _tickProvider;
         private readonly Func<IReadOnlySimulationRuntime> _runtimeProvider;
         private readonly Func<IReadOnlyList<IActionCommand>, PredictionSource, PredictionResult> _predictionExecutor;
@@ -130,7 +132,7 @@ namespace CheckmateRPG.Core.Prediction
             if (actions == null || actions.Count == 0)
                 return string.Empty;
 
-            var sb = new StringBuilder(actions.Count * 96);
+            var sb = new StringBuilder(actions.Count * EstimatedCharsPerAction);
             for (int i = 0; i < actions.Count; i++)
             {
                 IActionCommand action = actions[i];

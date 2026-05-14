@@ -101,6 +101,8 @@ namespace CheckmateRPG.Units
         private const float WoundedTargetBonus = 24f;
         private const float DistancePenalty = 7f;
         private const float ThreatPenalty = 45f;
+        private const float MovePredictionScoreMultiplier = 0.25f;
+        private const float MoveOccupancyConflictPenalty = 20f;
 
         private TeamComponent _team;
         private ActionRuntimeController _runtimeController;
@@ -570,7 +572,9 @@ namespace CheckmateRPG.Units
                 return 0f;
 
             PredictionActionEvaluation evaluation = _aiPredictionAdapter.Evaluate(command);
-            return evaluation.OccupancyConflict ? -20f : evaluation.Score * 0.25f;
+            return evaluation.OccupancyConflict
+                ? -MoveOccupancyConflictPenalty
+                : evaluation.Score * MovePredictionScoreMultiplier;
         }
 
         private float ScoreBoardControl(Vector2Int cell)

@@ -14,6 +14,10 @@ namespace CheckmateRPG.Core.Prediction
 
     public sealed class AIPredictionAdapter : IReadOnlyPredictionQueryAdapter
     {
+        private const float DeathScoreWeight = 100f;
+        private const float InterruptPenalty = 80f;
+        private const float OccupancyConflictPenalty = 20f;
+
         private readonly PredictionQueryService _queryService;
 
         public AIPredictionAdapter(PredictionQueryService queryService)
@@ -69,9 +73,9 @@ namespace CheckmateRPG.Core.Prediction
                     occupancyConflict = true;
             }
 
-            float score = expectedDamage + (expectedDeathCount * 100f) - (expectedInterruptCount * 80f);
+            float score = expectedDamage + (expectedDeathCount * DeathScoreWeight) - (expectedInterruptCount * InterruptPenalty);
             if (occupancyConflict)
-                score -= 20f;
+                score -= OccupancyConflictPenalty;
 
             return new PredictionActionEvaluation(
                 score,

@@ -45,10 +45,12 @@ namespace CheckmateRPG.Core.Prediction
         /// <summary>Damage events that would be applied, in mutation order.</summary>
         public IReadOnlyList<PredictedDamage> Damages { get; }
         public IReadOnlyList<PredictedDamage> ExpectedDamage => Damages;
+        public IReadOnlyList<PredictedDamage> ExpectedDamages => Damages;
 
         /// <summary>Movement events that would be applied, in mutation order.</summary>
         public IReadOnlyList<PredictedPosition> Positions { get; }
         public IReadOnlyList<PredictedPosition> ExpectedPosition => Positions;
+        public IReadOnlyList<PredictedPosition> ExpectedPositions => Positions;
 
         /// <summary>Units that would die as a result of the simulated tick.</summary>
         public IReadOnlyList<PredictedDeath> Deaths { get; }
@@ -57,6 +59,7 @@ namespace CheckmateRPG.Core.Prediction
         /// <summary>Actions that are predicted to be interrupted or cancelled.</summary>
         public IReadOnlyList<PredictedInterrupt> Interrupts { get; }
         public IReadOnlyList<PredictedInterrupt> ExpectedInterrupt => Interrupts;
+        public IReadOnlyList<PredictedInterrupt> ExpectedInterrupts => Interrupts;
 
         /// <summary>
         /// Deterministic resolve order for all non-cancelled actions, identical to the
