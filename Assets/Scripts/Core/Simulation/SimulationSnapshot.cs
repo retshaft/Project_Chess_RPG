@@ -282,33 +282,33 @@ namespace CheckmateRPG.Core.Simulation
 
         public SimulationActionSnapshot(SimulationActionSnapshot source)
             : this(
-                source?.ActionId ?? Guid.Empty,
-                source?.ActorId ?? Guid.Empty,
-                source?.ActionType,
-                source?.State ?? ActionState.Queued,
-                source?.QueuedTick ?? 0,
-                source?.StartTick ?? 0,
-                source?.ResolveTick ?? 0,
-                source?.RecoveryEndTick ?? 0,
-                source?.SpeedTier ?? ActionSpeedTier.Normal,
-                source?.IsInterruptible ?? true,
-                source?.IsRecoveryInterruptible ?? false,
-                source?.InterruptPriority ?? InterruptPriority.Normal,
-                source?.InterruptWindow ?? InterruptWindow.CastingInterruptible,
-                source?.IntentLockType ?? ActionLockType.CastLock,
-                source?.ConcurrencyPolicy ?? ActionConcurrencyPolicy.Reject,
-                source?.CanBeInterrupted ?? false,
-                source?.CanInterruptOthers ?? false,
-                source?.Definition,
-                source?.InterruptState ?? default,
-                source?.InterruptPolicy ?? default,
-                source?.From,
-                source?.To,
-                source?.TargetId,
-                source?.Damage,
-                source?.IsCritical,
-                source?.AbilityId,
-                source?.TargetIds)
+                source != null ? source.ActionId : Guid.Empty,
+                source != null ? source.ActorId : Guid.Empty,
+                source != null ? source.ActionType : null,
+                source != null ? source.State : ActionState.Queued,
+                source != null ? source.QueuedTick : 0,
+                source != null ? source.StartTick : 0,
+                source != null ? source.ResolveTick : 0,
+                source != null ? source.RecoveryEndTick : 0,
+                source != null ? source.SpeedTier : ActionSpeedTier.Normal,
+                source != null ? source.IsInterruptible : true,
+                source != null ? source.IsRecoveryInterruptible : false,
+                source != null ? source.InterruptPriority : InterruptPriority.Normal,
+                source != null ? source.InterruptWindow : InterruptWindow.CastingInterruptible,
+                source != null ? source.IntentLockType : ActionLockType.CastLock,
+                source != null ? source.ConcurrencyPolicy : ActionConcurrencyPolicy.Reject,
+                source != null ? source.CanBeInterrupted : false,
+                source != null ? source.CanInterruptOthers : false,
+                source != null ? source.Definition : default,
+                source != null ? source.InterruptState : default,
+                source != null ? source.InterruptPolicy : default,
+                source != null ? source.From : null,
+                source != null ? source.To : null,
+                source != null ? source.TargetId : null,
+                source != null ? source.Damage : null,
+                source != null ? source.IsCritical : null,
+                source != null ? source.AbilityId : null,
+                source != null ? source.TargetIds : null)
         {
         }
 
@@ -327,14 +327,11 @@ namespace CheckmateRPG.Core.Simulation
         public InterruptWindow InterruptWindow { get; }
         public ActionLockType IntentLockType { get; }
         public ActionConcurrencyPolicy ConcurrencyPolicy { get; }
-        
-        // IReadOnlyActionState 누락 프로퍼티 추가
         public bool CanBeInterrupted { get; }
         public bool CanInterruptOthers { get; }
         public ActionDefinition Definition { get; }
         public ActionInterruptState InterruptState { get; }
         public ActionInterruptPolicy InterruptPolicy { get; }
-
         public bool IsCompleted => ActionStateMachine.IsTerminal(State);
         public Vector2Int? From { get; }
         public Vector2Int? To { get; }
@@ -392,11 +389,11 @@ namespace CheckmateRPG.Core.Simulation
                 action.InterruptWindow,
                 action.IntentLockType,
                 action.ConcurrencyPolicy,
-                action.CanBeInterrupted,     // 매핑 추가
-                action.CanInterruptOthers,   // 매핑 추가
-                action.Definition,           // 매핑 추가
-                action.InterruptState,       // 매핑 추가
-                action.InterruptPolicy,      // 매핑 추가
+                action.CanBeInterrupted,
+                action.CanInterruptOthers,
+                action.Definition,
+                action.InterruptState,
+                action.InterruptPolicy,
                 from,
                 to,
                 targetId,
