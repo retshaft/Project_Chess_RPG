@@ -973,14 +973,20 @@ namespace CheckmateRPG.Core
                 new ActionCostContext(actor, abilityDefinition, abilityRuntimeState));
             if (!_actionCostReservation.CanAfford(actor.ActorId, cost, GetCurrentSp))
             {
-                RecordActionRequestJournal(action, $"Outcome=Rejected|Reason=InsufficientCost|{inputTrace}");
+                RecordActionRequestJournal(action, BuildActionRequestDetail(
+                    outcome: "Rejected",
+                    reason: "InsufficientCost",
+                    inputTrace: inputTrace));
                 return false;
             }
 
             ActionCostReservationHooks hooks = BuildReservationHooks(abilityDefinition, abilityRuntimeState);
             if (!_actionCostReservation.ReserveCost(action.ActionId, actor.ActorId, cost, hooks))
             {
-                RecordActionRequestJournal(action, $"Outcome=Rejected|Reason=ReservationFailed|{inputTrace}");
+                RecordActionRequestJournal(action, BuildActionRequestDetail(
+                    outcome: "Rejected",
+                    reason: "ReservationFailed",
+                    inputTrace: inputTrace));
                 return false;
             }
 
@@ -989,7 +995,12 @@ namespace CheckmateRPG.Core
                 ActionAdmissionResult admissionResult = _scheduler.ScheduleAction(action);
                 RecordActionRequestJournal(
                     action,
-                    $"Outcome=Admission|Status={admissionResult.Status}|Reason={admissionResult.Reason}|Lock={admissionResult.CurrentLock}|{inputTrace}");
+                    BuildActionRequestDetail(
+                        outcome: "Admission",
+                        reason: admissionResult.Reason.ToString(),
+                        inputTrace: inputTrace,
+                        status: admissionResult.Status.ToString(),
+                        currentLock: admissionResult.CurrentLock.ToString()));
                 if (admissionResult.Status == ActionAdmissionStatus.Rejected)
                 {
                     _actionCostReservation.Rollback(action.ActionId);
@@ -1002,7 +1013,11 @@ namespace CheckmateRPG.Core
             catch (Exception ex)
             {
                 _actionCostReservation.Rollback(action.ActionId);
-                RecordActionRequestJournal(action, $"Outcome=Rejected|Reason=Exception|Message={ex.Message}|{inputTrace}");
+                RecordActionRequestJournal(action, BuildActionRequestDetail(
+                    outcome: "Rejected",
+                    reason: "Exception",
+                    inputTrace: inputTrace,
+                    message: ex.Message));
                 Debug.LogWarning($"[ActionRuntimeController] Failed to queue action with reservation: {ex.Message}");
                 return false;
             }
@@ -1053,6 +1068,31 @@ namespace CheckmateRPG.Core
                 action.ActionId,
                 action.ActorId,
                 details ?? string.Empty);
+        }
+
+        private static string BuildActionRequestDetail(
+            string outcome,
+            string reason,
+            string inputTrace,
+            string status = null,
+            string currentLock = null,
+            string message = null)
+        {
+            string normalizedInput = inputTrace ?? string.Empty;
+            string normalizedOutcome = outcome ?? string.Empty;
+            string normalizedReason = reason ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(status) && !string.IsNullOrWhiteSpace(currentLock))
+            {
+                return $"Outcome={normalizedOutcome}|Status={status}|Reason={normalizedReason}|Lock={currentLock}|{normalizedInput}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                return $"Outcome={normalizedOutcome}|Reason={normalizedReason}|Message={message}|{normalizedInput}";
+            }
+
+            return $"Outcome={normalizedOutcome}|Reason={normalizedReason}|{normalizedInput}";
         }
 
         private void RecordResolveOrderJournal(IReadOnlyList<IActionCommand> readyActions)
