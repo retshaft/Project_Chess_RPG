@@ -50,6 +50,7 @@ namespace CheckmateRPG.Core
         private ActionResolverRegistry _resolverRegistry;
         private RuntimeMutationProcessor _mutationProcessor;
         private MutationCommitService _mutationCommitService;
+        private ReactionSystem _reactionSystem;
         private AbilityExecutionPipeline _abilityPipeline;
         private IActionCostPolicy _actionCostPolicy;
         private ActionCostReservation _actionCostReservation;
@@ -126,6 +127,11 @@ namespace CheckmateRPG.Core
                 state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state),
                 TryApplyAbilityActionCompleteMutation);
             _mutationCommitService = new MutationCommitService(_mutationProcessor);
+            _reactionSystem = new ReactionSystem(
+                _eventBus,
+                _mutationCommitService,
+                () => _simulationRuntime);
+            _reactionSystem.Attach();
             _resolutionPipeline = new ResolutionPhasePipeline(
                 resolveAction: (action, _) =>
                 {
@@ -169,6 +175,7 @@ namespace CheckmateRPG.Core
                 _tickScheduler.OnTick -= HandleRuntimeTick;
             _eventTraceRecorder?.Detach();
             _timelineRecorder?.Detach();
+            _reactionSystem?.Detach();
             _eventBus.Unsubscribe<ActionQueuedEvent>(HandleActionQueued);
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
