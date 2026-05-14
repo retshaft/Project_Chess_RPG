@@ -85,7 +85,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
             int currentTick = mutation.Tick;
             _simulationRuntime.ApplyDeadUnitLifecycle(mutation.TargetId, currentTick, OwnershipOwners.ActionScheduler);
             UnitKilledEvent unitKilledEvent = new(
-                new UnitKilledPayload(mutation.TargetId, mutation.SourceId, currentTick),
+                new CheckmateRPG.Core.Events.ActionEvents.UnitKilledPayload(mutation.TargetId, mutation.SourceId, currentTick),
                 mutation.SourceId.ToString("N"),
                 mutation.TargetId.ToString("N"));
 
