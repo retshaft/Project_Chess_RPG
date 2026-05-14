@@ -130,7 +130,6 @@ namespace CheckmateRPG.Core.Effects
             MaxStackCap = ResolveStackCap(maxStackCap);
             StackCount = ClampStack(StackCount + Mathf.Max(0, stackToAdd), MaxStackCap);
             RemainingTick = Mathf.Max(RemainingTick, remainingTick);
-            RemainingDuration = Mathf.Max(RemainingDuration, remainingTick);
             TickInterval = Mathf.Max(1, tickInterval);
             NextTickIn = Mathf.Clamp(nextTickIn, 1, TickInterval);
             Magnitude = Mathf.Max(0f, magnitude);

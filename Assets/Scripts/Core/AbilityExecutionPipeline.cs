@@ -316,7 +316,7 @@ namespace CheckmateRPG.Core
                 Mathf.Max(1, effect.StackCount),
                 Mathf.Max(0f, effect.Magnitude),
                 effect.StackPolicy,
-                Mathf.Max(1, effect.MaxStackCap));
+                effect.MaxStackCap);
         }
     }
 }
