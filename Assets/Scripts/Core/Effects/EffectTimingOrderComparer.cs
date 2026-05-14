@@ -39,7 +39,9 @@ namespace CheckmateRPG.Core.Effects
             if (appliedCompare != 0) return appliedCompare;
 
             // 2. Higher effective speed first (VeryFast has highest priority).
-            int speedCompare = GetSpeedPriority(ey.ActionSpeedLevel).CompareTo(GetSpeedPriority(ex.ActionSpeedLevel));
+            int xSpeedPriority = GetSpeedPriority(ex.ActionSpeedLevel);
+            int ySpeedPriority = GetSpeedPriority(ey.ActionSpeedLevel);
+            int speedCompare = ySpeedPriority.CompareTo(xSpeedPriority);
             if (speedCompare != 0) return speedCompare;
 
             // 3. Deterministic effect-id ordering.

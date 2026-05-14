@@ -26,6 +26,9 @@ namespace CheckmateRPG.Core.Effects
 
     public sealed class EffectSystem
     {
+        private const int TickPaddingWidth = 8;
+        private const int CollisionIndexPaddingWidth = 4;
+
         private readonly IEventBus _eventBus;
         private readonly EffectSystemContext _context;
         private readonly Func<SimulationRuntime> _runtimeProvider;
@@ -358,13 +361,13 @@ namespace CheckmateRPG.Core.Effects
             int appliedTick)
         {
             string baseKey = BuildBaseEffectKey(requested);
-            string seed = $"{baseKey}:{requested.SourceId:N}:{appliedTick:D8}";
+            string seed = $"{baseKey}:{requested.SourceId:N}:{appliedTick.ToString($"D{TickPaddingWidth}")}";
             string key = seed;
             int collisionIndex = 0;
             while (runtime.ActiveEffects.ContainsKey(key))
             {
                 collisionIndex++;
-                key = $"{seed}:{collisionIndex:D4}";
+                key = $"{seed}:{collisionIndex.ToString($"D{CollisionIndexPaddingWidth}")}";
             }
 
             return key;
