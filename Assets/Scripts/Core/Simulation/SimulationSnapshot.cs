@@ -238,6 +238,11 @@ namespace CheckmateRPG.Core.Simulation
             InterruptWindow interruptWindow,
             ActionLockType intentLockType,
             ActionConcurrencyPolicy concurrencyPolicy,
+            bool canBeInterrupted,
+            bool canInterruptOthers,
+            ActionDefinition definition,
+            ActionInterruptState interruptState,
+            ActionInterruptPolicy interruptPolicy,
             Vector2Int? from,
             Vector2Int? to,
             Guid? targetId,
@@ -261,6 +266,11 @@ namespace CheckmateRPG.Core.Simulation
             InterruptWindow = interruptWindow;
             IntentLockType = intentLockType;
             ConcurrencyPolicy = concurrencyPolicy;
+            CanBeInterrupted = canBeInterrupted;
+            CanInterruptOthers = canInterruptOthers;
+            Definition = definition;
+            InterruptState = interruptState;
+            InterruptPolicy = interruptPolicy;
             From = from;
             To = to;
             TargetId = targetId;
@@ -287,6 +297,11 @@ namespace CheckmateRPG.Core.Simulation
                 source?.InterruptWindow ?? InterruptWindow.CastingInterruptible,
                 source?.IntentLockType ?? ActionLockType.CastLock,
                 source?.ConcurrencyPolicy ?? ActionConcurrencyPolicy.Reject,
+                source?.CanBeInterrupted ?? false,
+                source?.CanInterruptOthers ?? false,
+                source?.Definition,
+                source?.InterruptState ?? default,
+                source?.InterruptPolicy ?? default,
                 source?.From,
                 source?.To,
                 source?.TargetId,
@@ -312,6 +327,14 @@ namespace CheckmateRPG.Core.Simulation
         public InterruptWindow InterruptWindow { get; }
         public ActionLockType IntentLockType { get; }
         public ActionConcurrencyPolicy ConcurrencyPolicy { get; }
+        
+        // IReadOnlyActionState 누락 프로퍼티 추가
+        public bool CanBeInterrupted { get; }
+        public bool CanInterruptOthers { get; }
+        public ActionDefinition Definition { get; }
+        public ActionInterruptState InterruptState { get; }
+        public ActionInterruptPolicy InterruptPolicy { get; }
+
         public bool IsCompleted => ActionStateMachine.IsTerminal(State);
         public Vector2Int? From { get; }
         public Vector2Int? To { get; }
@@ -369,6 +392,11 @@ namespace CheckmateRPG.Core.Simulation
                 action.InterruptWindow,
                 action.IntentLockType,
                 action.ConcurrencyPolicy,
+                action.CanBeInterrupted,     // 매핑 추가
+                action.CanInterruptOthers,   // 매핑 추가
+                action.Definition,           // 매핑 추가
+                action.InterruptState,       // 매핑 추가
+                action.InterruptPolicy,      // 매핑 추가
                 from,
                 to,
                 targetId,
