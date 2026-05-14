@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Core.Runtime;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Prediction
