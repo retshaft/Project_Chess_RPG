@@ -973,14 +973,14 @@ namespace CheckmateRPG.Core
                 new ActionCostContext(actor, abilityDefinition, abilityRuntimeState));
             if (!_actionCostReservation.CanAfford(actor.ActorId, cost, GetCurrentSp))
             {
-                RecordActionRequestJournal(action, $"Rejected:InsufficientCost|{inputTrace}");
+                RecordActionRequestJournal(action, $"Outcome=Rejected|Reason=InsufficientCost|{inputTrace}");
                 return false;
             }
 
             ActionCostReservationHooks hooks = BuildReservationHooks(abilityDefinition, abilityRuntimeState);
             if (!_actionCostReservation.ReserveCost(action.ActionId, actor.ActorId, cost, hooks))
             {
-                RecordActionRequestJournal(action, $"Rejected:ReservationFailed|{inputTrace}");
+                RecordActionRequestJournal(action, $"Outcome=Rejected|Reason=ReservationFailed|{inputTrace}");
                 return false;
             }
 
@@ -989,7 +989,7 @@ namespace CheckmateRPG.Core
                 ActionAdmissionResult admissionResult = _scheduler.ScheduleAction(action);
                 RecordActionRequestJournal(
                     action,
-                    $"Admission={admissionResult.Status}|Reason={admissionResult.Reason}|Lock={admissionResult.CurrentLock}|{inputTrace}");
+                    $"Outcome=Admission|Status={admissionResult.Status}|Reason={admissionResult.Reason}|Lock={admissionResult.CurrentLock}|{inputTrace}");
                 if (admissionResult.Status == ActionAdmissionStatus.Rejected)
                 {
                     _actionCostReservation.Rollback(action.ActionId);
@@ -1002,7 +1002,7 @@ namespace CheckmateRPG.Core
             catch (Exception ex)
             {
                 _actionCostReservation.Rollback(action.ActionId);
-                RecordActionRequestJournal(action, $"Rejected:Exception|{ex.Message}|{inputTrace}");
+                RecordActionRequestJournal(action, $"Outcome=Rejected|Reason=Exception|Message={ex.Message}|{inputTrace}");
                 Debug.LogWarning($"[ActionRuntimeController] Failed to queue action with reservation: {ex.Message}");
                 return false;
             }

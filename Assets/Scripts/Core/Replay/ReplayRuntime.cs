@@ -25,9 +25,6 @@ namespace CheckmateRPG.Core.Replay
             for (int i = 0; i < entries.Count; i++)
             {
                 ActionJournalEntry entry = entries[i];
-                if (entry.EntryType == ActionJournalEntryType.TickAdvance)
-                    continue;
-
                 IReadOnlyList<IRuntimeMutation> resolvedMutations = executor(entry);
                 replayMutationJournal.RecordCommit(entry.Tick, resolvedMutations);
             }
