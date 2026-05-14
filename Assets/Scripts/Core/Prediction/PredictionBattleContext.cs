@@ -8,7 +8,7 @@ namespace CheckmateRPG.Core.Prediction
 {
     /// <summary>
     /// A read-only <see cref="IBattleContext"/> implementation backed by the cloned
-    /// <see cref="SimulationRuntime"/> inside a <see cref="PredictionSimulationContext"/>.
+    /// <see cref="SimulationRuntime"/> inside a <see cref="PredictionContext"/>.
     /// <para>
     /// Cell validity and attack range are provided by caller-supplied delegates so that
     /// the prediction sandbox has no dependency on scene singletons such as

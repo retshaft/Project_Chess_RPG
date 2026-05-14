@@ -86,7 +86,9 @@ namespace CheckmateRPG.Core.Prediction
         public PredictionResult Execute(
             IReadOnlyList<IActionCommand> actions,
             SimulationRuntime sourceRuntime,
-            int tick)
+            int tick,
+            PredictionSource predictionSource = PredictionSource.ActionRuntimeController,
+            Guid predictionId = default)
         {
             if (sourceRuntime == null)
                 throw new ArgumentNullException(nameof(sourceRuntime));
@@ -95,7 +97,8 @@ namespace CheckmateRPG.Core.Prediction
                 return PredictionResult.Empty;
 
             // ── [2] Clone runtime ─────────────────────────────────────────────────
-            var context = new PredictionSimulationContext(sourceRuntime, tick);
+            var context = new PredictionContext(sourceRuntime, tick, predictionSource, predictionId);
+            PredictionIsolation.AssertRuntimeIsolation(context.RuntimeClone);
 
             // ── [6] Deterministic ordering (identical to production pipeline) ──────
             IReadOnlyList<IActionCommand> sorted = SortActions(actions);
@@ -105,11 +108,11 @@ namespace CheckmateRPG.Core.Prediction
 
             // ── Spatial reservation snapshot (collision preview) ──────────────────
             PositionReservationSnapshot spatialSnapshot =
-                _positionReservationSystem.Build(sorted, context.PredictedRuntime, tick);
+                _positionReservationSystem.Build(sorted, context.ClonedRuntime, tick);
 
             // ── [3] Simulate action resolution ────────────────────────────────────
             var battleContext = new PredictionBattleContext(
-                context.PredictedRuntime,
+                context.ClonedRuntime,
                 _isCellValid,
                 _attackRangeLookup,
                 _criticalDamageMultiplier);
@@ -124,7 +127,7 @@ namespace CheckmateRPG.Core.Prediction
             IReadOnlyList<IRuntimeMutation> orderedMutations =
                 mutationQueue.CreateOrderedSnapshot(_mutationOrderingService);
 
-            PredictionMutationApplier.Apply(orderedMutations, context);
+            PredictionMutationSandbox.Apply(orderedMutations, context);
 
             // ── [3] Collect result, [3] Discard clone ─────────────────────────────
             // The cloned runtime is referenced only by `context`; once we return
@@ -145,7 +148,7 @@ namespace CheckmateRPG.Core.Prediction
             PositionReservationSnapshot spatialSnapshot,
             PredictionBattleContext battleContext,
             ActionResolutionContext resolutionContext,
-            PredictionSimulationContext context)
+            PredictionContext context)
         {
             resolutionContext.CurrentPhase = ResolutionPhase.PreResolve;
 
@@ -190,7 +193,7 @@ namespace CheckmateRPG.Core.Prediction
             PositionReservationSnapshot spatialSnapshot,
             PredictionBattleContext battleContext,
             ActionResolutionContext resolutionContext,
-            PredictionSimulationContext context)
+            PredictionContext context)
         {
             if (resolutionContext.IsCancelled(move.ActionId))
                 return;
@@ -214,7 +217,7 @@ namespace CheckmateRPG.Core.Prediction
             AttackActionCommand attack,
             PredictionBattleContext battleContext,
             ActionResolutionContext resolutionContext,
-            PredictionSimulationContext context)
+            PredictionContext context)
         {
             if (resolutionContext.IsCancelled(attack.ActionId))
                 return;
@@ -245,7 +248,7 @@ namespace CheckmateRPG.Core.Prediction
             IActionCommand action,
             ActionCancellationReason reason,
             ActionResolutionContext resolutionContext,
-            PredictionSimulationContext context)
+            PredictionContext context)
         {
             resolutionContext.MarkCancelled(action.ActionId, reason);
             context.RecordInterrupt(new PredictedInterrupt(action.ActionId, action.ActorId, reason));
@@ -306,7 +309,7 @@ namespace CheckmateRPG.Core.Prediction
 
         private static void RecordResolveOrder(
             IReadOnlyList<IActionCommand> sorted,
-            PredictionSimulationContext context)
+            PredictionContext context)
         {
             for (int i = 0; i < sorted.Count; i++)
             {
