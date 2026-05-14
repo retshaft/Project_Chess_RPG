@@ -107,14 +107,14 @@ namespace CheckmateRPG.Core
                 if (runtime == null)
                     return;
 
-                int stackDepth = _reactionStack.Count;
-                int nextDepth = stackDepth + 1;
-                if (!_reactionDepthGuard.IsDepthAllowed(nextDepth, typeof(TEvent).Name))
+                int currentReactionDepth = _reactionStack.Count;
+                int nextReactionDepth = currentReactionDepth + 1;
+                if (!_reactionDepthGuard.IsDepthAllowed(nextReactionDepth, typeof(TEvent).Name))
                     return;
 
-                string parentReactionId = stackDepth > 0 ? _reactionStack.Peek() : string.Empty;
+                string parentReactionId = currentReactionDepth > 0 ? _reactionStack.Peek() : string.Empty;
                 var reactionContext = new ReactionContext(
-                    nextDepth,
+                    nextReactionDepth,
                     parentReactionId,
                     gameEvent,
                     runtime.CurrentTick,
@@ -176,12 +176,17 @@ namespace CheckmateRPG.Core
             }
 
             string signature = BuildEventRecursionSignature(resolvableEvent);
-            if (signatures.Add(signature))
+            if (!IsRecursiveSignature(signatures, signature))
                 return false;
 
             Debug.LogWarning(
                 $"[ReactionSystem] Recursive reaction event blocked. Chain={reactionChainId:N} Signature={signature}.");
             return true;
+        }
+
+        private static bool IsRecursiveSignature(HashSet<string> signatures, string signature)
+        {
+            return !signatures.Add(signature);
         }
 
         private static string BuildEventRecursionSignature(IResolvableGameEvent gameEvent)
@@ -228,9 +233,7 @@ namespace CheckmateRPG.Core
 
         private void ExecuteSingleReaction(PendingReactionExecution execution)
         {
-            string reactionId = string.IsNullOrWhiteSpace(execution.ReactionId)
-                ? UnknownReactionId
-                : execution.ReactionId;
+            string reactionId = GetSafeReactionId(execution.ReactionId);
             _reactionStack.Push(reactionId);
             try
             {
@@ -259,6 +262,13 @@ namespace CheckmateRPG.Core
             {
                 _reactionStack.Pop();
             }
+        }
+
+        private static string GetSafeReactionId(string reactionId)
+        {
+            return string.IsNullOrWhiteSpace(reactionId)
+                ? UnknownReactionId
+                : reactionId;
         }
 
         private List<PendingReactionExecution> BuildPendingExecutions(
