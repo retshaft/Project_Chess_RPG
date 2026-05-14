@@ -231,10 +231,10 @@ namespace CheckmateRPG.Core
                 effectState.Magnitude,
                 effectState.StackPolicy,
                 effectState.MaxStackCap,
-                timingPhase: effectState.TimingPhase,
-                actionSpeedLevel: effectState.ActionSpeedLevel,
-                isReaction: effectState.IsReaction,
-                Context: new MutationContext(
+                TimingPhase: effectState.TimingPhase, // timingPhase -> TimingPhase 로 수정
+                ActionSpeedLevel: effectState.ActionSpeedLevel, // actionSpeedLevel -> ActionSpeedLevel 로 수정
+                IsReaction: effectState.IsReaction, // isReaction -> IsReaction 로 수정
+                Context: new MutationContext( // context -> Context 로 수정
                     _scheduler != null ? _scheduler.CurrentTick : 0,
                     Guid.Empty,
                     effectState.TargetId,
