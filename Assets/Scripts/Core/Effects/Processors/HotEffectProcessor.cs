@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using CheckmateRPG.Components;
+using CheckmateRPG.Core.Runtime.Mutations;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Effects.Processors
@@ -24,26 +24,31 @@ namespace CheckmateRPG.Core.Effects.Processors
             _ = effect;
         }
 
-        public int OnTick(EffectSystemContext context, IReadOnlyEffectRuntimeState effect)
+        public EffectProcessorResult OnTick(
+            EffectSystemContext context,
+            EffectMutationContext mutationContext,
+            EffectMutationFactory mutationFactory,
+            IReadOnlyEffectRuntimeState effect)
         {
-            if (!context.TryGetUnit(effect.TargetId, out var target) ||
-                target == null ||
-                !target.TryGetComponent(out HealthComponent health) ||
-                health.IsDead)
-            {
-                return 0;
-            }
-
             if (!_healRatioPerTick.TryGetValue(effect.EffectId, out float ratio) || ratio <= 0f)
-                return 0;
+                return EffectProcessorResult.Empty;
+
+            if (!mutationContext.TargetUnit.Exists || mutationContext.TargetUnit.IsDead || mutationContext.TargetUnit.MaxHp <= 0)
+                return EffectProcessorResult.Empty;
 
             float stackScaledRatio = ratio * Mathf.Max(1, effect.StackCount) * Mathf.Max(0f, effect.Magnitude);
-            float healAmount = health.MaxHealth * stackScaledRatio;
+            float healAmount = mutationContext.TargetUnit.MaxHp * stackScaledRatio;
             if (healAmount <= 0f)
-                return 0;
+                return EffectProcessorResult.Empty;
 
-            health.Heal(healAmount);
-            return Mathf.RoundToInt(healAmount);
+            int amount = Mathf.RoundToInt(healAmount);
+            IRuntimeMutation mutation = mutationFactory?.CreateHeal(mutationContext, amount);
+            if (mutation == null)
+                return EffectProcessorResult.Empty;
+
+            return new EffectProcessorResult(
+                new[] { mutation },
+                amount);
         }
 
         public void OnExpired(EffectSystemContext context, IReadOnlyEffectRuntimeState effect)

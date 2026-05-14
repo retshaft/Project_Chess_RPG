@@ -12,7 +12,7 @@ namespace CheckmateRPG.Core.Effects
             _timingPipeline = timingPipeline ?? throw new ArgumentNullException(nameof(timingPipeline));
         }
 
-        public IReadOnlyList<EffectTickResult> ExecuteTick(
+        public EffectPhaseResult ExecuteTick(
             int currentTick,
             IReadOnlyDictionary<string, EffectRuntimeState> activeEffects,
             Func<IReadOnlyEffectRuntimeState, IEffectProcessor> processorResolver,
