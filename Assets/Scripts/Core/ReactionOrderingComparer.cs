@@ -11,7 +11,7 @@ namespace CheckmateRPG.Core
 
     /// <summary>
     /// Deterministic reaction ordering:
-    /// 1) Earlier registration first
+    /// 1) Earlier registration first (lower registration index first, ascending)
     /// 2) Higher source action speed level
     /// 3) ReactionId ordinal ordering
     /// </summary>
