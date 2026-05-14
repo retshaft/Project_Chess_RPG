@@ -13,6 +13,8 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         int InitialTickIn,
         int StackCount,
         float Magnitude,
+        CheckmateRPG.Core.Effects.EffectStackPolicy StackPolicy = CheckmateRPG.Core.Effects.EffectStackPolicy.Refresh,
+        int MaxStackCap = int.MaxValue,
         CheckmateRPG.Core.Effects.EffectTimingPhase TimingPhase = CheckmateRPG.Core.Effects.EffectTimingPhase.OnTickEnd,
         ActionSpeedTier ActionSpeedLevel = ActionSpeedTier.Normal,
         bool IsReaction = false,

@@ -10,10 +10,9 @@ namespace CheckmateRPG.Core.Effects
     /// <para>
     /// Priority (ascending = executed first):
     /// <list type="number">
-    ///   <item><see cref="IReadOnlyEffectRuntimeState.ActionSpeedLevel"/> –
-    ///         lower enum value (VeryFast = 0) executes before higher values.</item>
-    ///   <item>Remaining tick – fewer ticks remaining is processed first.</item>
-    ///   <item>Effect key string – lexicographic comparison for a stable tie-break.</item>
+    ///   <item>Earlier <see cref="IReadOnlyEffectRuntimeState.AppliedTick"/> first.</item>
+    ///   <item>Higher effective speed first (VeryFast → VerySlow).</item>
+    ///   <item><see cref="IReadOnlyEffectRuntimeState.EffectId"/> ordinal ordering.</item>
     /// </list>
     /// </para>
     /// </summary>
@@ -35,16 +34,35 @@ namespace CheckmateRPG.Core.Effects
             if (ex == null) return 1;
             if (ey == null) return -1;
 
-            // 1. ActionSpeedLevel – lower enum value resolves first.
-            int speedCompare = ((int)ex.ActionSpeedLevel).CompareTo((int)ey.ActionSpeedLevel);
+            // 1. Earlier applied tick first.
+            int appliedCompare = ex.AppliedTick.CompareTo(ey.AppliedTick);
+            if (appliedCompare != 0) return appliedCompare;
+
+            // 2. Higher effective speed first (VeryFast has highest priority).
+            int xSpeedPriority = GetSpeedPriority(ex.ActionSpeedLevel);
+            int ySpeedPriority = GetSpeedPriority(ey.ActionSpeedLevel);
+            int speedCompare = ySpeedPriority.CompareTo(xSpeedPriority);
             if (speedCompare != 0) return speedCompare;
 
-            // 2. Remaining tick – fewer ticks remaining (closer to expiry) processed first.
-            int tickCompare = ex.RemainingTick.CompareTo(ey.RemainingTick);
-            if (tickCompare != 0) return tickCompare;
+            // 3. Deterministic effect-id ordering.
+            int effectIdCompare = string.Compare(ex.EffectId, ey.EffectId, StringComparison.Ordinal);
+            if (effectIdCompare != 0) return effectIdCompare;
 
-            // 3. Deterministic runtime key tie-break (format: "{targetId}:{effectId}").
+            // 4. Deterministic runtime key fallback.
             return string.Compare(x.Key, y.Key, StringComparison.Ordinal);
+        }
+
+        private static int GetSpeedPriority(ActionSpeedTier tier)
+        {
+            return tier switch
+            {
+                ActionSpeedTier.VeryFast => 5,
+                ActionSpeedTier.Fast => 4,
+                ActionSpeedTier.Normal => 3,
+                ActionSpeedTier.Slow => 2,
+                ActionSpeedTier.VerySlow => 1,
+                _ => 0
+            };
         }
     }
 }

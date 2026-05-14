@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Effects;
 using UnityEngine;
 
 namespace CheckmateRPG.Core
@@ -20,6 +21,8 @@ namespace CheckmateRPG.Core
         [Min(1)] public int TickInterval = 1;
         [Min(1)] public int InitialTickIn = 1;
         [Min(1)] public int StackCount = 1;
+        public EffectStackPolicy StackPolicy = EffectStackPolicy.Refresh;
+        [Min(0)] public int MaxStackCap = 0;
         [Min(0f)] public float Magnitude = 1f;
         public bool ApplyToCaster;
     }

@@ -94,7 +94,7 @@ namespace CheckmateRPG.Core
             SimulationTimelineEntryType type = ResolveEntryType(gameEvent);
             string detail = BuildEventTrace(gameEvent);
 
-            // IResolvableGameEventÀÎ °æ¿ì¿¡¸¸ Source¿Í TargetÀ» °¡Á®¿Àµµ·Ï ¼öÁ¤
+            // IResolvableGameEventï¿½ï¿½ ï¿½ï¿½ì¿¡ï¿½ï¿½ Sourceï¿½ï¿½ Targetï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             string source = string.Empty;
             string target = string.Empty;
 
@@ -159,7 +159,7 @@ namespace CheckmateRPG.Core
                 MovementMutation move =>
                     $"Id={move.MutationId:N}|Target={move.TargetId:N}|From=({move.From.x},{move.From.y})|To=({move.To.x},{move.To.y})",
                 ApplyEffectMutation effect =>
-                    $"Id={effect.MutationId:N}|Effect={effect.EffectId}|Source={effect.SourceId:N}|Target={effect.TargetId:N}|Duration={effect.DurationTicks}|Interval={effect.TickInterval}|Initial={effect.InitialTickIn}|Stacks={effect.StackCount}|Magnitude={effect.Magnitude}",
+                    $"Id={effect.MutationId:N}|Effect={effect.EffectId}|Source={effect.SourceId:N}|Target={effect.TargetId:N}|Duration={effect.DurationTicks}|Interval={effect.TickInterval}|Initial={effect.InitialTickIn}|Stacks={effect.StackCount}|Policy={effect.StackPolicy}|Cap={effect.MaxStackCap}|Magnitude={effect.Magnitude}",
                 _ =>
                     $"Id={mutation.MutationId:N}|Target={mutation.TargetId:N}|Data={mutation}"
             };

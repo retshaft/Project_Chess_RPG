@@ -13,6 +13,8 @@ namespace CheckmateRPG.Core.Events.EffectEvents
         string EffectId,
         Guid SourceId,
         Guid TargetId,
+        int Tick,
+        int TickIndex,
         int RemainingTick,
         int StackCount,
         int DeltaHp);
