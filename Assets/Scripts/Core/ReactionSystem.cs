@@ -13,6 +13,7 @@ namespace CheckmateRPG.Core
         private const int MaxReactionEventDepth = 16;
         private const int MaxReactionDepth = 12;
         private const int MaxReactionsPerChain = 128;
+        private const string UnknownReactionId = "<unknown-reaction>";
 
         private readonly IEventBus _eventBus;
         private readonly MutationCommitService _mutationCommitService;
@@ -106,12 +107,13 @@ namespace CheckmateRPG.Core
                 if (runtime == null)
                     return;
 
-                int reactionDepth = _reactionStack.Count + 1;
-                if (!_reactionDepthGuard.IsDepthAllowed(reactionDepth, typeof(TEvent).Name))
+                int currentReactionDepth = _reactionStack.Count;
+                int nextReactionDepth = currentReactionDepth + 1;
+                if (!_reactionDepthGuard.IsDepthAllowed(nextReactionDepth, typeof(TEvent).Name))
                     return;
 
                 var reactionContext = new ReactionContext(
-                    reactionDepth,
+                    nextReactionDepth,
                     _reactionStack.Count > 0 ? _reactionStack.Peek() : string.Empty,
                     gameEvent,
                     runtime.CurrentTick,
@@ -225,7 +227,10 @@ namespace CheckmateRPG.Core
 
         private void ExecuteSingleReaction(PendingReactionExecution execution)
         {
-            _reactionStack.Push(execution.ReactionId ?? string.Empty);
+            string reactionId = string.IsNullOrWhiteSpace(execution.ReactionId)
+                ? UnknownReactionId
+                : execution.ReactionId;
+            _reactionStack.Push(reactionId);
             try
             {
                 ReactionExecutionPlan plan = execution.Plan;
