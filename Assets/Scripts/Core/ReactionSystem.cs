@@ -107,14 +107,15 @@ namespace CheckmateRPG.Core
                 if (runtime == null)
                     return;
 
-                int currentReactionDepth = _reactionStack.Count;
-                int nextReactionDepth = currentReactionDepth + 1;
+                int parentReactionDepth = _reactionStack.Count;
+                int nextReactionDepth = parentReactionDepth + 1;
                 if (!_reactionDepthGuard.IsDepthAllowed(nextReactionDepth, typeof(TEvent).Name))
                     return;
 
+                string parentReactionId = parentReactionDepth > 0 ? _reactionStack.Peek() : string.Empty;
                 var reactionContext = new ReactionContext(
                     nextReactionDepth,
-                    _reactionStack.Count > 0 ? _reactionStack.Peek() : string.Empty,
+                    parentReactionId,
                     gameEvent,
                     runtime.CurrentTick,
                     reactionChainId);
