@@ -7,6 +7,8 @@
 using System;
 using UnityEngine;
 using CheckmateRPG.Components;
+using CheckmateRPG.Core.Actions;
+using CheckmateRPG.Core.Prediction;
 using CheckmateRPG.Core;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Data;
@@ -99,9 +101,12 @@ namespace CheckmateRPG.Units
         private const float WoundedTargetBonus = 24f;
         private const float DistancePenalty = 7f;
         private const float ThreatPenalty = 45f;
+        private const float MovePredictionScoreMultiplier = 0.25f;
+        private const float MoveOccupancyConflictPenalty = 20f;
 
         private TeamComponent _team;
         private ActionRuntimeController _runtimeController;
+        private AIPredictionAdapter _aiPredictionAdapter;
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
 
@@ -143,6 +148,7 @@ namespace CheckmateRPG.Units
             _runtimeController = ActionRuntimeController.EnsureExists();
             _runtimeController.RegisterUnit(this);
             _runtimeController.SyncRuntimeState(this);
+            _aiPredictionAdapter = _runtimeController.AIPrediction;
 
             _isInitialised = true;
             Debug.Log($"[UnitBrain] {_unitData.UnitName} initialised at cell {_startCell}.");
@@ -506,6 +512,7 @@ namespace CheckmateRPG.Units
                 score += LethalBonus;
 
             score -= ManhattanDistance(Movement.GridPosition, targetCell) * DistancePenalty;
+            score += ScorePredictionAttack(targetBrain);
             return score;
         }
 
@@ -530,7 +537,44 @@ namespace CheckmateRPG.Units
             if (_unitData.PieceType == ChessPieceType.King)
                 score -= CountThreatsAgainstCell(candidateCell) * ThreatPenalty;
 
+            score += ScorePredictionMove(candidateCell);
             return score;
+        }
+
+        private float ScorePredictionAttack(UnitBrain targetBrain)
+        {
+            if (targetBrain == null || _runtimeController == null)
+                return 0f;
+            if (_aiPredictionAdapter == null)
+                _aiPredictionAdapter = _runtimeController.AIPrediction;
+            if (_aiPredictionAdapter == null)
+                return 0f;
+
+            IActionCommand command = _runtimeController.BuildAttackPredictionCommand(this, targetBrain.ActorId);
+            if (command == null)
+                return 0f;
+
+            PredictionActionEvaluation evaluation = _aiPredictionAdapter.Evaluate(command);
+            return evaluation.Score;
+        }
+
+        private float ScorePredictionMove(Vector2Int targetCell)
+        {
+            if (_runtimeController == null)
+                return 0f;
+            if (_aiPredictionAdapter == null)
+                _aiPredictionAdapter = _runtimeController.AIPrediction;
+            if (_aiPredictionAdapter == null)
+                return 0f;
+
+            IActionCommand command = _runtimeController.BuildMovePredictionCommand(this, targetCell);
+            if (command == null)
+                return 0f;
+
+            PredictionActionEvaluation evaluation = _aiPredictionAdapter.Evaluate(command);
+            return evaluation.OccupancyConflict
+                ? -MoveOccupancyConflictPenalty
+                : evaluation.Score * MovePredictionScoreMultiplier;
         }
 
         private float ScoreBoardControl(Vector2Int cell)
