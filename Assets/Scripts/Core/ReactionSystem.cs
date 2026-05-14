@@ -11,15 +11,21 @@ namespace CheckmateRPG.Core
     public sealed class ReactionSystem
     {
         private const int MaxReactionEventDepth = 16;
+        private const int MaxReactionDepth = 12;
         private const int MaxReactionsPerChain = 128;
+        private const string UnknownReactionId = "<unknown-reaction>";
 
         private readonly IEventBus _eventBus;
         private readonly MutationCommitService _mutationCommitService;
         private readonly Func<IReadOnlySimulationRuntime> _runtimeProvider;
+        private readonly ReactionDepthGuard _reactionDepthGuard;
         private readonly List<RegisteredReactionTrigger> _registeredTriggers = new();
+        private readonly Dictionary<Guid, int> _executedReactionCountByChain = new();
+        private readonly Dictionary<Guid, HashSet<string>> _eventSignatureHistoryByChain = new();
+        private readonly Dictionary<Guid, int> _activeDispatchDepthByChain = new();
+        private readonly Stack<string> _reactionStack = new();
 
         private int _nextRegistrationOrder;
-        private int _executedReactionCountInChain;
         private bool _isAttached;
 
         public ReactionSystem(
@@ -30,6 +36,7 @@ namespace CheckmateRPG.Core
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _mutationCommitService = mutationCommitService ?? throw new ArgumentNullException(nameof(mutationCommitService));
             _runtimeProvider = runtimeProvider ?? throw new ArgumentNullException(nameof(runtimeProvider));
+            _reactionDepthGuard = new ReactionDepthGuard(MaxReactionDepth);
         }
 
         public void Attach()
@@ -83,26 +90,185 @@ namespace CheckmateRPG.Core
             if (gameEvent is not IResolvableGameEvent resolvable || resolvable.Phase != EventPhase.PostResolve)
                 return;
 
-            if (resolvable.EventDepth <= 1)
-                _executedReactionCountInChain = 0;
-
             if (resolvable.EventDepth > MaxReactionEventDepth)
             {
                 Debug.LogWarning($"[ReactionSystem] Reaction skipped for {typeof(TEvent).Name}: EventDepth({resolvable.EventDepth}) exceeds {MaxReactionEventDepth}.");
                 return;
             }
 
-            IReadOnlySimulationRuntime runtime = _runtimeProvider();
-            if (runtime == null)
+            Guid reactionChainId = ResolveReactionChainId(resolvable);
+            EnterChainDispatchScope(reactionChainId);
+            try
+            {
+                if (IsRecursiveChainEvent(resolvable, reactionChainId))
+                    return;
+
+                IReadOnlySimulationRuntime runtime = _runtimeProvider();
+                if (runtime == null)
+                    return;
+
+                int currentReactionDepth = _reactionStack.Count;
+                int nextReactionDepth = currentReactionDepth + 1;
+                if (!_reactionDepthGuard.IsDepthAllowed(nextReactionDepth, typeof(TEvent).Name))
+                    return;
+
+                string parentReactionId = currentReactionDepth > 0 ? _reactionStack.Peek() : string.Empty;
+                var reactionContext = new ReactionContext(
+                    nextReactionDepth,
+                    parentReactionId,
+                    gameEvent,
+                    runtime.CurrentTick,
+                    reactionChainId);
+                var evaluationContext = new ReactionEvaluationContext(runtime.CurrentTick, runtime, gameEvent, reactionContext);
+                List<PendingReactionExecution> pendingExecutions = BuildPendingExecutions(gameEvent, evaluationContext);
+                if (pendingExecutions.Count == 0)
+                    return;
+
+                pendingExecutions.Sort(ReactionOrderingComparer.Default);
+                ExecuteReactions(reactionChainId, pendingExecutions);
+            }
+            finally
+            {
+                ExitChainDispatchScope(reactionChainId);
+            }
+        }
+
+        private Guid ResolveReactionChainId(IResolvableGameEvent resolvable)
+        {
+            return resolvable.ReactionChainId != Guid.Empty
+                ? resolvable.ReactionChainId
+                : Guid.NewGuid();
+        }
+
+        private void EnterChainDispatchScope(Guid reactionChainId)
+        {
+            if (_activeDispatchDepthByChain.TryGetValue(reactionChainId, out int depth))
+            {
+                _activeDispatchDepthByChain[reactionChainId] = depth + 1;
+                return;
+            }
+
+            _activeDispatchDepthByChain[reactionChainId] = 1;
+        }
+
+        private void ExitChainDispatchScope(Guid reactionChainId)
+        {
+            if (!_activeDispatchDepthByChain.TryGetValue(reactionChainId, out int depth))
                 return;
 
-            var evaluationContext = new ReactionEvaluationContext(runtime.CurrentTick, runtime, gameEvent);
-            List<PendingReactionExecution> pendingExecutions = BuildPendingExecutions(gameEvent, evaluationContext);
-            if (pendingExecutions.Count == 0)
+            if (depth > 1)
+            {
+                _activeDispatchDepthByChain[reactionChainId] = depth - 1;
                 return;
+            }
 
-            pendingExecutions.Sort(ReactionOrderingComparer.Default);
-            ExecuteReactions(pendingExecutions);
+            _activeDispatchDepthByChain.Remove(reactionChainId);
+            _executedReactionCountByChain.Remove(reactionChainId);
+            _eventSignatureHistoryByChain.Remove(reactionChainId);
+        }
+
+        private bool IsRecursiveChainEvent(IResolvableGameEvent resolvableEvent, Guid reactionChainId)
+        {
+            if (!_eventSignatureHistoryByChain.TryGetValue(reactionChainId, out HashSet<string> signatures))
+            {
+                signatures = new HashSet<string>(StringComparer.Ordinal);
+                _eventSignatureHistoryByChain[reactionChainId] = signatures;
+            }
+
+            string signature = BuildEventRecursionSignature(resolvableEvent);
+            if (!IsRecursiveSignature(signatures, signature))
+                return false;
+
+            Debug.LogWarning(
+                $"[ReactionSystem] Recursive reaction event blocked. Chain={reactionChainId:N} Signature={signature}.");
+            return true;
+        }
+
+        private static bool IsRecursiveSignature(HashSet<string> signatures, string signature)
+        {
+            return !signatures.Add(signature);
+        }
+
+        private static string BuildEventRecursionSignature(IResolvableGameEvent gameEvent)
+        {
+            return string.Concat(
+                gameEvent.GetType().FullName ?? gameEvent.GetType().Name,
+                "|",
+                gameEvent.Source ?? string.Empty,
+                "|",
+                gameEvent.Target ?? string.Empty,
+                "|",
+                gameEvent.Category,
+                "|",
+                gameEvent.Phase);
+        }
+
+        private int GetExecutedReactionCount(Guid reactionChainId)
+        {
+            return _executedReactionCountByChain.TryGetValue(reactionChainId, out int count)
+                ? count
+                : 0;
+        }
+
+        private void IncrementExecutedReactionCount(Guid reactionChainId)
+        {
+            _executedReactionCountByChain[reactionChainId] = GetExecutedReactionCount(reactionChainId) + 1;
+        }
+
+        private void ExecuteReactions(Guid reactionChainId, IReadOnlyList<PendingReactionExecution> pendingExecutions)
+        {
+            for (int i = 0; i < pendingExecutions.Count; i++)
+            {
+                if (GetExecutedReactionCount(reactionChainId) >= MaxReactionsPerChain)
+                {
+                    Debug.LogWarning($"[ReactionSystem] MaxReactionsPerChain({MaxReactionsPerChain}) reached. Remaining reactions skipped.");
+                    return;
+                }
+
+                PendingReactionExecution execution = pendingExecutions[i];
+                IncrementExecutedReactionCount(reactionChainId);
+                ExecuteSingleReaction(execution);
+            }
+        }
+
+        private void ExecuteSingleReaction(PendingReactionExecution execution)
+        {
+            string reactionId = GetSafeReactionId(execution.ReactionId);
+            _reactionStack.Push(reactionId);
+            try
+            {
+                ReactionExecutionPlan plan = execution.Plan;
+                if (plan.Mutations != null && plan.Mutations.Count > 0)
+                {
+                    var queue = new MutationQueue();
+                    for (int i = 0; i < plan.Mutations.Count; i++)
+                    {
+                        IRuntimeMutation mutation = plan.Mutations[i];
+                        if (mutation == null)
+                            continue;
+                        queue.Enqueue(mutation, plan.SourceActionSpeedLevel, int.MaxValue);
+                    }
+
+                    if (queue.Count > 0)
+                    {
+                        MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
+                        PublishEvents(commitResult.StagedEvents);
+                    }
+                }
+
+                PublishEvents(plan.Events);
+            }
+            finally
+            {
+                _reactionStack.Pop();
+            }
+        }
+
+        private static string GetSafeReactionId(string reactionId)
+        {
+            return string.IsNullOrWhiteSpace(reactionId)
+                ? UnknownReactionId
+                : reactionId;
         }
 
         private List<PendingReactionExecution> BuildPendingExecutions(
@@ -132,46 +298,6 @@ namespace CheckmateRPG.Core
             }
 
             return pending;
-        }
-
-        private void ExecuteReactions(IReadOnlyList<PendingReactionExecution> pendingExecutions)
-        {
-            for (int i = 0; i < pendingExecutions.Count; i++)
-            {
-                if (_executedReactionCountInChain >= MaxReactionsPerChain)
-                {
-                    Debug.LogWarning($"[ReactionSystem] MaxReactionsPerChain({MaxReactionsPerChain}) reached. Remaining reactions skipped.");
-                    return;
-                }
-
-                PendingReactionExecution execution = pendingExecutions[i];
-                _executedReactionCountInChain++;
-                ExecuteSingleReaction(execution);
-            }
-        }
-
-        private void ExecuteSingleReaction(PendingReactionExecution execution)
-        {
-            ReactionExecutionPlan plan = execution.Plan;
-            if (plan.Mutations != null && plan.Mutations.Count > 0)
-            {
-                var queue = new MutationQueue();
-                for (int i = 0; i < plan.Mutations.Count; i++)
-                {
-                    IRuntimeMutation mutation = plan.Mutations[i];
-                    if (mutation == null)
-                        continue;
-                    queue.Enqueue(mutation, plan.SourceActionSpeedLevel, int.MaxValue);
-                }
-
-                if (queue.Count > 0)
-                {
-                    MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
-                    PublishEvents(commitResult.StagedEvents);
-                }
-            }
-
-            PublishEvents(plan.Events);
         }
 
         private void PublishEvents(IReadOnlyList<IGameEvent> events)

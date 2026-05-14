@@ -143,7 +143,7 @@ namespace CheckmateRPG.Core
             if (gameEvent is IResolvableGameEvent resolvable)
             {
                 return
-                    $"Phase={resolvable.Phase}|Category={resolvable.Category}|Depth={resolvable.EventDepth}|Order={resolvable.QueueOrder}" +
+                    $"Phase={resolvable.Phase}|Category={resolvable.Category}|Depth={resolvable.EventDepth}|Order={resolvable.QueueOrder}|Chain={resolvable.ReactionChainId:N}" +
                     $"|Payload={TryGetPayloadString(gameEvent)}";
             }
 

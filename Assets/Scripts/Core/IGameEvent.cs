@@ -15,9 +15,10 @@ namespace CheckmateRPG.Core
         string Target { get; }
         int EventDepth { get; }
         long QueueOrder { get; }
+        Guid ReactionChainId { get; }
 
         IResolvableGameEvent WithPhase(EventPhase phase);
-        IResolvableGameEvent WithQueueMetadata(int eventDepth, long queueOrder);
+        IResolvableGameEvent WithQueueMetadata(int eventDepth, long queueOrder, Guid reactionChainId);
     }
 
     public interface IGameEvent<out TPayload> : IResolvableGameEvent
