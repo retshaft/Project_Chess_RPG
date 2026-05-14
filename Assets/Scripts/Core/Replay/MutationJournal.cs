@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Runtime.Mutations;
 
@@ -11,12 +12,18 @@ namespace CheckmateRPG.Core.Replay
 
         public int Count => _entries.Count;
 
-        public void RecordCommit(int tick, IReadOnlyList<IRuntimeMutation> mutations, MutationJournalResult result = MutationJournalResult.Applied)
+        public void RecordCommit(
+            int tick,
+            IReadOnlyList<IRuntimeMutation> mutations,
+            MutationJournalResult result = MutationJournalResult.Applied,
+            Guid sourceAction = default,
+            string targetRuntime = "")
         {
             if (mutations == null || mutations.Count == 0)
                 return;
 
             int commitOrder = GetNextCommitOrder(tick);
+            string normalizedTargetRuntime = targetRuntime ?? string.Empty;
             for (int i = 0; i < mutations.Count; i++)
             {
                 IRuntimeMutation mutation = mutations[i];
@@ -31,6 +38,8 @@ namespace CheckmateRPG.Core.Replay
                     mutation.MutationId,
                     mutation.TargetId,
                     mutation.GetType().Name,
+                    sourceAction,
+                    normalizedTargetRuntime,
                     result));
             }
         }

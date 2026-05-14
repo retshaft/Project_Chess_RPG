@@ -5,6 +5,7 @@ namespace CheckmateRPG.Core.Replay
         TickAdvance = 0,
         ActionRequest = 1,
         Reservation = 2,
-        ResolveOrder = 3
+        ResolveOrder = 3,
+        ActionResult = 4
     }
 }

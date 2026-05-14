@@ -8,6 +8,8 @@ namespace CheckmateRPG.Core.Replay
         ActionJournalEntryType EntryType,
         Guid ActionId,
         Guid ActorId,
+        int ScheduledTick,
+        string ReservationResult,
         int ResolveOrder,
         string Details);
 }
