@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Events.EffectEvents;
+using CheckmateRPG.Core.Runtime;
+using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Core.Simulation;
 using CheckmateRPG.Units;
@@ -11,16 +13,78 @@ namespace CheckmateRPG.Core.Effects
     public readonly struct EffectSystemContext
     {
         private readonly Func<Guid, UnitBrain> _unitResolver;
+        private readonly Func<SimulationRuntime> _runtimeProvider;
 
-        public EffectSystemContext(Func<Guid, UnitBrain> unitResolver)
+        public EffectSystemContext(
+            Func<Guid, UnitBrain> unitResolver,
+            Func<SimulationRuntime> runtimeProvider)
         {
             _unitResolver = unitResolver;
+            _runtimeProvider = runtimeProvider;
         }
 
         public bool TryGetUnit(Guid unitId, out UnitBrain unit)
         {
             unit = _unitResolver != null ? _unitResolver(unitId) : null;
             return unit != null;
+        }
+
+        public EffectMutationContext CreateMutationContext(
+            IReadOnlyEffectRuntimeState sourceEffect,
+            int tick,
+            string reason)
+        {
+            EffectMutationUnitContext sourceUnit = BuildUnitContext(sourceEffect?.SourceId ?? Guid.Empty);
+            EffectMutationUnitContext targetUnit = BuildUnitContext(sourceEffect?.TargetId ?? Guid.Empty);
+            return new EffectMutationContext(
+                sourceEffect,
+                sourceUnit,
+                targetUnit,
+                tick,
+                reason ?? string.Empty);
+        }
+
+        private EffectMutationUnitContext BuildUnitContext(Guid unitId)
+        {
+            if (unitId == Guid.Empty)
+                return EffectMutationUnitContext.Empty();
+
+            int currentHp = 0;
+            Vector2Int position = default;
+            UnitStatusFlags statusFlags = UnitStatusFlags.None;
+            bool exists = false;
+
+            SimulationRuntime runtime = _runtimeProvider != null ? _runtimeProvider() : null;
+            if (runtime != null && runtime.TryGetUnit(unitId, out IReadOnlyUnitRuntimeState runtimeState) && runtimeState != null)
+            {
+                currentHp = runtimeState.HP;
+                position = runtimeState.Position;
+                statusFlags = runtimeState.StatusFlags;
+                exists = true;
+            }
+
+            UnitBrain unit = _unitResolver != null ? _unitResolver(unitId) : null;
+            int maxHp = ResolveMaxHp(unit, currentHp);
+            if (!exists && unit != null)
+            {
+                currentHp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : currentHp;
+                position = unit.Movement != null ? unit.Movement.GridPosition : position;
+                statusFlags = unit.IsDead ? UnitStatusFlags.Dead : statusFlags;
+                exists = true;
+            }
+
+            return exists
+                ? new EffectMutationUnitContext(unitId, currentHp, maxHp, position, statusFlags, true)
+                : EffectMutationUnitContext.Empty(unitId);
+        }
+
+        private static int ResolveMaxHp(UnitBrain unit, int fallbackHp)
+        {
+            if (unit?.UnitData != null)
+                return Mathf.Max(0, Mathf.RoundToInt(unit.UnitData.MaxHealth));
+            if (unit?.Health != null)
+                return Mathf.Max(0, Mathf.RoundToInt(unit.Health.MaxHealth));
+            return Mathf.Max(0, fallbackHp);
         }
     }
 
@@ -40,9 +104,10 @@ namespace CheckmateRPG.Core.Effects
         public EffectSystem(IEventBus eventBus, Func<Guid, UnitBrain> unitResolver, Func<SimulationRuntime> runtimeProvider)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
-            _context = new EffectSystemContext(unitResolver);
+            _context = new EffectSystemContext(unitResolver, runtimeProvider);
             _runtimeProvider = runtimeProvider ?? throw new ArgumentNullException(nameof(runtimeProvider));
-            _timingPipeline = new EffectTimingPipeline(_expirationQueue);
+            var mutationFactory = new EffectMutationFactory();
+            _timingPipeline = new EffectTimingPipeline(_expirationQueue, mutationFactory);
             _tickScheduler = new EffectTickScheduler(_timingPipeline);
         }
 
@@ -86,28 +151,28 @@ namespace CheckmateRPG.Core.Effects
         /// Expired effects are collected in <see cref="EffectExpirationQueue"/> and removed
         /// after all tick processing is complete.
         /// </summary>
-        public void AdvanceTick(int schedulerTick)
+        public IReadOnlyList<QueuedMutation> AdvanceTick(int schedulerTick)
         {
             SimulationRuntime runtime = GetRuntime();
             runtime.SetCurrentTick(schedulerTick);
             if (runtime.ActiveEffects.Count == 0)
-                return;
+                return Array.Empty<QueuedMutation>();
 
             // Build a snapshot of the mutable effect dictionary for pipeline consumption.
             var mutableSnapshot = BuildMutableEffectSnapshot(runtime);
 
             // Run only the OnTickEnd phase here; other phases are invoked by the
             // ResolutionPhasePipeline at the appropriate moment.
-            IReadOnlyList<EffectTickResult> tickResults = _tickScheduler.ExecuteTick(
+            EffectPhaseResult tickResult = _tickScheduler.ExecuteTick(
                 schedulerTick,
                 mutableSnapshot,
                 ResolveProcessor,
                 _context);
 
             // Publish tick events for each effect that fired this tick.
-            for (int i = 0; i < tickResults.Count; i++)
+            for (int i = 0; i < tickResult.TickResults.Count; i++)
             {
-                EffectTickResult result = tickResults[i];
+                EffectTickResult result = tickResult.TickResults[i];
                 PublishTick(result.Effect, result.DeltaHp, schedulerTick, i);
             }
 
@@ -123,6 +188,8 @@ namespace CheckmateRPG.Core.Effects
 
                 runtime.UnregisterEffect(effectKey);
             });
+
+            return tickResult.QueuedMutations;
         }
 
         /// <summary>
@@ -132,7 +199,7 @@ namespace CheckmateRPG.Core.Effects
         /// <param name="phase">The phase to run. Must not be <see cref="EffectTimingPhase.OnTickEnd"/>.</param>
         /// <param name="schedulerTick">Current simulation tick.</param>
         /// <param name="actionId">Action that triggered this phase (may be <see cref="Guid.Empty"/>).</param>
-        public IReadOnlyList<EffectTickResult> RunPhase(
+        public EffectPhaseResult RunPhase(
             EffectTimingPhase phase,
             int schedulerTick,
             Guid actionId = default)
@@ -144,11 +211,11 @@ namespace CheckmateRPG.Core.Effects
 
             SimulationRuntime runtime = GetRuntime();
             if (runtime.ActiveEffects.Count == 0)
-                return Array.Empty<EffectTickResult>();
+                return EffectPhaseResult.Empty;
 
             var mutableSnapshot = BuildMutableEffectSnapshot(runtime);
 
-            IReadOnlyList<EffectTickResult> results = _timingPipeline.RunPhase(
+            EffectPhaseResult results = _timingPipeline.RunPhase(
                 phase,
                 schedulerTick,
                 mutableSnapshot,

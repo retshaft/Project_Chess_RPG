@@ -185,7 +185,35 @@ namespace CheckmateRPG.Core
 
         public bool ApplyEffectRuntime(EffectRuntimeState effectState)
         {
-            return _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(effectState);
+            if (effectState == null || _mutationCommitService == null)
+                return false;
+
+            var queue = new MutationQueue();
+            queue.Enqueue(new ApplyEffectMutation(
+                SeededRandomProvider.Shared.NextGuid(),
+                effectState.EffectId,
+                effectState.SourceId,
+                effectState.TargetId,
+                effectState.RemainingTick,
+                effectState.TickInterval,
+                effectState.NextTickIn,
+                effectState.StackCount,
+                effectState.Magnitude,
+                effectState.StackPolicy,
+                effectState.MaxStackCap,
+                timingPhase: effectState.TimingPhase,
+                actionSpeedLevel: effectState.ActionSpeedLevel,
+                isReaction: effectState.IsReaction,
+                Context: new MutationContext(
+                    _scheduler != null ? _scheduler.CurrentTick : 0,
+                    Guid.Empty,
+                    effectState.TargetId,
+                    nameof(ApplyEffectMutation))));
+
+            MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
+            EnqueueResolvedEvents(commitResult.StagedEvents);
+            _eventBus.ProcessQueue();
+            return commitResult.AppliedMutations.Count > 0;
         }
 
         public void RegisterUnit(UnitBrain unit)
@@ -434,7 +462,7 @@ namespace CheckmateRPG.Core
             MutationCommitResult commitResult = _mutationCommitService.Commit(mutationApplyInput.CommitQueue);
             _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
             ExecuteDeathCheckStage();
-            ExecuteCleanupStage();
+            CleanupStageResult cleanupResult = ExecuteCleanupStage();
 
             if (_enableRuntimeValidation)
             {
@@ -452,6 +480,7 @@ namespace CheckmateRPG.Core
             AppendEvents(stagedEvents, _positionReservations.ConflictEvents);
             AppendEvents(stagedEvents, mutationApplyInput.ActionEvents);
             AppendEvents(stagedEvents, commitResult.StagedEvents);
+            AppendEvents(stagedEvents, cleanupResult.StagedEvents);
             EnqueueResolvedEvents(stagedEvents);
             _eventBus.ProcessQueue();
             RecordSimulationSnapshot();
@@ -555,10 +584,29 @@ namespace CheckmateRPG.Core
             SyncAllRuntimeStates();
         }
 
-        private void ExecuteCleanupStage()
+        private CleanupStageResult ExecuteCleanupStage()
         {
-            _effectSystem?.AdvanceTick(_scheduler.CurrentTick);
+            if (_effectSystem == null || _mutationCommitService == null || _scheduler == null)
+            {
+                UpdateAbilityCooldownState(_scheduler != null ? _scheduler.CurrentTick : 0);
+                return CleanupStageResult.Empty;
+            }
+
+            IReadOnlyList<QueuedMutation> queuedEffectMutations = _effectSystem.AdvanceTick(_scheduler.CurrentTick);
+            if (queuedEffectMutations.Count == 0)
+            {
+                UpdateAbilityCooldownState(_scheduler.CurrentTick);
+                return CleanupStageResult.Empty;
+            }
+
+            var queue = new MutationQueue();
+            queue.EnqueueRange(queuedEffectMutations);
+            IReadOnlyList<IRuntimeMutation> queuedSnapshot = queue.CreateSnapshot();
+            _timelineRecorder?.RecordMutations(queuedSnapshot, MutationCommitPhase.QueueMutation.ToString());
+            MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
+            _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
             UpdateAbilityCooldownState(_scheduler.CurrentTick);
+            return new CleanupStageResult(commitResult.StagedEvents);
         }
 
         private bool TryResolveAction(IActionCommand action, out ActionResolutionResult result)
@@ -946,6 +994,11 @@ namespace CheckmateRPG.Core
         {
             public static MutationApplyInput Empty =>
                 new(Array.Empty<IGameEvent>(), new MutationQueue());
+        }
+
+        private readonly record struct CleanupStageResult(IReadOnlyList<IGameEvent> StagedEvents)
+        {
+            public static CleanupStageResult Empty => new(Array.Empty<IGameEvent>());
         }
 
         private static bool TryGetActorId(GameObject target, out Guid actorId)

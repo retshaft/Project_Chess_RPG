@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
 using UnityEngine;
 
@@ -27,14 +28,18 @@ namespace CheckmateRPG.Core.Effects
     public sealed class EffectTimingPipeline
     {
         private readonly EffectExpirationQueue _expirationQueue;
+        private readonly EffectMutationFactory _mutationFactory;
 
         /// <param name="expirationQueue">
         /// Queue that collects effects reaching duration 0. Must not be null.
         /// The caller is responsible for flushing it after all phases of a tick complete.
         /// </param>
-        public EffectTimingPipeline(EffectExpirationQueue expirationQueue)
+        public EffectTimingPipeline(
+            EffectExpirationQueue expirationQueue,
+            EffectMutationFactory mutationFactory)
         {
             _expirationQueue = expirationQueue ?? throw new ArgumentNullException(nameof(expirationQueue));
+            _mutationFactory = mutationFactory ?? throw new ArgumentNullException(nameof(mutationFactory));
         }
 
         // ── Public API ────────────────────────────────────────────────────────────
@@ -67,7 +72,7 @@ namespace CheckmateRPG.Core.Effects
         /// <see cref="EffectTimingPhase.OnTickEnd"/> ticks, in execution order.
         /// For all other phases the list is empty.
         /// </returns>
-        public IReadOnlyList<EffectTickResult> RunPhase(
+        public EffectPhaseResult RunPhase(
             EffectTimingPhase phase,
             int currentTick,
             IReadOnlyDictionary<string, EffectRuntimeState> activeEffects,
@@ -80,9 +85,10 @@ namespace CheckmateRPG.Core.Effects
 
             var sorted = BuildSortedPhaseList(phase, activeEffects);
             if (sorted.Count == 0)
-                return Array.Empty<EffectTickResult>();
+                return EffectPhaseResult.Empty;
 
             var tickResults = new List<EffectTickResult>();
+            var queuedMutations = new List<QueuedMutation>();
 
             for (int i = 0; i < sorted.Count; i++)
             {
@@ -114,9 +120,18 @@ namespace CheckmateRPG.Core.Effects
                     if (processor != null && effect.NextTickIn <= 0)
                     {
                         effect.TransitionLifecycle(OwnershipOwners.EffectSystem, EffectLifecycle.Ticking);
-                        int deltaHp = processor.OnTick(effectContext, effect);
+                        EffectMutationContext mutationContext = effectContext.CreateMutationContext(
+                            effect,
+                            currentTick,
+                            $"{phase}:{effect.EffectId}");
+                        EffectProcessorResult result = processor.OnTick(
+                            effectContext,
+                            mutationContext,
+                            _mutationFactory,
+                            effect);
+                        EnqueueMutations(queuedMutations, effect, result.Mutations, i);
                         effect.ResetTickCountdown(OwnershipOwners.EffectSystem);
-                        tickResults.Add(new EffectTickResult(key, effect, deltaHp, timingContext));
+                        tickResults.Add(new EffectTickResult(key, effect, result.DeltaHp, timingContext));
                     }
 
                     if (effect.IsExpired)
@@ -136,14 +151,23 @@ namespace CheckmateRPG.Core.Effects
                     // OnTick-equivalent logic supplied by the processor.
                     if (processor != null)
                     {
-                        int deltaHp = processor.OnTick(effectContext, effect);
-                        if (deltaHp != 0)
-                            tickResults.Add(new EffectTickResult(key, effect, deltaHp, timingContext));
+                        EffectMutationContext mutationContext = effectContext.CreateMutationContext(
+                            effect,
+                            currentTick,
+                            $"{phase}:{effect.EffectId}");
+                        EffectProcessorResult result = processor.OnTick(
+                            effectContext,
+                            mutationContext,
+                            _mutationFactory,
+                            effect);
+                        EnqueueMutations(queuedMutations, effect, result.Mutations, i);
+                        if (result.DeltaHp != 0)
+                            tickResults.Add(new EffectTickResult(key, effect, result.DeltaHp, timingContext));
                     }
                 }
             }
 
-            return tickResults;
+            return new EffectPhaseResult(queuedMutations, tickResults);
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────
@@ -172,6 +196,31 @@ namespace CheckmateRPG.Core.Effects
 
             return list;
         }
+
+        private static void EnqueueMutations(
+            ICollection<QueuedMutation> queuedMutations,
+            IReadOnlyEffectRuntimeState effect,
+            IReadOnlyList<IRuntimeMutation> mutations,
+            int resolveOrder)
+        {
+            if (queuedMutations == null || mutations == null || mutations.Count == 0)
+                return;
+
+            ActionSpeedTier speed = effect?.ActionSpeedLevel ?? ActionSpeedTier.Normal;
+            for (int i = 0; i < mutations.Count; i++)
+            {
+                if (mutations[i] != null)
+                    queuedMutations.Add(new QueuedMutation(mutations[i], speed, resolveOrder, i));
+            }
+        }
+    }
+
+    public readonly record struct EffectPhaseResult(
+        IReadOnlyList<QueuedMutation> QueuedMutations,
+        IReadOnlyList<EffectTickResult> TickResults)
+    {
+        public static EffectPhaseResult Empty =>
+            new(Array.Empty<QueuedMutation>(), Array.Empty<EffectTickResult>());
     }
 
     /// <summary>
