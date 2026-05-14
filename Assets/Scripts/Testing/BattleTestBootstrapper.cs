@@ -378,10 +378,10 @@ namespace CheckmateRPG.Testing
 
         private void HandleSelectionInput()
         {
-            if (Input.GetMouseButtonDown(0))
+            if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
                 TrySelectFromMouse();
 
-            if (Input.GetKeyDown(KeyCode.Tab))
+            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.tabKey.wasPressedThisFrame)
                 SelectNextPlayerUnit();
         }
 
@@ -404,10 +404,11 @@ namespace CheckmateRPG.Testing
             if (_mainCamera == null)
                 _mainCamera = Camera.main;
 
-            if (_mainCamera == null)
+            if (_mainCamera == null || UnityEngine.InputSystem.Mouse.current == null)
                 return;
 
-            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+            Vector2 mousePos = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+            Ray ray = _mainCamera.ScreenPointToRay(mousePos);
             if (!Physics.Raycast(ray, out RaycastHit hit))
                 return;
 
