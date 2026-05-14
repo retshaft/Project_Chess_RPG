@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Simulation;
@@ -15,7 +16,15 @@ namespace CheckmateRPG.Core
     public readonly record struct ReactionEvaluationContext(
         int CurrentTick,
         IReadOnlySimulationRuntime Runtime,
-        IGameEvent TriggerEvent);
+        IGameEvent TriggerEvent,
+        ReactionContext ReactionContext);
+
+    public readonly record struct ReactionContext(
+        int ReactionDepth,
+        string ParentReaction,
+        IGameEvent SourceEvent,
+        int TriggerTick,
+        Guid ReactionChainId);
 
     public readonly record struct ReactionExecutionPlan(
         string ReactionId,

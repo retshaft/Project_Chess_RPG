@@ -39,10 +39,16 @@ namespace CheckmateRPG.Core
         public string Target { get; init; }
         public int EventDepth { get; init; }
         public long QueueOrder { get; init; }
+        public Guid ReactionChainId { get; init; }
 
         public IResolvableGameEvent WithPhase(EventPhase phase) => this with { Phase = phase };
-        public IResolvableGameEvent WithQueueMetadata(int eventDepth, long queueOrder) =>
-            this with { EventDepth = eventDepth, QueueOrder = queueOrder };
+        public IResolvableGameEvent WithQueueMetadata(int eventDepth, long queueOrder, Guid reactionChainId) =>
+            this with
+            {
+                EventDepth = eventDepth,
+                QueueOrder = queueOrder,
+                ReactionChainId = reactionChainId
+            };
     }
 
     public readonly record struct MoveStartedPayload(int UnitId, int FromX, int FromY, int ToX, int ToY);

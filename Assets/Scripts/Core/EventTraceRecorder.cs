@@ -53,7 +53,7 @@ namespace CheckmateRPG.Core
             {
                 return
                     $"{gameEvent.GetType().Name}|Phase={resolvable.Phase}|Category={resolvable.Category}" +
-                    $"|Source={resolvable.Source}|Target={resolvable.Target}|Depth={resolvable.EventDepth}|Order={resolvable.QueueOrder}" +
+                    $"|Source={resolvable.Source}|Target={resolvable.Target}|Depth={resolvable.EventDepth}|Order={resolvable.QueueOrder}|Chain={resolvable.ReactionChainId:N}" +
                     $"|Payload={TryGetPayloadString(gameEvent)}";
             }
 

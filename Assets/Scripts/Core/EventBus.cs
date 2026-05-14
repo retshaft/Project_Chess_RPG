@@ -24,6 +24,7 @@ namespace CheckmateRPG.Core
 
         private bool _isProcessing;
         private int _currentEventDepth;
+        private Guid _currentReactionChainId;
         private long _nextQueueOrder;
 
         public bool EnableEventTrace { get; set; }
@@ -43,10 +44,15 @@ namespace CheckmateRPG.Core
                 return;
             }
 
+            Guid nextReactionChainId =
+                _currentReactionChainId != Guid.Empty
+                    ? _currentReactionChainId
+                    : Guid.NewGuid();
+
             IResolvableGameEvent queuedEvent;
             lock (_lock)
             {
-                queuedEvent = resolvableEvent.WithQueueMetadata(nextDepth, ++_nextQueueOrder);
+                queuedEvent = resolvableEvent.WithQueueMetadata(nextDepth, ++_nextQueueOrder, nextReactionChainId);
                 _eventQueue.Enqueue(queuedEvent);
             }
 
@@ -74,7 +80,9 @@ namespace CheckmateRPG.Core
                     }
 
                     int previousDepth = _currentEventDepth;
+                    Guid previousReactionChainId = _currentReactionChainId;
                     _currentEventDepth = queuedEvent.EventDepth;
+                    _currentReactionChainId = queuedEvent.ReactionChainId;
                     try
                     {
                         foreach (EventPhase phase in ResolvePhases)
@@ -85,6 +93,7 @@ namespace CheckmateRPG.Core
                     finally
                     {
                         _currentEventDepth = previousDepth;
+                        _currentReactionChainId = previousReactionChainId;
                     }
                 }
             }
@@ -261,7 +270,7 @@ namespace CheckmateRPG.Core
             Debug.Log(
                 $"[EventBus][{stage}] Type={gameEvent.GetType().Name} Phase={gameEvent.Phase} " +
                 $"Category={gameEvent.Category} Timestamp={gameEvent.Timestamp:O} QueueOrder={gameEvent.QueueOrder} " +
-                $"Source={gameEvent.Source} Target={gameEvent.Target}");
+                $"Source={gameEvent.Source} Target={gameEvent.Target} Chain={gameEvent.ReactionChainId:N}");
         }
     }
 }
