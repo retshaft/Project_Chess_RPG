@@ -11,7 +11,7 @@ namespace CheckmateRPG.Core.Prediction
     /// <summary>
     /// Applies <see cref="IRuntimeMutation"/> instances to the isolated
     /// <see cref="SimulationRuntime"/> clone inside a
-    /// <see cref="PredictionSimulationContext"/> and records the
+    /// <see cref="PredictionContext"/> and records the
     /// corresponding prediction outcomes.
     /// <para>
     /// Unlike the production <c>RuntimeMutationProcessor</c>, this class never
@@ -27,7 +27,7 @@ namespace CheckmateRPG.Core.Prediction
         /// </summary>
         public static void Apply(
             IReadOnlyList<IRuntimeMutation> orderedMutations,
-            PredictionSimulationContext context)
+            PredictionContext context)
         {
             if (orderedMutations == null || orderedMutations.Count == 0 || context == null)
                 return;
@@ -67,9 +67,9 @@ namespace CheckmateRPG.Core.Prediction
 
         // ── Damage ────────────────────────────────────────────────────────────────
 
-        private static void ApplyDamage(DamageMutation mutation, PredictionSimulationContext context)
+        private static void ApplyDamage(DamageMutation mutation, PredictionContext context)
         {
-            SimulationRuntime runtime = context.PredictedRuntime;
+            SimulationRuntime runtime = context.ClonedRuntime;
             if (!runtime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState state))
                 return;
 
@@ -95,9 +95,9 @@ namespace CheckmateRPG.Core.Prediction
             }
         }
 
-        private static void ApplyHeal(HealMutation mutation, PredictionSimulationContext context)
+        private static void ApplyHeal(HealMutation mutation, PredictionContext context)
         {
-            SimulationRuntime runtime = context.PredictedRuntime;
+            SimulationRuntime runtime = context.ClonedRuntime;
             if (!runtime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState state))
                 return;
 
@@ -108,9 +108,9 @@ namespace CheckmateRPG.Core.Prediction
 
         // ── Movement ──────────────────────────────────────────────────────────────
 
-        private static void ApplyMovement(MovementMutation mutation, PredictionSimulationContext context)
+        private static void ApplyMovement(MovementMutation mutation, PredictionContext context)
         {
-            SimulationRuntime runtime = context.PredictedRuntime;
+            SimulationRuntime runtime = context.ClonedRuntime;
             if (!runtime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState state))
                 return;
 
@@ -128,9 +128,9 @@ namespace CheckmateRPG.Core.Prediction
 
         // ── Effect ────────────────────────────────────────────────────────────────
 
-        private static void ApplyEffect(ApplyEffectMutation mutation, PredictionSimulationContext context)
+        private static void ApplyEffect(ApplyEffectMutation mutation, PredictionContext context)
         {
-            SimulationRuntime runtime = context.PredictedRuntime;
+            SimulationRuntime runtime = context.ClonedRuntime;
 
             var effectState = new Effects.EffectRuntimeState(
                 mutation.EffectId,
@@ -150,9 +150,9 @@ namespace CheckmateRPG.Core.Prediction
             runtime.RegisterEffect(effectState);
         }
 
-        private static void ApplyDeath(DeathMutation mutation, PredictionSimulationContext context)
+        private static void ApplyDeath(DeathMutation mutation, PredictionContext context)
         {
-            SimulationRuntime runtime = context.PredictedRuntime;
+            SimulationRuntime runtime = context.ClonedRuntime;
             if (!runtime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState state))
                 return;
 

@@ -321,7 +321,11 @@ namespace CheckmateRPG.Core
             if (actions == null || actions.Count == 0)
                 return PredictionResult.Empty;
 
-            return _predictionPipeline.Execute(actions, _simulationRuntime, _scheduler?.CurrentTick ?? 0);
+            return _predictionPipeline.Execute(
+                actions,
+                _simulationRuntime,
+                _scheduler?.CurrentTick ?? 0,
+                PredictionSource.ActionRuntimeController);
         }
 
         public void RegisterAbilityDefinition(AbilityDefinition definition)
