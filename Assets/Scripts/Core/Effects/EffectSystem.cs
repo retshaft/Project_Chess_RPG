@@ -363,6 +363,8 @@ namespace CheckmateRPG.Core.Effects
                 _applicationCountThisTick.Clear();
             }
 
+            // Quota key is TargetId + EffectId (SimulationRuntime.BuildEffectKey),
+            // so the cap is enforced per target/per effect type per tick.
             string effectKey = BuildBaseEffectKey(state);
             int maxApplicationsPerTick = EffectStackPolicyRules.ResolveMaxApplicationsPerTick(state.MaxApplicationsPerTick);
             int currentApplications = _applicationCountThisTick.TryGetValue(effectKey, out int count)

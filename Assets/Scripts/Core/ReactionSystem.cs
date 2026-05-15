@@ -12,6 +12,7 @@ namespace CheckmateRPG.Core
     public sealed class ReactionSystem
     {
         private const int MaxReactionEventDepth = 16;
+        // Milestone 13-1 enforcement: cap chained trigger->reaction recursion depth to prevent runaway loops.
         private const int MaxReactionDepth = 5;
         private const int MaxReactionsPerChain = 128;
         private const string UnknownReactionId = "<unknown-reaction>";
@@ -113,13 +114,12 @@ namespace CheckmateRPG.Core
 
                 int currentReactionDepth = _reactionStack.Count;
                 int nextReactionDepth = currentReactionDepth + 1;
-                if (!_reactionDepthGuard.IsDepthAllowed(nextReactionDepth, typeof(TEvent).Name))
-                {
-                    ReportDepthExceededValidationIssue(
+                if (!TryValidateReactionDepth(
                         reactionChainId,
                         nextReactionDepth,
                         typeof(TEvent).Name,
-                        runtime.CurrentTick);
+                        runtime.CurrentTick))
+                {
                     return;
                 }
 
@@ -232,14 +232,13 @@ namespace CheckmateRPG.Core
             {
                 PendingReactionExecution execution = pendingExecutions[i];
                 int nextReactionDepth = _reactionStack.Count + 1;
-                if (!_reactionDepthGuard.IsDepthAllowed(nextReactionDepth, execution.ReactionId))
-                {
-                    int tick = _runtimeProvider()?.CurrentTick ?? -1;
-                    ReportDepthExceededValidationIssue(
+                if (!TryValidateReactionDepth(
                         reactionChainId,
                         nextReactionDepth,
                         execution.ReactionId,
-                        tick);
+                        _runtimeProvider()?.CurrentTick ?? -1))
+                {
+                    // Enforcement policy: stop the current chain immediately when depth exceeds max.
                     return;
                 }
 
@@ -272,6 +271,19 @@ namespace CheckmateRPG.Core
                 $"Reaction depth exceeded. Chain={reactionChainId:N} Trigger={triggerName} Depth={depth} Max={_reactionDepthGuard.MaxReactionDepth}.",
                 UnitId: null,
                 Tick: tick));
+        }
+
+        private bool TryValidateReactionDepth(
+            Guid reactionChainId,
+            int depth,
+            string triggerName,
+            int tick)
+        {
+            if (_reactionDepthGuard.IsDepthAllowed(depth, triggerName))
+                return true;
+
+            ReportDepthExceededValidationIssue(reactionChainId, depth, triggerName, tick);
+            return false;
         }
 
         private void ExecuteSingleReaction(PendingReactionExecution execution)

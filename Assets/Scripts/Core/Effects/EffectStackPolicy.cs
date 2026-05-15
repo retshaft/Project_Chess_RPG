@@ -10,6 +10,8 @@ namespace CheckmateRPG.Core.Effects
 
     public static class EffectStackPolicyRules
     {
+        // Safety default to prevent unbounded re-application of the same effect in a single tick.
+        // This value is scoped to effect application control and is independent from reaction depth limits.
         public const int DefaultMaxApplicationsPerTick = 5;
 
         public static int ResolveMaxApplicationsPerTick(int maxApplicationsPerTick)
