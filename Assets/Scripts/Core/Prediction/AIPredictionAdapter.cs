@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Actions;
+using CheckmateRPG.Core.Replay;
+using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Units;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Prediction
@@ -12,6 +15,12 @@ namespace CheckmateRPG.Core.Prediction
         int ExpectedInterruptCount,
         bool OccupancyConflict);
 
+    public readonly record struct AIPredictionScenario(
+        IActionCommand Action,
+        RuntimeSnapshot PredictedSnapshot,
+        PredictionActionEvaluation Evaluation,
+        float Score);
+
     public sealed class AIPredictionAdapter : IReadOnlyPredictionQueryAdapter
     {
         private const float DeathScoreWeight = 100f;
@@ -19,10 +28,20 @@ namespace CheckmateRPG.Core.Prediction
         private const float OccupancyConflictPenalty = 20f;
 
         private readonly PredictionQueryService _queryService;
+        private readonly PredictionPipeline _predictionPipeline;
+        private readonly Func<SimulationRuntime> _runtimeProvider;
+        private readonly Func<int> _tickProvider;
 
-        public AIPredictionAdapter(PredictionQueryService queryService)
+        public AIPredictionAdapter(
+            PredictionQueryService queryService,
+            PredictionPipeline predictionPipeline = null,
+            Func<SimulationRuntime> runtimeProvider = null,
+            Func<int> tickProvider = null)
         {
             _queryService = queryService ?? throw new ArgumentNullException(nameof(queryService));
+            _predictionPipeline = predictionPipeline;
+            _runtimeProvider = runtimeProvider;
+            _tickProvider = tickProvider;
         }
 
         public IReadOnlyPredictionResult Query(IReadOnlyList<IActionCommand> actions)
@@ -44,6 +63,89 @@ namespace CheckmateRPG.Core.Prediction
             if (result == null)
                 return default;
 
+            return Evaluate(action, result);
+        }
+
+        public IReadOnlyList<AIPredictionScenario> ExploreScenarios(
+            UnitBrain brain,
+            int maxScenariosPerTick,
+            AIEvaluationMetrics metrics = null)
+        {
+            var scenarios = new List<AIPredictionScenario>();
+            if (brain == null)
+                return scenarios;
+
+            int scenarioCap = Mathf.Max(1, maxScenariosPerTick);
+            IReadOnlyList<IActionCommand> candidates = brain.BuildPredictionActionCandidates(scenarioCap);
+            if (candidates == null || candidates.Count == 0)
+                return scenarios;
+
+            SimulationRuntime runtime = _runtimeProvider != null ? _runtimeProvider() : null;
+            if (runtime == null)
+                return scenarios;
+
+            int tick = _tickProvider != null ? _tickProvider() : runtime.CurrentTick;
+            RuntimeSnapshot currentSnapshot = AIEvaluationMetrics.CaptureRuntimeSnapshot(runtime);
+            AIEvaluationMetrics evaluator = metrics ?? AIEvaluationMetrics.Default;
+
+            for (int i = 0; i < candidates.Count && scenarios.Count < scenarioCap; i++)
+            {
+                IActionCommand action = candidates[i];
+                if (action == null)
+                    continue;
+
+                var branchRuntime = new PredictionRuntimeClone(runtime, tick);
+                IReadOnlyPredictionResult prediction = _predictionPipeline != null
+                    ? _predictionPipeline.Execute(
+                        new[] { action },
+                        branchRuntime.ClonedRuntime,
+                        tick,
+                        PredictionSource.AI)
+                    : _queryService.Query(new[] { action }, PredictionSource.AI);
+
+                if (prediction == null)
+                    continue;
+
+                PredictionActionEvaluation evaluation = Evaluate(action, prediction);
+                RuntimeSnapshot predictedSnapshot = AIEvaluationMetrics.ProjectSnapshot(currentSnapshot, prediction);
+                float score = evaluation.Score + evaluator.Evaluate(currentSnapshot, predictedSnapshot, brain.ActorId);
+
+                scenarios.Add(new AIPredictionScenario(action, predictedSnapshot, evaluation, score));
+            }
+
+            return scenarios;
+        }
+
+        public bool TryGetBestAction(
+            UnitBrain brain,
+            AIEvaluationMetrics metrics,
+            int maxScenariosPerTick,
+            out IActionCommand bestAction)
+        {
+            bestAction = null;
+            IReadOnlyList<AIPredictionScenario> scenarios = ExploreScenarios(brain, maxScenariosPerTick, metrics);
+            if (scenarios.Count == 0)
+                return false;
+
+            float bestScore = float.MinValue;
+            for (int i = 0; i < scenarios.Count; i++)
+            {
+                AIPredictionScenario scenario = scenarios[i];
+                if (scenario.Action == null)
+                    continue;
+
+                if (bestAction == null || scenario.Score > bestScore)
+                {
+                    bestAction = scenario.Action;
+                    bestScore = scenario.Score;
+                }
+            }
+
+            return bestAction != null;
+        }
+
+        private static PredictionActionEvaluation Evaluate(IActionCommand action, IReadOnlyPredictionResult result)
+        {
             int expectedDamage = 0;
             for (int i = 0; i < result.ExpectedDamage.Count; i++)
             {
