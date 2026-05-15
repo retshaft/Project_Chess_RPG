@@ -166,7 +166,11 @@ namespace CheckmateRPG.Core
                         source);
                 });
             _uiPredictionAdapter = new UIPredictionAdapter(_predictionQueryService);
-            _aiPredictionAdapter = new AIPredictionAdapter(_predictionQueryService);
+            _aiPredictionAdapter = new AIPredictionAdapter(
+                _predictionQueryService,
+                _predictionPipeline,
+                () => _simulationRuntime,
+                () => _scheduler != null ? _scheduler.CurrentTick : 0);
             _effectSystem = BuildEffectSystem();
             _mutationProcessor = new RuntimeMutationProcessor(
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,

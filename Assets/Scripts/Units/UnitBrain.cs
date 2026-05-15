@@ -5,6 +5,7 @@
 // or an AI decision system.
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core.Actions;
@@ -104,9 +105,12 @@ namespace CheckmateRPG.Units
         private const float MovePredictionScoreMultiplier = 0.25f;
         private const float MoveOccupancyConflictPenalty = 20f;
 
+        [SerializeField, Min(1)] private int _maxScenariosPerTick = 24;
+
         private TeamComponent _team;
         private ActionRuntimeController _runtimeController;
         private AIPredictionAdapter _aiPredictionAdapter;
+        private readonly AIEvaluationMetrics _aiEvaluationMetrics = new();
 
         // ─── Unity Lifecycle ──────────────────────────────────────────────────────
 
@@ -259,6 +263,9 @@ namespace CheckmateRPG.Units
                 return;
             }
 
+            if (TryExecutePredictionDecision())
+                return;
+
             if (TryGetOverrideDecision(out DecisionCandidate overrideDecision))
             {
                 ExecuteDecision(overrideDecision);
@@ -272,6 +279,123 @@ namespace CheckmateRPG.Units
             }
 
             CurrentDecision = UnitDecision.Idle;
+        }
+
+        public IReadOnlyList<IActionCommand> BuildPredictionActionCandidates(int maxScenariosPerTick)
+        {
+            var candidates = new List<IActionCommand>();
+
+            if (_runtimeController == null)
+                _runtimeController = ActionRuntimeController.EnsureExists();
+            if (_runtimeController == null || Movement == null)
+                return candidates;
+
+            int scenarioCap = Mathf.Max(1, maxScenariosPerTick);
+
+            if (Combat != null && Combat.CanAttack)
+            {
+                List<TargetCandidate> targets = GetPotentialTargets();
+                for (int i = 0; i < targets.Count && candidates.Count < scenarioCap; i++)
+                {
+                    TargetCandidate target = targets[i];
+                    if (target.Brain == null || !IsAttackRange(Movement.GridPosition, target.Cell))
+                        continue;
+
+                    IActionCommand attack = _runtimeController.BuildAttackPredictionCommand(this, target.Brain.ActorId);
+                    if (attack != null)
+                        candidates.Add(attack);
+                }
+            }
+
+            foreach (Vector2Int cell in Movement.GetReachableCells())
+            {
+                if (candidates.Count >= scenarioCap)
+                    break;
+
+                IActionCommand move = _runtimeController.BuildMovePredictionCommand(this, cell);
+                if (move != null)
+                    candidates.Add(move);
+            }
+
+            AppendAbilityPredictionCandidates(candidates, scenarioCap);
+            return candidates;
+        }
+
+        private void AppendAbilityPredictionCandidates(List<IActionCommand> candidates, int maxScenariosPerTick)
+        {
+            _ = candidates;
+            _ = maxScenariosPerTick;
+        }
+
+        private bool TryExecutePredictionDecision()
+        {
+            if (_runtimeController == null)
+                _runtimeController = ActionRuntimeController.EnsureExists();
+            if (_runtimeController == null)
+                return false;
+
+            if (_aiPredictionAdapter == null)
+                _aiPredictionAdapter = _runtimeController.AIPrediction;
+            if (_aiPredictionAdapter == null)
+                return false;
+
+            if (!_aiPredictionAdapter.TryGetBestAction(
+                    this,
+                    _aiEvaluationMetrics,
+                    Mathf.Max(1, _maxScenariosPerTick),
+                    out IActionCommand bestAction))
+            {
+                return false;
+            }
+
+            return EnqueuePredictedAction(bestAction);
+        }
+
+        private bool EnqueuePredictedAction(IActionCommand action)
+        {
+            if (action == null || action.ActorId != ActorId)
+                return false;
+
+            switch (action)
+            {
+                case MoveActionCommand move:
+                    if (QueueMoveAction(move.To))
+                    {
+                        CurrentDecision = UnitDecision.Move;
+                        return true;
+                    }
+                    break;
+                case AttackActionCommand attack:
+                    if (TryResolveTargetByActorId(attack.TargetId, out GameObject target) && QueueAttackAction(target))
+                    {
+                        _currentTarget = target;
+                        CurrentDecision = UnitDecision.Attack;
+                        return true;
+                    }
+                    break;
+            }
+
+            return false;
+        }
+
+        private static bool TryResolveTargetByActorId(Guid actorId, out GameObject target)
+        {
+            target = null;
+            if (actorId == Guid.Empty)
+                return false;
+
+            UnitBrain[] allBrains = FindObjectsByType<UnitBrain>(FindObjectsSortMode.None);
+            for (int i = 0; i < allBrains.Length; i++)
+            {
+                UnitBrain brain = allBrains[i];
+                if (brain == null || brain.ActorId != actorId || brain.IsDead)
+                    continue;
+
+                target = brain.gameObject;
+                return true;
+            }
+
+            return false;
         }
 
         private void ExecuteDecision(DecisionCandidate decision)
