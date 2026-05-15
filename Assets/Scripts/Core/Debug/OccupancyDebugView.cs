@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CheckmateRPG.Core;
+using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Simulation;
 using CheckmateRPG.Core.Simulation.Spatial;
 using UnityEngine;
@@ -76,8 +77,9 @@ namespace CheckmateRPG.Core.DebugOverlay
             GUILayout.EndScrollView();
 
             int conflictCount = reservation?.ReservationLostActions?.Count ?? 0;
+            int blockedMovementCount = ResolveBlockedMovementCount(reservation, controller);
             GUILayout.Label($"reservation conflict: {conflictCount}");
-            GUILayout.Label($"blocked movement: {conflictCount}");
+            GUILayout.Label($"blocked movement: {blockedMovementCount}");
 
             _conflictScroll = GUILayout.BeginScrollView(_conflictScroll, GUILayout.Height(120f));
             if (reservation?.ReservationLostActions != null)
@@ -98,6 +100,32 @@ namespace CheckmateRPG.Core.DebugOverlay
             GUILayout.EndScrollView();
 
             GUI.DragWindow();
+        }
+
+        private static int ResolveBlockedMovementCount(PositionReservationSnapshot reservation, ActionRuntimeController controller)
+        {
+            if (reservation?.ReservationLostActions == null || reservation.ReservationLostActions.Count == 0)
+                return 0;
+
+            IReadOnlyCollection<IActionCommand> activeActions = controller?.Scheduler?.GetActiveActions();
+            if (activeActions == null || activeActions.Count == 0)
+                return 0;
+
+            var lostLookup = new HashSet<Guid>(reservation.ReservationLostActions);
+            int count = 0;
+            foreach (IActionCommand action in activeActions)
+            {
+                if (action == null)
+                    continue;
+
+                if (!lostLookup.Contains(action.ActionId))
+                    continue;
+
+                if (action is MoveActionCommand)
+                    count++;
+            }
+
+            return count;
         }
     }
 }

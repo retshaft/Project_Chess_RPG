@@ -22,9 +22,6 @@ mono_crash.*
 
 # Build results
 [Dd]ebug/
-[Dd]ebug/**
-[Dd]ebug.meta
-[Dd]ebug/*.meta
 !Assets/Scripts/Core/Debug/
 !Assets/Scripts/Core/Debug/**
 [Dd]ebugPublic/
