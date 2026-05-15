@@ -26,9 +26,10 @@ namespace CheckmateRPG.Core.Effects
             bool isReaction = false,
             int appliedTick = 0,
             EffectStackPolicy stackPolicy = EffectStackPolicy.Refresh,
-            int maxStackCap = int.MaxValue)
+            int maxStackCap = int.MaxValue,
+            int maxApplicationsPerTick = 0)
         {
-            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction, appliedTick, stackPolicy, maxStackCap);
+            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction, appliedTick, stackPolicy, maxStackCap, maxApplicationsPerTick);
         }
 
         public EffectRuntimeState(EffectRuntimeState source)
@@ -50,7 +51,8 @@ namespace CheckmateRPG.Core.Effects
                 source.IsReaction,
                 source.AppliedTick,
                 source.StackPolicy,
-                source.MaxStackCap);
+                source.MaxStackCap,
+                source.MaxApplicationsPerTick);
 
             RemainingDuration = source.RemainingDuration;
             Lifecycle = source.Lifecycle;
@@ -70,6 +72,7 @@ namespace CheckmateRPG.Core.Effects
         public bool IsReaction { get; private set; }
         public EffectStackPolicy StackPolicy { get; private set; } = EffectStackPolicy.Refresh;
         public int MaxStackCap { get; private set; } = int.MaxValue;
+        public int MaxApplicationsPerTick { get; private set; } = EffectStackPolicyRules.DefaultMaxApplicationsPerTick;
 
         /// <inheritdoc/>
         public int RemainingDuration { get; private set; }
@@ -94,7 +97,8 @@ namespace CheckmateRPG.Core.Effects
             bool isReaction = false,
             int appliedTick = 0,
             EffectStackPolicy stackPolicy = EffectStackPolicy.Refresh,
-            int maxStackCap = int.MaxValue)
+            int maxStackCap = int.MaxValue,
+            int maxApplicationsPerTick = 0)
         {
             EffectId = effectId ?? string.Empty;
             SourceId = sourceId;
@@ -111,6 +115,7 @@ namespace CheckmateRPG.Core.Effects
             IsReaction = isReaction;
             AppliedTick = appliedTick;
             StackPolicy = stackPolicy;
+            MaxApplicationsPerTick = EffectStackPolicyRules.ResolveMaxApplicationsPerTick(maxApplicationsPerTick);
             Lifecycle = EffectLifecycle.Applied;
         }
 
@@ -122,6 +127,7 @@ namespace CheckmateRPG.Core.Effects
             int nextTickIn,
             float magnitude,
             int maxStackCap,
+            int maxApplicationsPerTick,
             string ownerName)
         {
             OwnershipValidationService.Default.EnsureAuthorized(ownerName, OwnershipStateKeys.EffectStack);
@@ -137,6 +143,7 @@ namespace CheckmateRPG.Core.Effects
             TickInterval = Mathf.Max(1, tickInterval);
             NextTickIn = Mathf.Clamp(nextTickIn, 1, TickInterval);
             Magnitude = Mathf.Max(0f, magnitude);
+            MaxApplicationsPerTick = EffectStackPolicyRules.ResolveMaxApplicationsPerTick(maxApplicationsPerTick);
             Lifecycle = EffectLifecycle.Applied;
         }
 
@@ -150,6 +157,7 @@ namespace CheckmateRPG.Core.Effects
             int appliedTick,
             EffectStackPolicy stackPolicy,
             int maxStackCap,
+            int maxApplicationsPerTick,
             string ownerName)
         {
             OwnershipValidationService.Default.EnsureAuthorized(ownerName, OwnershipStateKeys.EffectStack);
@@ -164,6 +172,7 @@ namespace CheckmateRPG.Core.Effects
             NextTickIn = Mathf.Clamp(nextTickIn, 1, TickInterval);
             Magnitude = Mathf.Max(0f, magnitude);
             AppliedTick = appliedTick;
+            MaxApplicationsPerTick = EffectStackPolicyRules.ResolveMaxApplicationsPerTick(maxApplicationsPerTick);
             Lifecycle = EffectLifecycle.Applied;
         }
 

@@ -177,7 +177,8 @@ namespace CheckmateRPG.Core
             _reactionSystem = new ReactionSystem(
                 _eventBus,
                 _mutationCommitService,
-                () => _simulationRuntime);
+                () => _simulationRuntime,
+                () => _runtimeValidationSystem);
             _reactionSystem.Attach();
             _resolutionPipeline = new ResolutionPhasePipeline(
                 resolveAction: (action, _) =>

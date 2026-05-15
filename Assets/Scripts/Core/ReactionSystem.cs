@@ -4,6 +4,7 @@ using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Processors;
 using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Core.Simulation.Validation;
 using UnityEngine;
 
 namespace CheckmateRPG.Core
@@ -11,13 +12,16 @@ namespace CheckmateRPG.Core
     public sealed class ReactionSystem
     {
         private const int MaxReactionEventDepth = 16;
-        private const int MaxReactionDepth = 12;
+        // Milestone 13-1 enforcement: required cap range is 3~5; use 5 as the strict upper bound.
+        // Chained trigger->reaction recursion beyond this depth is treated as unsafe and stopped.
+        private const int MaxReactionDepth = 5;
         private const int MaxReactionsPerChain = 128;
         private const string UnknownReactionId = "<unknown-reaction>";
 
         private readonly IEventBus _eventBus;
         private readonly MutationCommitService _mutationCommitService;
         private readonly Func<IReadOnlySimulationRuntime> _runtimeProvider;
+        private readonly Func<RuntimeValidationSystem> _runtimeValidationProvider;
         private readonly ReactionDepthGuard _reactionDepthGuard;
         private readonly List<RegisteredReactionTrigger> _registeredTriggers = new();
         private readonly Dictionary<Guid, int> _executedReactionCountByChain = new();
@@ -31,11 +35,13 @@ namespace CheckmateRPG.Core
         public ReactionSystem(
             IEventBus eventBus,
             MutationCommitService mutationCommitService,
-            Func<IReadOnlySimulationRuntime> runtimeProvider)
+            Func<IReadOnlySimulationRuntime> runtimeProvider,
+            Func<RuntimeValidationSystem> runtimeValidationProvider = null)
         {
             _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
             _mutationCommitService = mutationCommitService ?? throw new ArgumentNullException(nameof(mutationCommitService));
             _runtimeProvider = runtimeProvider ?? throw new ArgumentNullException(nameof(runtimeProvider));
+            _runtimeValidationProvider = runtimeValidationProvider;
             _reactionDepthGuard = new ReactionDepthGuard(MaxReactionDepth);
         }
 
@@ -109,8 +115,14 @@ namespace CheckmateRPG.Core
 
                 int currentReactionDepth = _reactionStack.Count;
                 int nextReactionDepth = currentReactionDepth + 1;
-                if (!_reactionDepthGuard.IsDepthAllowed(nextReactionDepth, typeof(TEvent).Name))
+                if (!TryValidateReactionDepth(
+                        reactionChainId,
+                        nextReactionDepth,
+                        typeof(TEvent).Name,
+                        runtime.CurrentTick))
+                {
                     return;
+                }
 
                 string parentReactionId = currentReactionDepth > 0 ? _reactionStack.Peek() : string.Empty;
                 var reactionContext = new ReactionContext(
@@ -219,6 +231,17 @@ namespace CheckmateRPG.Core
         {
             for (int i = 0; i < pendingExecutions.Count; i++)
             {
+                int nextReactionDepth = _reactionStack.Count + 1;
+                if (!TryValidateReactionDepth(
+                        reactionChainId,
+                        nextReactionDepth,
+                        pendingExecutions[i].ReactionId,
+                        _runtimeProvider()?.CurrentTick ?? -1))
+                {
+                    // Enforcement policy: stop the current chain immediately when depth exceeds max.
+                    return;
+                }
+
                 if (GetExecutedReactionCount(reactionChainId) >= MaxReactionsPerChain)
                 {
                     Debug.LogWarning($"[ReactionSystem] MaxReactionsPerChain({MaxReactionsPerChain}) reached. Remaining reactions skipped.");
@@ -229,6 +252,39 @@ namespace CheckmateRPG.Core
                 IncrementExecutedReactionCount(reactionChainId);
                 ExecuteSingleReaction(execution);
             }
+        }
+
+        private void ReportDepthExceededValidationIssue(
+            Guid reactionChainId,
+            int depth,
+            string triggerName,
+            int tick)
+        {
+            RuntimeValidationSystem validationSystem = _runtimeValidationProvider != null
+                ? _runtimeValidationProvider()
+                : null;
+
+            if (validationSystem == null)
+                return;
+
+            validationSystem.ReportIssue(new ValidationIssue(
+                ValidationSeverity.Warning,
+                $"Reaction depth exceeded. Chain={reactionChainId:N} Trigger={triggerName} Depth={depth} Max={MaxReactionDepth}.",
+                UnitId: null,
+                Tick: tick));
+        }
+
+        private bool TryValidateReactionDepth(
+            Guid reactionChainId,
+            int depth,
+            string triggerName,
+            int tick)
+        {
+            if (_reactionDepthGuard.IsDepthAllowed(depth, triggerName))
+                return true;
+
+            ReportDepthExceededValidationIssue(reactionChainId, depth, triggerName, tick);
+            return false;
         }
 
         private void ExecuteSingleReaction(PendingReactionExecution execution)
