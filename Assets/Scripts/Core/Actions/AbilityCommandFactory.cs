@@ -72,7 +72,7 @@ namespace CheckmateRPG.Core.Actions
             if (resolvedCells.Count == 0 && data.TargetShape != TargetingShape.Self)
                 return Array.Empty<EffectRuntimeState>();
 
-            var clones = new List<EffectRuntimeState>(Math.Max(1, data.Effects.Count * Math.Max(1, resolvedCells.Count)));
+            var clones = new List<EffectRuntimeState>(data.Effects.Count * Math.Max(1, resolvedCells.Count));
             for (int i = 0; i < data.Effects.Count; i++)
             {
                 EffectDataSO effectData = data.Effects[i];

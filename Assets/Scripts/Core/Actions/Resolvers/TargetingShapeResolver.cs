@@ -84,10 +84,11 @@ namespace CheckmateRPG.Core.Actions.Resolvers
             entries.Sort(sortPolicy);
 
             var sorted = new List<Vector2Int>(entries.Count);
+            var seen = new HashSet<Vector2Int>();
             for (int i = 0; i < entries.Count; i++)
             {
                 Vector2Int cell = entries[i].Cell;
-                if (!sorted.Contains(cell))
+                if (seen.Add(cell))
                     sorted.Add(cell);
             }
 
