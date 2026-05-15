@@ -17,6 +17,7 @@ namespace CheckmateRPG.Core.Abilities
         Heal,
         Buff,
         Dot,
+        // Crowd-control category (e.g., freeze, poison-linked disable, virus-type impairments).
         Cc
     }
 

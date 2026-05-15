@@ -87,6 +87,7 @@ namespace CheckmateRPG.Core.Actions
 
                 for (int t = 0; t < resolvedCells.Count; t++)
                 {
+                    // Cell-to-unit resolution happens in a later runtime stage; this factory only translates SO data.
                     clones.Add(BuildRuntimeEffect(data.AbilityId, effectData, source.UnitId, Guid.Empty, tick, i));
                 }
             }
