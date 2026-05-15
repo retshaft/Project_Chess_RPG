@@ -77,7 +77,7 @@ namespace CheckmateRPG.Core.DebugOverlay
             GUILayout.EndScrollView();
 
             int conflictCount = reservation?.ReservationLostActions?.Count ?? 0;
-            int blockedMovementCount = ResolveBlockedMovementCount(reservation, controller);
+            int blockedMovementCount = CountBlockedMovements(reservation, controller);
             GUILayout.Label($"reservation conflict: {conflictCount}");
             GUILayout.Label($"blocked movement: {blockedMovementCount}");
 
@@ -102,7 +102,7 @@ namespace CheckmateRPG.Core.DebugOverlay
             GUI.DragWindow();
         }
 
-        private static int ResolveBlockedMovementCount(PositionReservationSnapshot reservation, ActionRuntimeController controller)
+        private static int CountBlockedMovements(PositionReservationSnapshot reservation, ActionRuntimeController controller)
         {
             if (reservation?.ReservationLostActions == null || reservation.ReservationLostActions.Count == 0)
                 return 0;

@@ -47,7 +47,7 @@ namespace CheckmateRPG.Core.DebugOverlay
                 return;
             }
 
-            int tick = controller.Scheduler?.CurrentTick ?? 0;
+            int tick = controller.Scheduler?.CurrentTick ?? -1;
             IReadOnlySimulationRuntime runtime = controller.SimulationRuntime;
             IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> activeEffects = runtime?.ActiveEffects;
 
