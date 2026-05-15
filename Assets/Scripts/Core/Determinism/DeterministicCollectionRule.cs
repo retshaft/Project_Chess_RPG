@@ -75,7 +75,7 @@ namespace CheckmateRPG.Core.Determinism
     }
 
     /// <summary>
-    /// Categorises the kind of non-determinism that a given violation represents.
+    /// Categorizes the kind of non-determinism that a given violation represents.
     /// Used by <see cref="DeterministicAuditLog"/> when recording entries.
     /// </summary>
     public enum DeterminismViolationKind
