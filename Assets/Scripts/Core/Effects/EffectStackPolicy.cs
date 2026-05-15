@@ -7,4 +7,17 @@ namespace CheckmateRPG.Core.Effects
         Independent = 2,
         MaxStackCap = 3
     }
+
+    public static class EffectStackPolicyRules
+    {
+        public const int DefaultMaxApplicationsPerTick = 5;
+
+        public static int ResolveMaxApplicationsPerTick(int maxApplicationsPerTick)
+        {
+            if (maxApplicationsPerTick <= 0)
+                return DefaultMaxApplicationsPerTick;
+
+            return maxApplicationsPerTick;
+        }
+    }
 }

@@ -6,6 +6,7 @@ namespace CheckmateRPG.Core.Simulation.Validation
     public sealed class RuntimeValidationSystem
     {
         private readonly List<ISimulationValidator> _validators = new();
+        private readonly List<ValidationIssue> _runtimeIssues = new();
 
         public void Register(ISimulationValidator validator)
         {
@@ -26,13 +27,15 @@ namespace CheckmateRPG.Core.Simulation.Validation
             _validators.Remove(validator);
         }
 
+        public void ReportIssue(ValidationIssue issue)
+        {
+            _runtimeIssues.Add(issue);
+        }
+
         public ValidationResult Validate(IReadOnlySimulationRuntime runtime)
         {
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
-
-            if (_validators.Count == 0)
-                return ValidationResult.Valid();
 
             ValidationResult aggregated = ValidationResult.Valid();
 
@@ -44,6 +47,13 @@ namespace CheckmateRPG.Core.Simulation.Validation
                     throw new InvalidOperationException($"Validator '{validator.GetType().Name}' returned a null ValidationResult.");
 
                 aggregated = ValidationResult.Merge(aggregated, result);
+            }
+
+            if (_runtimeIssues.Count > 0)
+            {
+                ValidationIssue[] bufferedIssues = _runtimeIssues.ToArray();
+                _runtimeIssues.Clear();
+                aggregated = ValidationResult.Merge(aggregated, new ValidationResult(true, bufferedIssues));
             }
 
             return aggregated;

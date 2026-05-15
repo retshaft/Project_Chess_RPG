@@ -100,6 +100,8 @@ namespace CheckmateRPG.Core.Effects
         private readonly EffectExpirationQueue _expirationQueue = new();
         private readonly EffectTimingPipeline _timingPipeline;
         private readonly EffectTickScheduler _tickScheduler;
+        private readonly Dictionary<string, int> _applicationCountThisTick = new(StringComparer.Ordinal);
+        private int _applicationCountTick = int.MinValue;
 
         public EffectSystem(IEventBus eventBus, Func<Guid, UnitBrain> unitResolver, Func<SimulationRuntime> runtimeProvider)
         {
@@ -129,6 +131,9 @@ namespace CheckmateRPG.Core.Effects
             {
                 return false;
             }
+
+            if (!TryConsumePerTickApplicationQuota(state, runtime.CurrentTick))
+                return false;
 
             EffectRuntimeState runtimeState = ApplyByStackPolicy(runtime, state);
 
@@ -280,6 +285,7 @@ namespace CheckmateRPG.Core.Effects
                         appliedTick,
                         requested.StackPolicy,
                         requested.MaxStackCap,
+                        requested.MaxApplicationsPerTick,
                         OwnershipOwners.EffectSystem);
                     break;
                 case EffectStackPolicy.MaxStackCap:
@@ -291,6 +297,7 @@ namespace CheckmateRPG.Core.Effects
                         requested.NextTickIn,
                         requested.Magnitude,
                         requested.MaxStackCap,
+                        requested.MaxApplicationsPerTick,
                         OwnershipOwners.EffectSystem);
                     break;
                 case EffectStackPolicy.Refresh:
@@ -303,6 +310,7 @@ namespace CheckmateRPG.Core.Effects
                         requested.NextTickIn,
                         requested.Magnitude,
                         requested.MaxStackCap,
+                        requested.MaxApplicationsPerTick,
                         OwnershipOwners.EffectSystem);
                     break;
             }
@@ -345,6 +353,31 @@ namespace CheckmateRPG.Core.Effects
             }
 
             return snapshot;
+        }
+
+        private bool TryConsumePerTickApplicationQuota(EffectRuntimeState state, int currentTick)
+        {
+            if (_applicationCountTick != currentTick)
+            {
+                _applicationCountTick = currentTick;
+                _applicationCountThisTick.Clear();
+            }
+
+            string effectKey = BuildBaseEffectKey(state);
+            int maxApplicationsPerTick = EffectStackPolicyRules.ResolveMaxApplicationsPerTick(state.MaxApplicationsPerTick);
+            int currentApplications = _applicationCountThisTick.TryGetValue(effectKey, out int count)
+                ? count
+                : 0;
+
+            if (currentApplications >= maxApplicationsPerTick)
+            {
+                Debug.LogWarning(
+                    $"[EffectSystem] Effect application skipped: MaxApplicationsPerTick({maxApplicationsPerTick}) reached for '{state.EffectId}' on '{state.TargetId:N}' at tick {currentTick}.");
+                return false;
+            }
+
+            _applicationCountThisTick[effectKey] = currentApplications + 1;
+            return true;
         }
 
         private void PublishApplied(IReadOnlyEffectRuntimeState state)
@@ -408,7 +441,8 @@ namespace CheckmateRPG.Core.Effects
                 requested.IsReaction,
                 appliedTick,
                 requested.StackPolicy,
-                requested.MaxStackCap);
+                requested.MaxStackCap,
+                requested.MaxApplicationsPerTick);
 
             runtime.RegisterEffect(effectKey, created);
             if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState runtimeEffect))

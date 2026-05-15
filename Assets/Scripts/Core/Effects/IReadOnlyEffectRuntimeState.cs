@@ -50,5 +50,6 @@ namespace CheckmateRPG.Core.Effects
         bool IsReaction { get; }
         EffectStackPolicy StackPolicy { get; }
         int MaxStackCap { get; }
+        int MaxApplicationsPerTick { get; }
     }
 }
