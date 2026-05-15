@@ -321,10 +321,9 @@ namespace CheckmateRPG.Units
             return candidates;
         }
 
-        private void AppendAbilityPredictionCandidates(List<IActionCommand> candidates, int maxScenariosPerTick)
+        private void AppendAbilityPredictionCandidates(List<IActionCommand> _candidates, int _maxScenariosPerTick)
         {
-            _ = candidates;
-            _ = maxScenariosPerTick;
+            // TODO(Milestone 13-2): add usable ability/skill action candidates when ability targeting data is exposed.
         }
 
         private bool TryExecutePredictionDecision()
@@ -384,15 +383,22 @@ namespace CheckmateRPG.Units
             if (actorId == Guid.Empty)
                 return false;
 
-            UnitBrain[] allBrains = FindObjectsByType<UnitBrain>(FindObjectsSortMode.None);
-            for (int i = 0; i < allBrains.Length; i++)
-            {
-                UnitBrain brain = allBrains[i];
-                if (brain == null || brain.ActorId != actorId || brain.IsDead)
-                    continue;
+            if (GridSystem.Instance == null)
+                return false;
 
-                target = brain.gameObject;
-                return true;
+            for (int x = 0; x < GridSystem.GridWidth; x++)
+            {
+                for (int y = 0; y < GridSystem.GridHeight; y++)
+                {
+                    GameObject occupant = GridSystem.Instance.GetOccupant(x, y);
+                    if (occupant == null || !occupant.TryGetComponent(out UnitBrain brain))
+                        continue;
+                    if (brain.ActorId != actorId || brain.IsDead)
+                        continue;
+
+                    target = occupant;
+                    return true;
+                }
             }
 
             return false;

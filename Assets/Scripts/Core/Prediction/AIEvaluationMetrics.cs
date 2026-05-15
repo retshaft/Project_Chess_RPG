@@ -35,7 +35,9 @@ namespace CheckmateRPG.Core.Prediction
                     continue;
 
                 SimulationUnitSnapshot currentUnit = pair.Value;
-                int hpDelta = Mathf.Max(0, Mathf.Max(0, currentUnit?.HP ?? 0) - Mathf.Max(0, predictedUnit?.HP ?? 0));
+                int currentHp = currentUnit != null ? currentUnit.HP : 0;
+                int predictedHp = predictedUnit != null ? predictedUnit.HP : 0;
+                int hpDelta = Mathf.Max(0, currentHp - predictedHp);
 
                 if (unitId == actorId)
                 {
@@ -113,7 +115,9 @@ namespace CheckmateRPG.Core.Prediction
 
             var unitStates = new Dictionary<Guid, SimulationUnitSnapshot>();
             foreach (KeyValuePair<Guid, SimulationUnitSnapshot> pair in currentSnapshot.UnitStates)
-                unitStates[pair.Key] = pair.Value != null ? new SimulationUnitSnapshot(pair.Value) : null;
+                unitStates[pair.Key] = pair.Value != null
+                    ? new SimulationUnitSnapshot(pair.Value)
+                    : new SimulationUnitSnapshot(pair.Key, 0, 0, default, null, 0, UnitStatusFlags.None);
 
             var occupancy = new Dictionary<Vector2Int, Guid>(currentSnapshot.Occupancy);
 
@@ -141,7 +145,7 @@ namespace CheckmateRPG.Core.Prediction
                 if (!unitStates.TryGetValue(damage.TargetId, out SimulationUnitSnapshot unit) || unit == null)
                     continue;
 
-                int nextHp = Mathf.Max(0, unit.HP - Mathf.Max(0, damage.Amount));
+                int nextHp = Mathf.Max(0, unit.HP - damage.Amount);
                 UnitStatusFlags nextFlags = nextHp <= 0 ? unit.StatusFlags | UnitStatusFlags.Dead : unit.StatusFlags;
                 unitStates[damage.TargetId] = new SimulationUnitSnapshot(
                     unit.UnitId,
