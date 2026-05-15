@@ -52,7 +52,7 @@ namespace CheckmateRPG.Core.DebugOverlay
             IReadOnlyDictionary<string, IReadOnlyEffectRuntimeState> activeEffects = runtime?.ActiveEffects;
 
             int count = activeEffects?.Count ?? 0;
-            GUILayout.Label($"active effect: {count}");
+            GUILayout.Label($"active effects: {count}");
 
             _scroll = GUILayout.BeginScrollView(_scroll);
 

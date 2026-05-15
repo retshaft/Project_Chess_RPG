@@ -85,7 +85,8 @@ namespace CheckmateRPG.Core.DebugOverlay
                     if (action == null)
                         continue;
 
-                    GUILayout.Label($"[{action.State}] A:{action.ActionId:N} Actor:{action.ActorId:N} S:{action.SpeedTier}");
+                    GUILayout.Label(
+                        $"[{action.State}] Action:{action.ActionId:N} Actor:{action.ActorId:N} Speed:{action.SpeedTier}");
                     shown++;
                 }
             }

@@ -56,7 +56,7 @@ namespace CheckmateRPG.Core.DebugOverlay
 
             IReadOnlyDictionary<Vector2Int, Guid> occupied = runtime?.OccupiedPositions;
             int occupiedCount = occupied?.Count ?? 0;
-            GUILayout.Label($"tile ownership: {occupiedCount}");
+            GUILayout.Label($"tile occupancy: {occupiedCount}");
 
             _tileScroll = GUILayout.BeginScrollView(_tileScroll, GUILayout.Height(160f));
             if (occupied != null)
