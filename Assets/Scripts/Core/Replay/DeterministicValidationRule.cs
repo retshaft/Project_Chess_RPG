@@ -6,6 +6,8 @@ namespace CheckmateRPG.Core.Replay
 {
     public sealed class DeterministicValidationRule
     {
+        private const float FloatComparisonEpsilon = 0.0001f;
+
         public DeterministicValidationResult Validate(
             ActionJournal expectedActionJournal,
             ActionJournal actualActionJournal,
@@ -147,7 +149,7 @@ namespace CheckmateRPG.Core.Replay
                 RuntimeReservationEntry a = actualReservations[i];
                 if (e.ActionId == a.ActionId &&
                     e.ActorId == a.ActorId &&
-                    e.APCost.Equals(a.APCost) &&
+                    Math.Abs(e.APCost - a.APCost) <= FloatComparisonEpsilon &&
                     e.SPCost == a.SPCost)
                 {
                     continue;

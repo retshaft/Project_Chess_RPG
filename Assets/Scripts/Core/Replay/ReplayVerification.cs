@@ -6,6 +6,8 @@ namespace CheckmateRPG.Core.Replay
 {
     public sealed class ReplayVerification
     {
+        private const int UnsetDivergenceTick = int.MaxValue;
+
         private readonly SnapshotCompare _snapshotCompare;
         private readonly DeterministicValidationRule _deterministicValidationRule;
         private readonly RuntimeInvariantValidator _runtimeInvariantValidator;
@@ -39,7 +41,7 @@ namespace CheckmateRPG.Core.Replay
 
             var differences = new List<string>();
             var mismatchedRuntimeObjects = new SortedSet<string>(StringComparer.Ordinal);
-            int divergenceTick = int.MaxValue;
+            int divergenceTick = UnsetDivergenceTick;
             DivergenceReason divergenceReason = DivergenceReason.None;
 
             CompareActionJournal(expectedActionJournal.GetEntries(), actualActionJournal.GetEntries(), differences, mismatchedRuntimeObjects, ref divergenceTick, ref divergenceReason);
@@ -62,7 +64,7 @@ namespace CheckmateRPG.Core.Replay
             if (differences.Count == 0)
                 return ReplayVerificationResult.Match();
 
-            int resolvedTick = divergenceTick == int.MaxValue ? -1 : divergenceTick;
+            int resolvedTick = divergenceTick == UnsetDivergenceTick ? -1 : divergenceTick;
             DivergenceReason resolvedReason = divergenceReason == DivergenceReason.None ? DivergenceReason.Unknown : divergenceReason;
             return new ReplayVerificationResult(
                 ReplayMatchResult.Diverged,
