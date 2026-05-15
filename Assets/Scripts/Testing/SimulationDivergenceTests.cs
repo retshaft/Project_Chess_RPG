@@ -27,11 +27,10 @@ namespace CheckmateRPG.Tests
 
             ReplayRecorder originalReplayRecorder = new ReplayRecorder();
             MutationJournal originalMutationJournal = ExecuteOriginalAndExtractMutationJournal(
-                originalRuntime,
                 sourceJournal,
                 originalReplayRecorder);
 
-            MutationJournal replayMutationJournal = ExecuteReplayRuntime(replayRuntime, replayJournal);
+            MutationJournal replayMutationJournal = ExecuteReplayRuntime(replayJournal);
 
             RuntimeSnapshot originalSnapshot = CaptureRuntimeSnapshot(originalRuntime);
             RuntimeSnapshot replaySnapshot = CaptureRuntimeSnapshot(replayRuntime);
@@ -118,11 +117,9 @@ namespace CheckmateRPG.Tests
         }
 
         private static MutationJournal ExecuteOriginalAndExtractMutationJournal(
-            SimulationRuntime runtime,
             ActionJournal sourceJournal,
             ReplayRecorder replayRecorder)
         {
-            _ = runtime;
             var chainStateByActor = new Dictionary<Guid, int>();
 
             var pipeline = new ReplaySimulationPipeline(sourceJournal);
@@ -140,9 +137,8 @@ namespace CheckmateRPG.Tests
             return extractedResult.ReplayedMutations;
         }
 
-        private static MutationJournal ExecuteReplayRuntime(SimulationRuntime runtime, ActionJournal actionJournal)
+        private static MutationJournal ExecuteReplayRuntime(ActionJournal actionJournal)
         {
-            _ = runtime;
             var chainStateByActor = new Dictionary<Guid, int>();
             var pipeline = new ReplaySimulationPipeline(actionJournal);
             ReplaySimulationResult replayResult = pipeline.Execute(entry => BuildDeterministicMutations(entry, chainStateByActor));
@@ -267,7 +263,10 @@ namespace CheckmateRPG.Tests
 
         private static ActionJournalEntry DeserializeEntry(int tick, string serialized)
         {
-            string[] parts = (serialized ?? string.Empty).Split('|');
+            if (serialized == null)
+                throw new ArgumentNullException(nameof(serialized));
+
+            string[] parts = serialized.Split('|');
             if (parts.Length < 7)
                 throw new FormatException($"Invalid serialized journal entry: {serialized}");
 
@@ -302,9 +301,12 @@ namespace CheckmateRPG.Tests
                 $"{entry.Tick}|{entry.Sequence}|{(int)entry.EntryType}|{entry.ActionId:N}|{entry.ActorId:N}|{mutationIndex}|{chainDepth}";
             byte[] seedBytes = Encoding.UTF8.GetBytes(seed);
             byte[] hash;
-            using (MD5 md5 = MD5.Create())
-                hash = md5.ComputeHash(seedBytes);
-            return new Guid(hash);
+            using (SHA256 sha256 = SHA256.Create())
+                hash = sha256.ComputeHash(seedBytes);
+
+            var guidBytes = new byte[16];
+            Buffer.BlockCopy(hash, 0, guidBytes, 0, guidBytes.Length);
+            return new Guid(guidBytes);
         }
 
         private static RuntimeSnapshot CaptureRuntimeSnapshot(SimulationRuntime runtime)
