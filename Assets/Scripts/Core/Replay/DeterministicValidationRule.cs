@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Simulation;
 
 namespace CheckmateRPG.Core.Replay
 {
@@ -188,10 +189,10 @@ namespace CheckmateRPG.Core.Replay
             return true;
         }
 
-        private static string[] ToOrderedEffectKeys(IReadOnlyDictionary<string, global::CheckmateRPG.Core.Simulation.SimulationEffectSnapshot> effects)
+        private static string[] ToOrderedEffectKeys(IReadOnlyDictionary<string, SimulationEffectSnapshot> effects)
         {
             var ordered = new List<string>(effects.Count);
-            foreach (KeyValuePair<string, global::CheckmateRPG.Core.Simulation.SimulationEffectSnapshot> pair in effects)
+            foreach (KeyValuePair<string, SimulationEffectSnapshot> pair in effects)
                 ordered.Add(pair.Key ?? string.Empty);
 
             ordered.Sort(StringComparer.Ordinal);

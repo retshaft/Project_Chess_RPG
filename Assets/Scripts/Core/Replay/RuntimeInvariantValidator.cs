@@ -33,7 +33,7 @@ namespace CheckmateRPG.Core.Replay
 
         private static void ValidateDuplicateOccupancy(RuntimeSnapshot snapshot, List<RuntimeInvariantValidationIssue> issues)
         {
-            var seenPositions = new Dictionary<Vector2Int, Guid>(Vector2IntComparer.Instance);
+            var seenPositions = new Dictionary<Vector2Int, Guid>(DeterministicVector2IntComparer.Instance);
             var orderedUnitIds = new SortedSet<Guid>(snapshot.UnitStates.Keys);
             foreach (Guid unitId in orderedUnitIds)
             {
@@ -51,7 +51,7 @@ namespace CheckmateRPG.Core.Replay
                 seenPositions[state.Position] = unitId;
             }
 
-            var orderedOccupancy = new SortedSet<Vector2Int>(snapshot.Occupancy.Keys, Vector2IntComparer.Instance);
+            var orderedOccupancy = new SortedSet<Vector2Int>(snapshot.Occupancy.Keys, DeterministicVector2IntComparer.Instance);
             foreach (Vector2Int pos in orderedOccupancy)
             {
                 if (!snapshot.Occupancy.TryGetValue(pos, out Guid occupancyUnitId))
@@ -142,26 +142,6 @@ namespace CheckmateRPG.Core.Replay
             }
         }
 
-        private sealed class Vector2IntComparer : IEqualityComparer<Vector2Int>, IComparer<Vector2Int>
-        {
-            public static readonly Vector2IntComparer Instance = new();
-
-            public bool Equals(Vector2Int x, Vector2Int y)
-            {
-                return x.x == y.x && x.y == y.y;
-            }
-
-            public int GetHashCode(Vector2Int obj)
-            {
-                return HashCode.Combine(obj.x, obj.y);
-            }
-
-            public int Compare(Vector2Int x, Vector2Int y)
-            {
-                int cx = x.x.CompareTo(y.x);
-                return cx != 0 ? cx : x.y.CompareTo(y.y);
-            }
-        }
     }
 
     public readonly record struct RuntimeInvariantValidationIssue(string RuntimeObject, string Message);

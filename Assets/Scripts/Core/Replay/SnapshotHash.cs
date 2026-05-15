@@ -58,7 +58,7 @@ namespace CheckmateRPG.Core.Replay
 
         private static void AppendOccupancy(StringBuilder builder, IReadOnlyDictionary<Vector2Int, Guid> occupancy)
         {
-            var orderedPositions = new SortedSet<Vector2Int>(occupancy.Keys, Vector2IntComparer.Instance);
+            var orderedPositions = new SortedSet<Vector2Int>(occupancy.Keys, DeterministicVector2IntComparer.Instance);
             builder.Append("Occupancy[");
             foreach (Vector2Int pos in orderedPositions)
             {
@@ -125,17 +125,6 @@ namespace CheckmateRPG.Core.Replay
                 builder.Append(bytes[i].ToString("x2", CultureInfo.InvariantCulture));
 
             return builder.ToString();
-        }
-
-        private sealed class Vector2IntComparer : IComparer<Vector2Int>
-        {
-            public static readonly Vector2IntComparer Instance = new();
-
-            public int Compare(Vector2Int x, Vector2Int y)
-            {
-                int cx = x.x.CompareTo(y.x);
-                return cx != 0 ? cx : x.y.CompareTo(y.y);
-            }
         }
     }
 }
