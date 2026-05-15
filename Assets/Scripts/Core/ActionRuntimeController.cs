@@ -88,6 +88,17 @@ namespace CheckmateRPG.Core
         public SnapshotRecorder SnapshotRecorder => _snapshotRecorder;
 
         /// <summary>
+        /// Read-only view of the simulation runtime state. Safe to read from debug overlays.
+        /// </summary>
+        public IReadOnlySimulationRuntime SimulationRuntime => _simulationRuntime;
+
+        /// <summary>
+        /// Current position reservation snapshot. Updated each tick during spatial arbitration.
+        /// Safe to read from debug overlays.
+        /// </summary>
+        public PositionReservationSnapshot PositionReservations => _positionReservations;
+
+        /// <summary>
         /// Returns the prediction pipeline configured for this runtime.
         /// May be <c>null</c> before <c>Awake</c> has been called.
         /// </summary>
