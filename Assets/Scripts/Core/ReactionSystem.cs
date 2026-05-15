@@ -230,12 +230,11 @@ namespace CheckmateRPG.Core
         {
             for (int i = 0; i < pendingExecutions.Count; i++)
             {
-                PendingReactionExecution execution = pendingExecutions[i];
                 int nextReactionDepth = _reactionStack.Count + 1;
                 if (!TryValidateReactionDepth(
                         reactionChainId,
                         nextReactionDepth,
-                        execution.ReactionId,
+                        pendingExecutions[i].ReactionId,
                         _runtimeProvider()?.CurrentTick ?? -1))
                 {
                     // Enforcement policy: stop the current chain immediately when depth exceeds max.
@@ -248,6 +247,7 @@ namespace CheckmateRPG.Core
                     return;
                 }
 
+                PendingReactionExecution execution = pendingExecutions[i];
                 IncrementExecutedReactionCount(reactionChainId);
                 ExecuteSingleReaction(execution);
             }
