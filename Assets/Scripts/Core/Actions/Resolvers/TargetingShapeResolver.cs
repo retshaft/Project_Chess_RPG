@@ -112,6 +112,10 @@ namespace CheckmateRPG.Core.Actions.Resolvers
             byte[] bytes = new byte[16];
             Buffer.BlockCopy(BitConverter.GetBytes(cell.x), 0, bytes, 0, 4);
             Buffer.BlockCopy(BitConverter.GetBytes(cell.y), 0, bytes, 4, 4);
+            int mixA = unchecked((cell.x * 73856093) ^ (cell.y * 19349663));
+            int mixB = unchecked((cell.x * 83492791) ^ (cell.y * (int)2971215073u));
+            Buffer.BlockCopy(BitConverter.GetBytes(mixA), 0, bytes, 8, 4);
+            Buffer.BlockCopy(BitConverter.GetBytes(mixB), 0, bytes, 12, 4);
             return new Guid(bytes);
         }
     }

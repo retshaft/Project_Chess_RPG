@@ -87,9 +87,7 @@ namespace CheckmateRPG.Core.Actions
 
                 for (int t = 0; t < resolvedCells.Count; t++)
                 {
-                    Vector2Int cell = resolvedCells[t];
-                    Guid targetId = cell == source.Position ? source.UnitId : Guid.Empty;
-                    clones.Add(BuildRuntimeEffect(data.AbilityId, effectData, source.UnitId, targetId, tick, i));
+                    clones.Add(BuildRuntimeEffect(data.AbilityId, effectData, source.UnitId, Guid.Empty, tick, i));
                 }
             }
 
