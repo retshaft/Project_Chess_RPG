@@ -12,7 +12,8 @@ namespace CheckmateRPG.Core
     public sealed class ReactionSystem
     {
         private const int MaxReactionEventDepth = 16;
-        // Milestone 13-1 enforcement: cap chained trigger->reaction recursion depth to prevent runaway loops.
+        // Milestone 13-1 enforcement: required cap range is 3~5; use 5 as the strict upper bound.
+        // Chained trigger->reaction recursion beyond this depth is treated as unsafe and stopped.
         private const int MaxReactionDepth = 5;
         private const int MaxReactionsPerChain = 128;
         private const string UnknownReactionId = "<unknown-reaction>";
@@ -268,7 +269,7 @@ namespace CheckmateRPG.Core
 
             validationSystem.ReportIssue(new ValidationIssue(
                 ValidationSeverity.Warning,
-                $"Reaction depth exceeded. Chain={reactionChainId:N} Trigger={triggerName} Depth={depth} Max={_reactionDepthGuard.MaxReactionDepth}.",
+                $"Reaction depth exceeded. Chain={reactionChainId:N} Trigger={triggerName} Depth={depth} Max={MaxReactionDepth}.",
                 UnitId: null,
                 Tick: tick));
         }

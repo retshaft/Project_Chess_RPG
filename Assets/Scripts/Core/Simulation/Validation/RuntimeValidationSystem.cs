@@ -37,6 +37,8 @@ namespace CheckmateRPG.Core.Simulation.Validation
             if (runtime == null)
                 throw new ArgumentNullException(nameof(runtime));
 
+            // Keep evaluating even when no validators are registered so externally reported runtime issues
+            // (for example reaction-depth guard warnings) are still surfaced in the aggregated result.
             ValidationResult aggregated = ValidationResult.Valid();
 
             for (int i = 0; i < _validators.Count; i++)
