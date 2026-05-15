@@ -72,6 +72,10 @@ namespace CheckmateRPG.Core
         private SnapshotRecorder _snapshotRecorder;
         private ValidationResult _lastValidationResult = ValidationResult.Valid();
         private bool _validationHalted;
+        private int _lastResolveMutationQueueCount;
+        private int _lastCleanupMutationQueueCount;
+        private string _lastResolveMutationQueueSummary = "none";
+        private string _lastCleanupMutationQueueSummary = "none";
         private PredictionPipeline _predictionPipeline;
         private PredictionQueryService _predictionQueryService;
         private UIPredictionAdapter _uiPredictionAdapter;
@@ -86,6 +90,10 @@ namespace CheckmateRPG.Core
         public MutationJournal MutationJournal => _mutationJournal;
         public SimulationTimelineRecorder TimelineRecorder => _timelineRecorder;
         public SnapshotRecorder SnapshotRecorder => _snapshotRecorder;
+        public int LastQueuedMutationCount => _lastResolveMutationQueueCount + _lastCleanupMutationQueueCount;
+        public string LastQueuedMutationSummary =>
+            $"resolve={_lastResolveMutationQueueCount} ({_lastResolveMutationQueueSummary}), " +
+            $"cleanup={_lastCleanupMutationQueueCount} ({_lastCleanupMutationQueueSummary})";
 
         /// <summary>
         /// Read-only view of the simulation runtime state. Safe to read from debug overlays.
@@ -511,6 +519,7 @@ namespace CheckmateRPG.Core
             if (ShouldRecordJournal)
                 _actionJournal.RecordTick(_scheduler.CurrentTick);
             _timelineRecorder?.RecordTick(_scheduler.CurrentTick);
+            ResetMutationQueueDebugSnapshot();
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             RecordResolveOrderJournal(ready);
@@ -522,6 +531,7 @@ namespace CheckmateRPG.Core
             resolutionContext.CurrentPhase = ResolutionPhase.MutationCommit;
             MutationApplyInput mutationApplyInput = BuildMutationApplyInput(resolutionContext);
             IReadOnlyList<IRuntimeMutation> queuedMutations = mutationApplyInput.CommitQueue.CreateSnapshot();
+            UpdateResolveMutationQueueDebugSnapshot(queuedMutations);
             _timelineRecorder?.RecordMutations(queuedMutations, MutationCommitPhase.QueueMutation.ToString());
             MutationCommitResult commitResult = _mutationCommitService.Commit(mutationApplyInput.CommitQueue);
             RecordMutationCommitJournal(commitResult);
@@ -670,12 +680,62 @@ namespace CheckmateRPG.Core
             var queue = new MutationQueue();
             queue.EnqueueRange(queuedEffectMutations);
             IReadOnlyList<IRuntimeMutation> queuedSnapshot = queue.CreateSnapshot();
+            UpdateCleanupMutationQueueDebugSnapshot(queuedSnapshot);
             _timelineRecorder?.RecordMutations(queuedSnapshot, MutationCommitPhase.QueueMutation.ToString());
             MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
             RecordMutationCommitJournal(commitResult);
             _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
             UpdateAbilityCooldownState(_scheduler.CurrentTick);
             return new CleanupStageResult(commitResult.StagedEvents);
+        }
+
+        private void ResetMutationQueueDebugSnapshot()
+        {
+            _lastResolveMutationQueueCount = 0;
+            _lastCleanupMutationQueueCount = 0;
+            _lastResolveMutationQueueSummary = "none";
+            _lastCleanupMutationQueueSummary = "none";
+        }
+
+        private void UpdateResolveMutationQueueDebugSnapshot(IReadOnlyList<IRuntimeMutation> queuedMutations)
+        {
+            _lastResolveMutationQueueCount = queuedMutations?.Count ?? 0;
+            _lastResolveMutationQueueSummary = BuildMutationSummary(queuedMutations);
+        }
+
+        private void UpdateCleanupMutationQueueDebugSnapshot(IReadOnlyList<IRuntimeMutation> queuedMutations)
+        {
+            _lastCleanupMutationQueueCount = queuedMutations?.Count ?? 0;
+            _lastCleanupMutationQueueSummary = BuildMutationSummary(queuedMutations);
+        }
+
+        private static string BuildMutationSummary(IReadOnlyList<IRuntimeMutation> queuedMutations)
+        {
+            if (queuedMutations == null || queuedMutations.Count == 0)
+                return "none";
+
+            var countsByType = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < queuedMutations.Count; i++)
+            {
+                IRuntimeMutation mutation = queuedMutations[i];
+                if (mutation == null)
+                    continue;
+
+                string typeName = mutation.GetType().Name;
+                if (countsByType.TryGetValue(typeName, out int current))
+                    countsByType[typeName] = current + 1;
+                else
+                    countsByType[typeName] = 1;
+            }
+
+            if (countsByType.Count == 0)
+                return "none";
+
+            var summaryParts = new List<string>(countsByType.Count);
+            foreach (KeyValuePair<string, int> pair in countsByType)
+                summaryParts.Add($"{pair.Key}x{pair.Value}");
+
+            return string.Join(", ", summaryParts);
         }
 
         private bool TryResolveAction(IActionCommand action, out ActionResolutionResult result)
