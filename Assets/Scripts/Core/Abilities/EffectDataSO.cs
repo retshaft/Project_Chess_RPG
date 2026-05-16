@@ -26,6 +26,9 @@ namespace CheckmateRPG.Core.Abilities
     {
         public EffectType Type = EffectType.Damage;
         public ElementType Element = ElementType.None;
+        public bool AppliesStatusEffect;
+        public CheckmateRPG.Core.StatusEffectType StatusEffect = CheckmateRPG.Core.StatusEffectType.Stagger;
+        public bool IsPhysicalCC;
         [Min(0f)] public float BaseValue = 0f;
         [Min(0)] public int DurationTicks = 0;
         [Min(1)] public int MaxStacks = 1;

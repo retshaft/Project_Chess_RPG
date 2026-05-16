@@ -26,6 +26,8 @@ namespace CheckmateRPG.Core.Runtime.Processors
             Func<Guid, UnitBrain> unitLookup,
             SimulationRuntime simulationRuntime,
             Func<EffectRuntimeState, bool> applyEffect,
+            Func<string, bool> isPhysicalCcEffect,
+            Func<ApplyEffectMutation, ApplyEffectMutation> substituteWithStagger,
             Func<AbilityActionCompleteMutation, bool> applyAbilityActionComplete)
         {
             if (unitLookup == null)
@@ -34,12 +36,16 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 throw new ArgumentNullException(nameof(simulationRuntime));
             if (applyEffect == null)
                 throw new ArgumentNullException(nameof(applyEffect));
+            if (isPhysicalCcEffect == null)
+                throw new ArgumentNullException(nameof(isPhysicalCcEffect));
+            if (substituteWithStagger == null)
+                throw new ArgumentNullException(nameof(substituteWithStagger));
             if (applyAbilityActionComplete == null)
                 throw new ArgumentNullException(nameof(applyAbilityActionComplete));
 
             _damageProcessor = new DamageMutationProcessor(unitLookup, simulationRuntime);
             _movementProcessor = new MovementMutationProcessor(unitLookup, simulationRuntime);
-            _effectProcessor = new EffectMutationProcessor(applyEffect);
+            _effectProcessor = new EffectMutationProcessor(simulationRuntime, applyEffect, isPhysicalCcEffect, substituteWithStagger);
             _applyAbilityActionComplete = applyAbilityActionComplete;
         }
 

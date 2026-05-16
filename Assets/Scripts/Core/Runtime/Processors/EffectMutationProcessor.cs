@@ -8,11 +8,21 @@ namespace CheckmateRPG.Core.Runtime.Processors
 {
     public sealed class EffectMutationProcessor
     {
+        private readonly Simulation.SimulationRuntime _simulationRuntime;
         private readonly Func<EffectRuntimeState, bool> _applyEffect;
+        private readonly Func<string, bool> _isPhysicalCcEffect;
+        private readonly Func<ApplyEffectMutation, ApplyEffectMutation> _substituteWithStagger;
 
-        public EffectMutationProcessor(Func<EffectRuntimeState, bool> applyEffect)
+        public EffectMutationProcessor(
+            Simulation.SimulationRuntime simulationRuntime,
+            Func<EffectRuntimeState, bool> applyEffect,
+            Func<string, bool> isPhysicalCcEffect,
+            Func<ApplyEffectMutation, ApplyEffectMutation> substituteWithStagger)
         {
+            _simulationRuntime = simulationRuntime ?? throw new ArgumentNullException(nameof(simulationRuntime));
             _applyEffect = applyEffect ?? throw new ArgumentNullException(nameof(applyEffect));
+            _isPhysicalCcEffect = isPhysicalCcEffect ?? throw new ArgumentNullException(nameof(isPhysicalCcEffect));
+            _substituteWithStagger = substituteWithStagger ?? throw new ArgumentNullException(nameof(substituteWithStagger));
         }
 
         public IReadOnlyList<IGameEvent> Apply(ApplyEffectMutation mutation)
@@ -20,23 +30,39 @@ namespace CheckmateRPG.Core.Runtime.Processors
             if (string.IsNullOrWhiteSpace(mutation.EffectId) || mutation.TargetId == Guid.Empty)
                 return Array.Empty<IGameEvent>();
 
+            ApplyEffectMutation resolvedMutation = ResolveMutation(mutation);
             var state = new EffectRuntimeState(
-                mutation.EffectId,
-                mutation.SourceId,
-                mutation.TargetId,
-                Mathf.Max(1, mutation.DurationTicks),
-                Mathf.Max(1, mutation.StackCount),
-                Mathf.Max(1, mutation.TickInterval),
-                Mathf.Clamp(mutation.InitialTickIn, 1, Mathf.Max(1, mutation.TickInterval)),
-                Mathf.Max(0f, mutation.Magnitude),
-                timingPhase: mutation.TimingPhase,
-                actionSpeedLevel: mutation.ActionSpeedLevel,
-                isReaction: mutation.IsReaction,
-                stackPolicy: mutation.StackPolicy,
-                maxStackCap: mutation.MaxStackCap);
+                resolvedMutation.EffectId,
+                resolvedMutation.SourceId,
+                resolvedMutation.TargetId,
+                Mathf.Max(1, resolvedMutation.DurationTicks),
+                Mathf.Max(1, resolvedMutation.StackCount),
+                Mathf.Max(1, resolvedMutation.TickInterval),
+                Mathf.Clamp(resolvedMutation.InitialTickIn, 1, Mathf.Max(1, resolvedMutation.TickInterval)),
+                Mathf.Max(0f, resolvedMutation.Magnitude),
+                timingPhase: resolvedMutation.TimingPhase,
+                actionSpeedLevel: resolvedMutation.ActionSpeedLevel,
+                isReaction: resolvedMutation.IsReaction,
+                stackPolicy: resolvedMutation.StackPolicy,
+                maxStackCap: resolvedMutation.MaxStackCap);
 
             _ = _applyEffect(state);
             return Array.Empty<IGameEvent>();
+        }
+
+        private ApplyEffectMutation ResolveMutation(ApplyEffectMutation mutation)
+        {
+            if (!_isPhysicalCcEffect(mutation.EffectId))
+                return mutation;
+            if (!_simulationRuntime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState targetState) || targetState == null)
+                return mutation;
+            if ((targetState.StatusFlags & UnitStatusFlags.Stagger) != 0)
+                return mutation;
+
+            ApplyEffectMutation substituted = _substituteWithStagger(mutation);
+            return string.IsNullOrWhiteSpace(substituted.EffectId)
+                ? mutation
+                : substituted;
         }
     }
 }
