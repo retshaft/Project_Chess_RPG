@@ -182,27 +182,54 @@ namespace CheckmateRPG.Core.Runtime.Processors
             if (pushedUnit == null || pushedUnit.Health == null)
                 return Array.Empty<IRuntimeMutation>();
 
-            bool forcedMovementContext = IsForcedMovementContext(sourceMutation.Context.Reason);
-            bool likelyPushDisplacement = Mathf.Max(
-                Mathf.Abs(sourceMutation.To.x - origin.x),
-                Mathf.Abs(sourceMutation.To.y - origin.y)) > 1;
-            if (!forcedMovementContext && !likelyPushDisplacement)
+            if (!ShouldTriggerSplat(sourceMutation, origin, resolution))
                 return Array.Empty<IRuntimeMutation>();
 
+            Guid splatSourceId = ResolveSplatSourceId(sourceMutation, pushedUnit.ActorId);
             var mutations = new List<IRuntimeMutation>(2);
             if (resolution.CollidedTargetId != Guid.Empty)
             {
-                TryAddSplatMutation(mutations, pushedUnit, pushedUnit.ActorId, sourceMutation, "UnitSplat:Pushed");
+                TryAddSplatMutation(mutations, pushedUnit, splatSourceId, sourceMutation, "UnitSplat:Pushed");
                 UnitBrain collidedUnit = _unitLookup(resolution.CollidedTargetId);
                 if (collidedUnit != null)
-                    TryAddSplatMutation(mutations, collidedUnit, pushedUnit.ActorId, sourceMutation, "UnitSplat:Collided");
+                    TryAddSplatMutation(mutations, collidedUnit, splatSourceId, sourceMutation, "UnitSplat:Collided");
             }
             else if (resolution.HitWall)
             {
-                TryAddSplatMutation(mutations, pushedUnit, pushedUnit.ActorId, sourceMutation, "WallSplat");
+                TryAddSplatMutation(mutations, pushedUnit, splatSourceId, sourceMutation, "WallSplat");
             }
 
             return mutations.Count == 0 ? Array.Empty<IRuntimeMutation>() : mutations;
+        }
+
+        private static bool ShouldTriggerSplat(
+            MovementMutation sourceMutation,
+            Vector2Int origin,
+            MovementResolution resolution)
+        {
+            bool hasSplatOutcome = resolution.HitWall || resolution.CollidedTargetId != Guid.Empty;
+            if (!hasSplatOutcome)
+                return false;
+
+            int requestedDisplacementSteps = Mathf.Max(
+                Mathf.Abs(sourceMutation.To.x - origin.x),
+                Mathf.Abs(sourceMutation.To.y - origin.y));
+            if (requestedDisplacementSteps <= 0)
+                return false;
+
+            // Standard move actions resolve as MovementMutation and should not trigger splat damage.
+            return !string.Equals(
+                sourceMutation.Context.MutationReason,
+                nameof(MovementMutation),
+                StringComparison.Ordinal);
+        }
+
+        private static Guid ResolveSplatSourceId(MovementMutation sourceMutation, Guid fallbackSourceId)
+        {
+            if (sourceMutation.Context.TargetRuntime != Guid.Empty)
+                return sourceMutation.Context.TargetRuntime;
+
+            return fallbackSourceId;
         }
 
         private static void TryAddSplatMutation(
@@ -234,17 +261,6 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 Context: context,
                 DamageType: DamageType.True,
                 IsTrueDamage: true));
-        }
-
-        private static bool IsForcedMovementContext(string reason)
-        {
-            if (string.IsNullOrWhiteSpace(reason))
-                return false;
-
-            return reason.IndexOf("knockback", StringComparison.OrdinalIgnoreCase) >= 0
-                   || reason.IndexOf("push", StringComparison.OrdinalIgnoreCase) >= 0
-                   || reason.IndexOf("forced", StringComparison.OrdinalIgnoreCase) >= 0
-                   || reason.IndexOf("grab", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private readonly record struct MovementResolution(
