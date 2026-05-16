@@ -127,6 +127,16 @@ namespace CheckmateRPG.Grid
         /// <inheritdoc cref="IsValidCell(int,int)"/>
         public bool IsValidCell(Vector2Int cell) => IsValidCell(cell.x, cell.y);
 
+        /// <summary>
+        /// Clamps the requested cell to the nearest valid in-bounds grid coordinate.
+        /// </summary>
+        public Vector2Int ClampToValidCell(Vector2Int cell)
+        {
+            return new Vector2Int(
+                Mathf.Clamp(cell.x, 0, GridWidth - 1),
+                Mathf.Clamp(cell.y, 0, GridHeight - 1));
+        }
+
         // ─── Occupancy ────────────────────────────────────────────────────────────
 
         /// <summary>

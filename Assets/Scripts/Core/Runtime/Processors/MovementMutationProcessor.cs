@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using CheckmateRPG.Core;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
@@ -13,6 +12,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
 {
     public sealed class MovementMutationProcessor
     {
+        private const float SplatDamageRatio = 0.1f;
         private readonly Func<Guid, UnitBrain> _unitLookup;
         private readonly SimulationRuntime _simulationRuntime;
 
@@ -22,34 +22,47 @@ namespace CheckmateRPG.Core.Runtime.Processors
             _simulationRuntime = simulationRuntime ?? throw new ArgumentNullException(nameof(simulationRuntime));
         }
 
-        public IReadOnlyList<IGameEvent> Apply(MovementMutation mutation)
+        public MovementProcessResult ApplyWithGeneratedMutations(MovementMutation mutation)
         {
             UnitBrain unit = _unitLookup(mutation.TargetId);
             if (unit == null || unit.Movement == null)
-                return Array.Empty<IGameEvent>();
+                return MovementProcessResult.Empty;
 
-            bool moved = unit.Movement.ApplyResolvedMovement(mutation.To);
+            Vector2Int origin = unit.Movement.GridPosition;
+            MovementResolution resolution = ResolveMovementResolution(unit, origin, mutation.To);
+            bool moved = unit.Movement.ApplyResolvedMovement(resolution.FinalCell);
             if (!moved)
-                return Array.Empty<IGameEvent>();
+                return MovementProcessResult.Empty;
 
-            _simulationRuntime.SetUnitPosition(mutation.TargetId, mutation.To, OwnershipOwners.MovementMutationProcessor);
+            _simulationRuntime.SetUnitPosition(mutation.TargetId, resolution.FinalCell, OwnershipOwners.MovementMutationProcessor);
 
             MoveCompletedEvent moveCompletedEvent = new(
-                new CheckmateRPG.Core.Events.ActionEvents.MoveCompletedPayload(mutation.TargetId, mutation.From, mutation.To),
+                new CheckmateRPG.Core.Events.ActionEvents.MoveCompletedPayload(mutation.TargetId, origin, resolution.FinalCell),
                 mutation.TargetId.ToString("N"),
-                mutation.To.ToString());
+                resolution.FinalCell.ToString());
 
-            return new IGameEvent[] { moveCompletedEvent };
+            IReadOnlyList<IRuntimeMutation> generatedMutations = BuildSplatDamageMutations(unit, origin, mutation, resolution);
+            return new MovementProcessResult(new IGameEvent[] { moveCompletedEvent }, generatedMutations);
         }
 
-        public IReadOnlyList<IGameEvent> Apply(MoveMutation mutation)
+        public IReadOnlyList<IGameEvent> Apply(MovementMutation mutation)
         {
-            return Apply(new MovementMutation(
+            return ApplyWithGeneratedMutations(mutation).Events;
+        }
+
+        public MovementProcessResult ApplyWithGeneratedMutations(MoveMutation mutation)
+        {
+            return ApplyWithGeneratedMutations(new MovementMutation(
                 mutation.MutationId,
                 mutation.TargetId,
                 mutation.From,
                 mutation.To,
                 mutation.Context));
+        }
+
+        public IReadOnlyList<IGameEvent> Apply(MoveMutation mutation)
+        {
+            return ApplyWithGeneratedMutations(mutation).Events;
         }
 
         public static float ResolveSwampApMultiplier(Vector2Int from, Vector2Int to, bool isJumpSkill = false)
@@ -110,5 +123,157 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
             return false;
         }
+
+        private static MovementResolution ResolveMovementResolution(UnitBrain pushedUnit, Vector2Int origin, Vector2Int requestedDestination)
+        {
+            GridSystem grid = GridSystem.Instance;
+            if (grid == null)
+                return new MovementResolution(requestedDestination, false, Guid.Empty);
+
+            Vector2Int clampedDestination = grid.ClampToValidCell(requestedDestination);
+            bool wallSplat = clampedDestination != requestedDestination;
+            Vector2Int direction = new(
+                Mathf.Clamp(requestedDestination.x - origin.x, -1, 1),
+                Mathf.Clamp(requestedDestination.y - origin.y, -1, 1));
+            int intendedSteps = Mathf.Max(
+                Mathf.Abs(requestedDestination.x - origin.x),
+                Mathf.Abs(requestedDestination.y - origin.y));
+
+            if (direction == Vector2Int.zero || intendedSteps <= 0)
+                return new MovementResolution(origin, wallSplat, Guid.Empty);
+
+            Vector2Int finalCell = origin;
+            Guid collidedTargetId = Guid.Empty;
+            for (int step = 1; step <= intendedSteps; step++)
+            {
+                Vector2Int candidate = origin + direction * step;
+                if (!grid.IsValidCell(candidate))
+                {
+                    wallSplat = true;
+                    break;
+                }
+
+                GameObject occupant = grid.GetOccupant(candidate);
+                if (occupant != null && occupant != pushedUnit.gameObject)
+                {
+                    if (occupant.TryGetComponent(out UnitBrain collidedUnit) &&
+                        collidedUnit != null &&
+                        !collidedUnit.IsDead &&
+                        collidedUnit.ActorId != Guid.Empty)
+                    {
+                        collidedTargetId = collidedUnit.ActorId;
+                    }
+
+                    break;
+                }
+
+                finalCell = candidate;
+            }
+
+            return new MovementResolution(finalCell, wallSplat, collidedTargetId);
+        }
+
+        private IReadOnlyList<IRuntimeMutation> BuildSplatDamageMutations(
+            UnitBrain pushedUnit,
+            Vector2Int origin,
+            MovementMutation sourceMutation,
+            MovementResolution resolution)
+        {
+            if (pushedUnit == null || pushedUnit.Health == null)
+                return Array.Empty<IRuntimeMutation>();
+
+            if (!ShouldTriggerSplat(sourceMutation, origin, resolution))
+                return Array.Empty<IRuntimeMutation>();
+
+            Guid splatSourceId = ResolveSplatSourceId(sourceMutation, pushedUnit.ActorId);
+            var mutations = new List<IRuntimeMutation>(2);
+            if (resolution.CollidedTargetId != Guid.Empty)
+            {
+                TryAddSplatMutation(mutations, pushedUnit, splatSourceId, sourceMutation, "UnitSplat:Pushed");
+                UnitBrain collidedUnit = _unitLookup(resolution.CollidedTargetId);
+                if (collidedUnit != null)
+                    TryAddSplatMutation(mutations, collidedUnit, splatSourceId, sourceMutation, "UnitSplat:Collided");
+            }
+            else if (resolution.HitWall)
+            {
+                TryAddSplatMutation(mutations, pushedUnit, splatSourceId, sourceMutation, "WallSplat");
+            }
+
+            return mutations.Count == 0 ? Array.Empty<IRuntimeMutation>() : mutations;
+        }
+
+        private static bool ShouldTriggerSplat(
+            MovementMutation sourceMutation,
+            Vector2Int origin,
+            MovementResolution resolution)
+        {
+            bool hasSplatOutcome = resolution.HitWall || resolution.CollidedTargetId != Guid.Empty;
+            if (!hasSplatOutcome)
+                return false;
+
+            int requestedDisplacementSteps = Mathf.Max(
+                Mathf.Abs(sourceMutation.To.x - origin.x),
+                Mathf.Abs(sourceMutation.To.y - origin.y));
+            if (requestedDisplacementSteps <= 0)
+                return false;
+
+            // Standard move actions resolve as MovementMutation and should not trigger splat damage.
+            return !string.Equals(
+                sourceMutation.Context.MutationReason,
+                nameof(MovementMutation),
+                StringComparison.Ordinal);
+        }
+
+        private static Guid ResolveSplatSourceId(MovementMutation sourceMutation, Guid fallbackSourceId)
+        {
+            if (sourceMutation.Context.TargetRuntime != Guid.Empty)
+                return sourceMutation.Context.TargetRuntime;
+
+            return fallbackSourceId;
+        }
+
+        private static void TryAddSplatMutation(
+            List<IRuntimeMutation> mutations,
+            UnitBrain target,
+            Guid sourceId,
+            MovementMutation sourceMutation,
+            string reasonSuffix)
+        {
+            if (target == null || target.Health == null || target.IsDead || target.ActorId == Guid.Empty)
+                return;
+
+            int amount = Mathf.FloorToInt(Mathf.Max(0f, target.Health.MaxHealth) * SplatDamageRatio);
+            if (amount <= 0)
+                return;
+
+            MutationContext context = new(
+                sourceMutation.Context.Tick,
+                sourceMutation.Context.SourceAction,
+                target.ActorId,
+                $"{nameof(MovementMutationProcessor)}:{reasonSuffix}");
+
+            mutations.Add(new DamageMutation(
+                SeededRandomProvider.Shared.NextGuid(),
+                target.ActorId,
+                sourceId,
+                amount,
+                IsCritical: false,
+                Context: context,
+                DamageType: DamageType.True,
+                IsTrueDamage: true));
+        }
+
+        private readonly record struct MovementResolution(
+            Vector2Int FinalCell,
+            bool HitWall,
+            Guid CollidedTargetId);
+    }
+
+    public readonly record struct MovementProcessResult(
+        IReadOnlyList<IGameEvent> Events,
+        IReadOnlyList<IRuntimeMutation> GeneratedMutations)
+    {
+        public static MovementProcessResult Empty =>
+            new(Array.Empty<IGameEvent>(), Array.Empty<IRuntimeMutation>());
     }
 }
