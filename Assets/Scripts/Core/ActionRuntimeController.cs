@@ -576,6 +576,7 @@ namespace CheckmateRPG.Core
         private EffectSystem BuildEffectSystem()
         {
             var effectSystem = new EffectSystem(_eventBus, ResolveUnit, () => _simulationRuntime);
+            effectSystem.RegisterProcessor(new TerrainEffectProcessor());
             effectSystem.RegisterProcessor(new DotEffectProcessor(new Dictionary<string, float>
             {
                 [StatusEffectType.Burn.ToString()] = 0.02f,

@@ -10,7 +10,8 @@ namespace CheckmateRPG.Core.Effects
             EffectMutationContext context,
             int amount,
             DamageType damageType = DamageType.Magical,
-            bool isCritical = false)
+            bool isCritical = false,
+            bool isTrueDamage = false)
         {
             Guid targetId = ResolveTargetId(context);
             if (targetId == Guid.Empty)
@@ -23,7 +24,8 @@ namespace CheckmateRPG.Core.Effects
                 Mathf.Max(0, amount),
                 isCritical,
                 BuildContext(context, targetId),
-                damageType);
+                damageType,
+                isTrueDamage);
         }
 
         public IRuntimeMutation CreateHeal(EffectMutationContext context, int amount)

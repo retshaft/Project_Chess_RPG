@@ -1,4 +1,6 @@
 using CheckmateRPG.Grid;
+using CheckmateRPG.Core.Runtime.Processors;
+using CheckmateRPG.Data;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Actions
@@ -24,8 +26,8 @@ namespace CheckmateRPG.Core.Actions
                     0,
                     0,
                     APActionReason.Attack),
-                AbilityActionCommand => new ActionCostBreakdown(
-                    Mathf.Max(0f, GetAbilityApCost(context.AbilityDefinition) * multiplier),
+                AbilityActionCommand ability => new ActionCostBreakdown(
+                    Mathf.Max(0f, GetAbilityApCost(context.Actor, ability, context.AbilityDefinition) * multiplier),
                     0,
                     Mathf.Max(0, context.AbilityDefinition != null ? context.AbilityDefinition.Cooldown : 0),
                     APActionReason.Skill),
@@ -36,9 +38,7 @@ namespace CheckmateRPG.Core.Actions
         private static float GetMoveApCost(CheckmateRPG.Units.UnitBrain actor, MoveActionCommand move)
         {
             float baseCost = actor.UnitData != null ? actor.UnitData.MoveCostAP : 0f;
-            float tileMultiplier = 1f;
-            if (GridSystem.Instance != null)
-                tileMultiplier *= GridSystem.Instance.GetMoveCostMultiplier(move.To);
+            float tileMultiplier = MovementMutationProcessor.ResolveSwampApMultiplier(move.From, move.To);
             return Mathf.Max(0f, baseCost * tileMultiplier);
         }
 
@@ -47,9 +47,29 @@ namespace CheckmateRPG.Core.Actions
             return actor.UnitData != null ? Mathf.Max(0f, actor.UnitData.AttackCostAP) : 0f;
         }
 
-        private static float GetAbilityApCost(AbilityDefinition definition)
+        private static float GetAbilityApCost(CheckmateRPG.Units.UnitBrain actor, AbilityActionCommand action, AbilityDefinition definition)
         {
-            return definition != null ? Mathf.Max(0f, definition.Cost) : 0f;
+            float baseCost = definition != null ? Mathf.Max(0f, definition.Cost) : 0f;
+            if (baseCost <= 0f || actor == null || action == null || !IsJumpAbility(actor, action))
+                return baseCost;
+
+            if (action.TargetCells == null || action.TargetCells.Count == 0)
+                return baseCost;
+
+            Vector2Int landing = action.TargetCells[0];
+            Vector2Int from = actor.Movement != null ? actor.Movement.GridPosition : landing;
+            float swampMultiplier = MovementMutationProcessor.ResolveSwampApMultiplier(from, landing, isJumpSkill: true);
+            return Mathf.Max(0f, baseCost * swampMultiplier);
+        }
+
+        private static bool IsJumpAbility(CheckmateRPG.Units.UnitBrain actor, AbilityActionCommand action)
+        {
+            if (actor?.UnitData?.PieceType == ChessPieceType.Knight)
+                return true;
+
+            string abilityId = action?.AbilityId ?? string.Empty;
+            return abilityId.IndexOf("jump", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   abilityId.IndexOf("leap", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }
