@@ -140,7 +140,7 @@ namespace CheckmateRPG.Data
                 ChessPieceType.Rook => "포트리스",
                 ChessPieceType.Queen => "대왕",
                 ChessPieceType.King => "군주",
-                _ => "병력"
+                _ => "징집병"
             };
         }
 
