@@ -23,6 +23,7 @@ namespace CheckmateRPG.Testing
         [SerializeField] private float _textYOffset = 1.5f;
         [SerializeField] private int _fontSize = 48;
 
+        private static readonly Dictionary<string, Type> EventTypeCache = new(StringComparer.Ordinal);
         private readonly Dictionary<Guid, UnitBrain> _unitsById = new();
         private readonly List<DynamicSubscription> _dynamicSubscriptions = new();
 
@@ -51,6 +52,7 @@ namespace CheckmateRPG.Testing
             _eventBus.Subscribe<DamageAppliedEvent>(HandleDamageApplied);
             _eventBus.Subscribe<MoveCompletedEvent>(HandleMoveCompleted);
             _eventBus.Subscribe<EffectTickEvent>(HandleEffectTick);
+            RefreshUnitCache();
 
             // Compatibility subscriptions for requested temporary event names.
             SubscribeByName("DamageTakenEvent", HandleLegacyDamageTaken);
@@ -160,7 +162,7 @@ namespace CheckmateRPG.Testing
 
         private IEnumerator PlayFloatingText(Vector3 worldAnchor, string message, Color color)
         {
-            var textRoot = new GameObject($"DummyFloatingText_{message}");
+            var textRoot = new GameObject("DummyFloatingText");
             textRoot.transform.position = worldAnchor;
 
             TextMesh textMesh = textRoot.AddComponent<TextMesh>();
@@ -202,6 +204,9 @@ namespace CheckmateRPG.Testing
 
         private static Type ResolveEventType(string simpleTypeName)
         {
+            if (EventTypeCache.TryGetValue(simpleTypeName, out Type cached))
+                return cached;
+
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             for (int i = 0; i < assemblies.Length; i++)
             {
@@ -228,10 +233,12 @@ namespace CheckmateRPG.Testing
                         continue;
                     }
 
+                    EventTypeCache[simpleTypeName] = candidate;
                     return candidate;
                 }
             }
 
+            EventTypeCache[simpleTypeName] = null;
             return null;
         }
 
@@ -278,6 +285,12 @@ namespace CheckmateRPG.Testing
             if (_unitsById.TryGetValue(unitId, out unit) && unit != null)
                 return true;
 
+            RefreshUnitCache();
+            return _unitsById.TryGetValue(unitId, out unit) && unit != null;
+        }
+
+        private void RefreshUnitCache()
+        {
             UnitBrain[] allUnits = FindObjectsByType<UnitBrain>(FindObjectsSortMode.None);
             for (int i = 0; i < allUnits.Length; i++)
             {
@@ -287,8 +300,6 @@ namespace CheckmateRPG.Testing
 
                 _unitsById[candidate.ActorId] = candidate;
             }
-
-            return _unitsById.TryGetValue(unitId, out unit) && unit != null;
         }
 
         private static bool IsResolvePhase(IGameEvent gameEvent)
