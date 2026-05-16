@@ -71,6 +71,8 @@ namespace CheckmateRPG.Core.Effects
                 currentHp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : currentHp;
                 position = unit.Movement != null ? unit.Movement.GridPosition : position;
                 statusFlags = unit.IsDead ? UnitStatusFlags.Dead : statusFlags;
+                if (unit.StatusEffects != null && unit.StatusEffects.HasStatus(StatusEffectType.Stagger))
+                    statusFlags |= UnitStatusFlags.Stagger;
                 exists = true;
             }
 

@@ -429,6 +429,8 @@ namespace CheckmateRPG.Core
                     baselineFlags |= UnitStatusFlags.MoveLocked;
                 if (unit.Combat != null && unit.StatusEffects != null && !unit.StatusEffects.CanAttack)
                     baselineFlags |= UnitStatusFlags.AttackLocked;
+                if (unit.StatusEffects != null && unit.StatusEffects.HasStatus(StatusEffectType.Stagger))
+                    baselineFlags |= UnitStatusFlags.Stagger;
 
                 baseline.SeedBaseline(
                     unit.ActorId,
@@ -452,6 +454,8 @@ namespace CheckmateRPG.Core
                 flags |= UnitStatusFlags.MoveLocked;
             if (unit.Combat != null && unit.StatusEffects != null && !unit.StatusEffects.CanAttack)
                 flags |= UnitStatusFlags.AttackLocked;
+            if (unit.StatusEffects != null && unit.StatusEffects.HasStatus(StatusEffectType.Stagger))
+                flags |= UnitStatusFlags.Stagger;
 
             _simulationRuntime.SetUnitDerivedState(unit.ActorId, sp, flags);
             _simulationRuntime.SetUnitHP(unit.ActorId, hp, OwnershipOwners.DamageMutationProcessor);

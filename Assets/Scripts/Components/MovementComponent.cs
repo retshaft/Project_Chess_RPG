@@ -211,9 +211,9 @@ namespace CheckmateRPG.Components
 
             int effectiveWeight = Weight;
             if (_statusEffects != null && _statusEffects.HasStatus(Core.StatusEffectType.Stagger) && !IsBoss)
-                effectiveWeight = Mathf.Max(0, effectiveWeight - 1);
+                effectiveWeight = Math.Max(0, effectiveWeight - 1);
 
-            int distance = Mathf.Max(0, force - effectiveWeight);
+            int distance = Math.Max(0, force - effectiveWeight);
             if (distance <= 0)
                 return;
 
