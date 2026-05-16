@@ -7,6 +7,7 @@ using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Replay;
 using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Mutations;
+using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Core.Simulation;
 using NUnit.Framework;
 using UnityEngine;
@@ -16,6 +17,38 @@ namespace CheckmateRPG.Tests
     [TestFixture]
     public sealed class SimulationDivergenceTests
     {
+        [Test]
+        public void StressTest_DeterministicSymmetry()
+        {
+            const int seed = 20260516;
+            const int iterations = 1000;
+            const int unitCount = 10;
+            const int totalTicks = 100;
+
+            byte[] baselineDigest = null;
+            for (int iteration = 0; iteration < iterations; iteration++)
+            {
+                byte[] digest = RunHeadlessDeterministicBattle(seed, unitCount, totalTicks);
+                if (baselineDigest == null)
+                {
+                    baselineDigest = digest;
+                    continue;
+                }
+
+                Assert.AreEqual(
+                    baselineDigest.Length,
+                    digest.Length,
+                    $"Digest length mismatch at iteration {iteration}.");
+                for (int i = 0; i < baselineDigest.Length; i++)
+                {
+                    Assert.AreEqual(
+                        baselineDigest[i],
+                        digest[i],
+                        $"Digest mismatch at iteration {iteration}, byte index {i}.");
+                }
+            }
+        }
+
         [Test]
         public void OriginalAndReplayRuntime_ShouldMatch_WhenReplayingSameActionJournal()
         {
@@ -330,6 +363,177 @@ namespace CheckmateRPG.Tests
                 ap: 0f,
                 activeEffects,
                 reservations: Array.Empty<RuntimeReservationEntry>());
+        }
+
+        private static byte[] RunHeadlessDeterministicBattle(int seed, int unitCount, int totalTicks)
+        {
+            const int boardSize = 16;
+
+            SimulationRuntime runtime = new SimulationRuntime(currentTick: 0);
+            var random = new SeededRandomProvider(seed);
+            List<Guid> orderedUnitIds = InitializeUnits(runtime, random, unitCount, boardSize);
+
+            var schedulerObject = new GameObject("DeterministicSymmetryTickScheduler");
+            TickScheduler scheduler = schedulerObject.AddComponent<TickScheduler>();
+            try
+            {
+                for (int tick = 0; tick < totalTicks; tick++)
+                {
+                    scheduler.Advance(TickScheduler.DefaultTickDurationSeconds);
+                    runtime.SetCurrentTick(scheduler.CurrentTick);
+                    ExecuteBattleTick(runtime, random, orderedUnitIds, boardSize, scheduler.CurrentTick);
+                }
+
+                RuntimeSnapshot snapshot = CaptureRuntimeSnapshot(runtime);
+                return SnapshotHash.ComputeDigest(snapshot);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(schedulerObject);
+            }
+        }
+
+        private static List<Guid> InitializeUnits(
+            SimulationRuntime runtime,
+            SeededRandomProvider random,
+            int unitCount,
+            int boardSize)
+        {
+            var occupied = new HashSet<Vector2Int>();
+            var unitIds = new List<Guid>(unitCount);
+            for (int i = 0; i < unitCount; i++)
+            {
+                Guid unitId = random.NextGuid();
+                while (unitId == Guid.Empty || unitIds.Contains(unitId))
+                    unitId = random.NextGuid();
+
+                Vector2Int position = NextUniquePosition(random, boardSize, occupied);
+                var state = new UnitRuntimeState();
+                state.SeedBaseline(
+                    unitId,
+                    hp: 120,
+                    sp: 20,
+                    position: position,
+                    currentActionId: null,
+                    recoveryUntilTick: 0,
+                    statusFlags: UnitStatusFlags.None);
+                runtime.RegisterUnit(state);
+                unitIds.Add(unitId);
+            }
+
+            unitIds.Sort();
+            return unitIds;
+        }
+
+        private static Vector2Int NextUniquePosition(
+            SeededRandomProvider random,
+            int boardSize,
+            HashSet<Vector2Int> occupied)
+        {
+            int attempts = boardSize * boardSize * 2;
+            for (int i = 0; i < attempts; i++)
+            {
+                var candidate = new Vector2Int(random.NextInt(0, boardSize), random.NextInt(0, boardSize));
+                if (occupied.Add(candidate))
+                    return candidate;
+            }
+
+            for (int x = 0; x < boardSize; x++)
+            {
+                for (int y = 0; y < boardSize; y++)
+                {
+                    var candidate = new Vector2Int(x, y);
+                    if (occupied.Add(candidate))
+                        return candidate;
+                }
+            }
+
+            throw new InvalidOperationException("Unable to allocate deterministic unit position.");
+        }
+
+        private static void ExecuteBattleTick(
+            SimulationRuntime runtime,
+            SeededRandomProvider random,
+            IReadOnlyList<Guid> unitIds,
+            int boardSize,
+            int currentTick)
+        {
+            for (int i = 0; i < unitIds.Count; i++)
+                TryMoveUnit(runtime, random, unitIds[i], boardSize);
+
+            for (int i = 0; i < unitIds.Count; i++)
+                ApplyAreaAttack(runtime, random, unitIds, unitIds[i], boardSize, currentTick);
+        }
+
+        private static void TryMoveUnit(
+            SimulationRuntime runtime,
+            SeededRandomProvider random,
+            Guid unitId,
+            int boardSize)
+        {
+            if (!runtime.TryGetUnit(unitId, out IReadOnlyUnitRuntimeState unit) ||
+                (unit.StatusFlags & UnitStatusFlags.Dead) != 0)
+            {
+                return;
+            }
+
+            int dx = random.NextInt(-1, 2);
+            int dy = random.NextInt(-1, 2);
+            if (dx == 0 && dy == 0)
+                return;
+
+            Vector2Int destination = new Vector2Int(
+                Mathf.Clamp(unit.Position.x + dx, 0, boardSize - 1),
+                Mathf.Clamp(unit.Position.y + dy, 0, boardSize - 1));
+
+            if (destination == unit.Position)
+                return;
+
+            if (runtime.OccupiedPositions.TryGetValue(destination, out Guid occupant) && occupant != unitId)
+                return;
+
+            runtime.SetUnitPosition(unitId, destination, OwnershipOwners.MovementMutationProcessor);
+        }
+
+        private static void ApplyAreaAttack(
+            SimulationRuntime runtime,
+            SeededRandomProvider random,
+            IReadOnlyList<Guid> unitIds,
+            Guid attackerId,
+            int boardSize,
+            int currentTick)
+        {
+            if (!runtime.TryGetUnit(attackerId, out IReadOnlyUnitRuntimeState attacker) ||
+                (attacker.StatusFlags & UnitStatusFlags.Dead) != 0)
+            {
+                return;
+            }
+
+            var attackActionId = random.NextGuid();
+            runtime.SetUnitActionState(attackerId, attackActionId, currentTick + 1, OwnershipOwners.ActionScheduler);
+
+            Vector2Int center = new Vector2Int(random.NextInt(0, boardSize), random.NextInt(0, boardSize));
+            int radius = random.NextInt(1, 3);
+            int damage = random.NextInt(3, 10);
+
+            for (int i = 0; i < unitIds.Count; i++)
+            {
+                Guid targetId = unitIds[i];
+                if (!runtime.TryGetUnit(targetId, out IReadOnlyUnitRuntimeState target) ||
+                    (target.StatusFlags & UnitStatusFlags.Dead) != 0)
+                {
+                    continue;
+                }
+
+                int manhattanDistance = Mathf.Abs(target.Position.x - center.x) + Mathf.Abs(target.Position.y - center.y);
+                if (manhattanDistance > radius)
+                    continue;
+
+                int remainingHp = Mathf.Max(0, target.HP - damage);
+                runtime.SetUnitHP(targetId, remainingHp, OwnershipOwners.DamageMutationProcessor);
+                if (remainingHp == 0)
+                    runtime.AddUnitStatusFlag(targetId, UnitStatusFlags.Dead);
+            }
         }
     }
 }
