@@ -12,14 +12,18 @@ namespace CheckmateRPG.Core.Replay
     {
         public static string Compute(RuntimeSnapshot snapshot)
         {
+            return ToLowerHex(ComputeDigest(snapshot));
+        }
+
+        public static byte[] ComputeDigest(RuntimeSnapshot snapshot)
+        {
             if (snapshot == null)
-                return string.Empty;
+                return Array.Empty<byte>();
 
             string canonicalState = BuildCanonicalState(snapshot);
             byte[] inputBytes = Encoding.UTF8.GetBytes(canonicalState);
             using SHA256 sha256 = SHA256.Create();
-            byte[] hash = sha256.ComputeHash(inputBytes);
-            return ToLowerHex(hash);
+            return sha256.ComputeHash(inputBytes);
         }
 
         private static string BuildCanonicalState(RuntimeSnapshot snapshot)
