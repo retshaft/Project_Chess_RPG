@@ -29,17 +29,24 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 return Array.Empty<IGameEvent>();
 
             int amount = Mathf.Max(0, mutation.Amount);
-            switch (mutation.DamageType)
+            if (mutation.IsTrueDamage)
             {
-                case DamageType.Physical:
-                    target.Health.TakeDamage(amount);
-                    break;
-                case DamageType.Magical:
-                    target.Health.ApplyMagicDamage(amount);
-                    break;
-                default:
-                    target.Health.ApplyTrueDamage(amount);
-                    break;
+                target.Health.ApplyTrueDamage(amount);
+            }
+            else
+            {
+                switch (mutation.DamageType)
+                {
+                    case DamageType.Physical:
+                        target.Health.TakeDamage(amount);
+                        break;
+                    case DamageType.Magical:
+                        target.Health.ApplyMagicDamage(amount);
+                        break;
+                    default:
+                        target.Health.ApplyTrueDamage(amount);
+                        break;
+                }
             }
 
             int actualRemainingHp = Mathf.RoundToInt(target.Health.CurrentHealth);

@@ -5,7 +5,9 @@ using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
+using UnityEngine;
 
 namespace CheckmateRPG.Core.Runtime.Processors
 {
@@ -48,6 +50,65 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 mutation.From,
                 mutation.To,
                 mutation.Context));
+        }
+
+        public static float ResolveSwampApMultiplier(Vector2Int from, Vector2Int to, bool isJumpSkill = false)
+        {
+            GridSystem grid = GridSystem.Instance;
+            if (grid == null || !grid.IsValidCell(to))
+                return 1f;
+
+            if (grid.GetTileType(to) == TileType.Swamp)
+                return GridSystem.SwampMoveCostMultiplier;
+
+            if (isJumpSkill)
+                return 1f;
+
+            if (PathContainsSwamp(grid, from, to))
+                return GridSystem.SwampMoveCostMultiplier;
+
+            return 1f;
+        }
+
+        private static bool PathContainsSwamp(GridSystem grid, Vector2Int from, Vector2Int to)
+        {
+            int x = from.x;
+            int y = from.y;
+            int xEnd = to.x;
+            int yEnd = to.y;
+            int deltaX = Mathf.Abs(xEnd - x);
+            int stepX = x < xEnd ? 1 : -1;
+            int deltaY = -Mathf.Abs(yEnd - y);
+            int stepY = y < yEnd ? 1 : -1;
+            int error = deltaX + deltaY;
+
+            bool isStart = true;
+            while (true)
+            {
+                var sample = new Vector2Int(x, y);
+                if (!isStart && sample != to && grid.IsValidCell(sample) && grid.GetTileType(sample) == TileType.Swamp)
+                    return true;
+
+                if (x == xEnd && y == yEnd)
+                    break;
+
+                int doubledError = 2 * error;
+                if (doubledError >= deltaY)
+                {
+                    error += deltaY;
+                    x += stepX;
+                }
+
+                if (doubledError <= deltaX)
+                {
+                    error += deltaX;
+                    y += stepY;
+                }
+
+                isStart = false;
+            }
+
+            return false;
         }
     }
 }

@@ -5,6 +5,7 @@ using CheckmateRPG.Core.Runtime;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Runtime.Ownership;
 using CheckmateRPG.Core.Simulation;
+using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
 using UnityEngine;
 
@@ -90,6 +91,7 @@ namespace CheckmateRPG.Core.Effects
 
     public sealed class EffectSystem
     {
+        private const int TerrainEffectDurationTicks = 2;
         private const int TickPaddingWidth = 8;
         private const int CollisionIndexPaddingWidth = 4;
 
@@ -160,6 +162,7 @@ namespace CheckmateRPG.Core.Effects
         {
             SimulationRuntime runtime = GetRuntime();
             runtime.SetCurrentTick(schedulerTick);
+            ApplyTerrainTileEffects(runtime, schedulerTick);
             if (runtime.ActiveEffects.Count == 0)
                 return Array.Empty<QueuedMutation>();
 
@@ -195,6 +198,61 @@ namespace CheckmateRPG.Core.Effects
             });
 
             return tickResult.QueuedMutations;
+        }
+
+        private void ApplyTerrainTileEffects(SimulationRuntime runtime, int schedulerTick)
+        {
+            GridSystem grid = GridSystem.Instance;
+            if (grid == null || runtime == null)
+                return;
+
+            foreach (KeyValuePair<Guid, IReadOnlyUnitRuntimeState> pair in runtime.RuntimeStates)
+            {
+                IReadOnlyUnitRuntimeState unit = pair.Value;
+                if (unit == null || unit.UnitId == Guid.Empty || (unit.StatusFlags & UnitStatusFlags.Dead) != 0)
+                    continue;
+
+                TileType tileType = grid.GetTileType(unit.Position);
+                if (tileType == TileType.Spikes)
+                    ApplyTerrainEffect(unit.UnitId, TerrainEffectIds.SpikesTrueDot, schedulerTick);
+
+                if (tileType == TileType.Sanctuary && IsSanctuaryAlly(unit.UnitId))
+                {
+                    ApplyTerrainEffect(unit.UnitId, TerrainEffectIds.SanctuaryHot, schedulerTick);
+                    ApplyTerrainEffect(unit.UnitId, TerrainEffectIds.SanctuaryDefense, schedulerTick);
+                }
+            }
+        }
+
+        private void ApplyTerrainEffect(Guid unitId, string effectId, int schedulerTick)
+        {
+            var state = new EffectRuntimeState(
+                effectId: effectId,
+                sourceId: Guid.Empty,
+                targetId: unitId,
+                remainingTick: TerrainEffectDurationTicks,
+                stackCount: 1,
+                tickInterval: 1,
+                nextTickIn: 1,
+                magnitude: 1f,
+                timingPhase: EffectTimingPhase.OnTickEnd,
+                actionSpeedLevel: ActionSpeedTier.Normal,
+                isReaction: false,
+                appliedTick: schedulerTick,
+                stackPolicy: EffectStackPolicy.MaxStackCap,
+                maxStackCap: 1,
+                maxApplicationsPerTick: 1);
+
+            ApplyOrRefreshEffect(state);
+        }
+
+        private bool IsSanctuaryAlly(Guid unitId)
+        {
+            if (!_context.TryGetUnit(unitId, out UnitBrain unit) || unit == null)
+                return false;
+
+            CheckmateRPG.Components.TeamComponent team = unit.GetComponent<CheckmateRPG.Components.TeamComponent>();
+            return team != null && team.IsPlayer;
         }
 
         /// <summary>

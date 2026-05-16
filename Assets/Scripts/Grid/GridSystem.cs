@@ -17,10 +17,10 @@ namespace CheckmateRPG.Grid
 
         public const int GridWidth  = 8;
         public const int GridHeight = 8;
-        private const float SwampMoveCostMultiplier = 2f;
-        private const float SpikeDamagePercentPerSecond = 0.03f;
-        private const float SanctuaryHealPercentPerSecond = 0.02f;
-        private const float SanctuaryDefenseBonus = 0.15f;
+        public const float SwampMoveCostMultiplier = 2f;
+        public const float SpikeDamagePercentPerSecond = 0.03f;
+        public const float SanctuaryHealPercentPerSecond = 0.02f;
+        public const float SanctuaryDefenseBonus = 0.15f;
 
         // ─── Serialized Fields ────────────────────────────────────────────────────
 
@@ -78,15 +78,7 @@ namespace CheckmateRPG.Grid
 
         private void Update()
         {
-            if (_tileEffectTickInterval <= 0f)
-                return;
-
-            _tileEffectTimer += Time.deltaTime;
-            if (_tileEffectTimer >= _tileEffectTickInterval)
-            {
-                _tileEffectTimer -= _tileEffectTickInterval;
-                ApplyTileEffectTick();
-            }
+            // Core simulation terrain ticks are executed through EffectTickScheduler.
         }
 
         // ─── Coordinate Conversion ────────────────────────────────────────────────
@@ -232,9 +224,7 @@ namespace CheckmateRPG.Grid
         /// </summary>
         public void ApplyTileEffects(GameObject unit, Vector2Int cell)
         {
-            if (!IsValidCell(cell) || unit == null) return;
-
-            UpdateSanctuaryDefense(unit, GetTileType(cell));
+            // Terrain gameplay effects are resolved by the deterministic effect runtime.
         }
 
         private void UpdateSanctuaryDefense(GameObject unit, TileType tileType)
