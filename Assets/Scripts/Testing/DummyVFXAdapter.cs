@@ -22,6 +22,7 @@ namespace CheckmateRPG.Testing
         [SerializeField] private float _floatingDistance = 1f;
         [SerializeField] private float _textYOffset = 1.5f;
         [SerializeField] private int _fontSize = 48;
+        [SerializeField] private float _unitCacheRefreshInterval = 0.5f;
 
         private static readonly Dictionary<string, Type> EventTypeCache = new(StringComparer.Ordinal);
         private static readonly HashSet<string> MissingEventTypeCache = new(StringComparer.Ordinal);
@@ -30,6 +31,7 @@ namespace CheckmateRPG.Testing
 
         private IEventBus _eventBus;
         private bool _isSubscribed;
+        private float _nextUnitCacheRefreshTime;
 
         private readonly struct DynamicSubscription
         {
@@ -213,6 +215,10 @@ namespace CheckmateRPG.Testing
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             for (int i = 0; i < assemblies.Length; i++)
             {
+                string assemblyName = assemblies[i].GetName().Name;
+                if (string.IsNullOrWhiteSpace(assemblyName) || !assemblyName.Contains("Assembly-CSharp", StringComparison.Ordinal))
+                    continue;
+
                 Type[] types;
                 try
                 {
@@ -231,6 +237,8 @@ namespace CheckmateRPG.Testing
                     Type candidate = types[j];
                     if (candidate == null ||
                         !typeof(IGameEvent).IsAssignableFrom(candidate) ||
+                        string.IsNullOrWhiteSpace(candidate.FullName) ||
+                        !candidate.FullName.StartsWith("CheckmateRPG.", StringComparison.Ordinal) ||
                         !string.Equals(candidate.Name, simpleTypeName, StringComparison.Ordinal))
                     {
                         continue;
@@ -288,7 +296,11 @@ namespace CheckmateRPG.Testing
             if (_unitsById.TryGetValue(unitId, out unit) && unit != null)
                 return true;
 
+            if (Time.unscaledTime < _nextUnitCacheRefreshTime)
+                return false;
+
             RefreshUnitCache();
+            _nextUnitCacheRefreshTime = Time.unscaledTime + Mathf.Max(0.1f, _unitCacheRefreshInterval);
             return _unitsById.TryGetValue(unitId, out unit) && unit != null;
         }
 
