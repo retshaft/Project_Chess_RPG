@@ -7,7 +7,7 @@ namespace CheckmateRPG.Core.Actions
 {
     public sealed class DefaultActionCostPolicy : IActionCostPolicy
     {
-        private static readonly HashSet<string> JumpAbilityTokens = new(System.StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> JumpAbilityTokens = new(System.StringComparer.Ordinal)
         {
             "jump",
             "leap"
@@ -70,10 +70,10 @@ namespace CheckmateRPG.Core.Actions
 
         private static bool IsJumpAbility(AbilityActionCommand action)
         {
-            string abilityId = action?.AbilityId ?? string.Empty;
+            string abilityId = (action?.AbilityId ?? string.Empty).ToLowerInvariant();
             foreach (string token in JumpAbilityTokens)
             {
-                if (abilityId.IndexOf(token, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                if (abilityId.Contains(token))
                     return true;
             }
 

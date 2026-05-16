@@ -64,24 +64,51 @@ namespace CheckmateRPG.Core.Runtime.Processors
             if (isJumpSkill)
                 return 1f;
 
-            int deltaX = to.x - from.x;
-            int deltaY = to.y - from.y;
-            int stepCount = Mathf.Max(Mathf.Abs(deltaX), Mathf.Abs(deltaY));
-            if (stepCount <= 1)
-                return 1f;
-
-            float inverseStepCount = 1f / stepCount;
-            for (int step = 1; step < stepCount; step++)
-            {
-                float t = step * inverseStepCount;
-                int x = from.x + Mathf.RoundToInt(deltaX * t);
-                int y = from.y + Mathf.RoundToInt(deltaY * t);
-                var sample = new Vector2Int(x, y);
-                if (grid.IsValidCell(sample) && grid.GetTileType(sample) == TileType.Swamp)
-                    return GridSystem.SwampMoveCostMultiplier;
-            }
+            if (PathContainsSwamp(grid, from, to))
+                return GridSystem.SwampMoveCostMultiplier;
 
             return 1f;
+        }
+
+        private static bool PathContainsSwamp(GridSystem grid, Vector2Int from, Vector2Int to)
+        {
+            int x = from.x;
+            int y = from.y;
+            int xEnd = to.x;
+            int yEnd = to.y;
+            int deltaX = Mathf.Abs(xEnd - x);
+            int stepX = x < xEnd ? 1 : -1;
+            int deltaY = -Mathf.Abs(yEnd - y);
+            int stepY = y < yEnd ? 1 : -1;
+            int error = deltaX + deltaY;
+
+            bool isStart = true;
+            while (true)
+            {
+                var sample = new Vector2Int(x, y);
+                if (!isStart && sample != to && grid.IsValidCell(sample) && grid.GetTileType(sample) == TileType.Swamp)
+                    return true;
+
+                if (x == xEnd && y == yEnd)
+                    break;
+
+                int doubledError = 2 * error;
+                if (doubledError >= deltaY)
+                {
+                    error += deltaY;
+                    x += stepX;
+                }
+
+                if (doubledError <= deltaX)
+                {
+                    error += deltaX;
+                    y += stepY;
+                }
+
+                isStart = false;
+            }
+
+            return false;
         }
     }
 }
