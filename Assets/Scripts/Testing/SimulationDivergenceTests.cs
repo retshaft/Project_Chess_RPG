@@ -430,7 +430,8 @@ namespace CheckmateRPG.Tests
             int boardSize,
             HashSet<Vector2Int> occupied)
         {
-            int attempts = boardSize * boardSize * 2;
+            const int randomRetryMultiplier = 2;
+            int attempts = boardSize * boardSize * randomRetryMultiplier;
             for (int i = 0; i < attempts; i++)
             {
                 var candidate = new Vector2Int(random.NextInt(0, boardSize), random.NextInt(0, boardSize));
