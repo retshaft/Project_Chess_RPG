@@ -314,11 +314,11 @@ namespace CheckmateRPG.Core
                         runtimeEffect.EffectId,
                         sourceId,
                         targetActorId,
-                        Mathf.Max(1, runtimeEffect.RemainingTick),
-                        Mathf.Max(1, runtimeEffect.TickInterval),
-                        Mathf.Clamp(runtimeEffect.NextTickIn, 1, Mathf.Max(1, runtimeEffect.TickInterval)),
-                        Mathf.Max(1, runtimeEffect.StackCount),
-                        Mathf.Max(0f, runtimeEffect.Magnitude),
+                        runtimeEffect.RemainingTick,
+                        runtimeEffect.TickInterval,
+                        runtimeEffect.NextTickIn,
+                        runtimeEffect.StackCount,
+                        runtimeEffect.Magnitude,
                         runtimeEffect.StackPolicy,
                         runtimeEffect.MaxStackCap,
                         runtimeEffect.TimingPhase,
@@ -362,8 +362,7 @@ namespace CheckmateRPG.Core
 
         private static void EnqueuePostResolveMutations(AbilityResolveRequest request, MutationQueue mutationQueue)
         {
-            AbilityResolveResult resolved = new(true, Array.Empty<AbilityEffectIntent>());
-            IReadOnlyList<IRuntimeMutation> postResolveMutations = PostProcessResolveMutations(request, resolved);
+            IReadOnlyList<IRuntimeMutation> postResolveMutations = PostProcessResolveMutations(request);
             for (int i = 0; i < postResolveMutations.Count; i++)
             {
                 IRuntimeMutation mutation = postResolveMutations[i];
@@ -381,11 +380,9 @@ namespace CheckmateRPG.Core
             return request.Action.TargetIds?.Count ?? 0;
         }
 
-        private static IReadOnlyList<IRuntimeMutation> PostProcessResolveMutations(
-            AbilityResolveRequest request,
-            AbilityResolveResult resolveResult)
+        private static IReadOnlyList<IRuntimeMutation> PostProcessResolveMutations(AbilityResolveRequest request)
         {
-            if (!resolveResult.Succeeded || request.Action == null)
+            if (request.Action == null)
                 return Array.Empty<IRuntimeMutation>();
 
             return new IRuntimeMutation[]
