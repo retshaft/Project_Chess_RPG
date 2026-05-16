@@ -93,14 +93,20 @@ namespace CheckmateRPG.Core.Effects.Processors
 
         private static bool IsOnTile(UnitBrain unit, TileType tileType)
         {
-            if (unit?.Movement == null)
+            if (unit == null)
                 return false;
 
             GridSystem grid = GridSystem.Instance;
             if (grid == null)
                 return false;
 
-            return grid.GetTileType(unit.Movement.GridPosition) == tileType;
+            Vector2Int position = unit.RuntimeState != null
+                ? unit.RuntimeState.Position
+                : (unit.Movement != null ? unit.Movement.GridPosition : default);
+            if (!grid.IsValidCell(position))
+                return false;
+
+            return grid.GetTileType(position) == tileType;
         }
 
         private static bool IsOnTile(Vector2Int position, TileType tileType)

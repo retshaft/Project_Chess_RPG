@@ -1,11 +1,18 @@
 using CheckmateRPG.Grid;
 using CheckmateRPG.Core.Runtime.Processors;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Actions
 {
     public sealed class DefaultActionCostPolicy : IActionCostPolicy
     {
+        private static readonly HashSet<string> JumpAbilityTokens = new(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "jump",
+            "leap"
+        };
+
         public ActionCostBreakdown Evaluate(IActionCommand action, ActionCostContext context)
         {
             if (action == null || context.Actor == null)
@@ -64,8 +71,13 @@ namespace CheckmateRPG.Core.Actions
         private static bool IsJumpAbility(AbilityActionCommand action)
         {
             string abilityId = action?.AbilityId ?? string.Empty;
-            return abilityId.IndexOf("jump", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   abilityId.IndexOf("leap", System.StringComparison.OrdinalIgnoreCase) >= 0;
+            foreach (string token in JumpAbilityTokens)
+            {
+                if (abilityId.IndexOf(token, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

@@ -224,8 +224,7 @@ namespace CheckmateRPG.Grid
         /// </summary>
         public void ApplyTileEffects(GameObject unit, Vector2Int cell)
         {
-            _ = unit;
-            _ = cell;
+            // Terrain gameplay effects are resolved by the deterministic effect runtime.
         }
 
         private void UpdateSanctuaryDefense(GameObject unit, TileType tileType)

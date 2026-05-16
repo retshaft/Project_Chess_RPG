@@ -13,7 +13,6 @@ namespace CheckmateRPG.Core.Runtime.Processors
 {
     public sealed class MovementMutationProcessor
     {
-        private const float SwampPenaltyMultiplier = 2f;
         private readonly Func<Guid, UnitBrain> _unitLookup;
         private readonly SimulationRuntime _simulationRuntime;
 
@@ -60,7 +59,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 return 1f;
 
             if (grid.GetTileType(to) == TileType.Swamp)
-                return SwampPenaltyMultiplier;
+                return GridSystem.SwampMoveCostMultiplier;
 
             if (isJumpSkill)
                 return 1f;
@@ -71,13 +70,15 @@ namespace CheckmateRPG.Core.Runtime.Processors
             if (stepCount <= 1)
                 return 1f;
 
+            float inverseStepCount = 1f / stepCount;
             for (int step = 1; step < stepCount; step++)
             {
-                int x = from.x + Mathf.RoundToInt(deltaX * (step / (float)stepCount));
-                int y = from.y + Mathf.RoundToInt(deltaY * (step / (float)stepCount));
+                float t = step * inverseStepCount;
+                int x = from.x + Mathf.RoundToInt(deltaX * t);
+                int y = from.y + Mathf.RoundToInt(deltaY * t);
                 var sample = new Vector2Int(x, y);
                 if (grid.IsValidCell(sample) && grid.GetTileType(sample) == TileType.Swamp)
-                    return SwampPenaltyMultiplier;
+                    return GridSystem.SwampMoveCostMultiplier;
             }
 
             return 1f;
