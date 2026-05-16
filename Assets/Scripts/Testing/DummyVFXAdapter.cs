@@ -24,6 +24,7 @@ namespace CheckmateRPG.Testing
         [SerializeField] private int _fontSize = 48;
 
         private static readonly Dictionary<string, Type> EventTypeCache = new(StringComparer.Ordinal);
+        private static readonly HashSet<string> MissingEventTypeCache = new(StringComparer.Ordinal);
         private readonly Dictionary<Guid, UnitBrain> _unitsById = new();
         private readonly List<DynamicSubscription> _dynamicSubscriptions = new();
 
@@ -206,6 +207,8 @@ namespace CheckmateRPG.Testing
         {
             if (EventTypeCache.TryGetValue(simpleTypeName, out Type cached))
                 return cached;
+            if (MissingEventTypeCache.Contains(simpleTypeName))
+                return null;
 
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             for (int i = 0; i < assemblies.Length; i++)
@@ -238,7 +241,7 @@ namespace CheckmateRPG.Testing
                 }
             }
 
-            EventTypeCache[simpleTypeName] = null;
+            MissingEventTypeCache.Add(simpleTypeName);
             return null;
         }
 
