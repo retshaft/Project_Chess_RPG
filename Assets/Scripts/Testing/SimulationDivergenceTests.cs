@@ -39,6 +39,7 @@ namespace CheckmateRPG.Tests
                     baselineDigest.Length,
                     digest.Length,
                     $"Digest length mismatch at iteration {iteration}.");
+                // Byte-for-byte contract: keep Assert.AreEqual per index for explicit divergence location.
                 for (int i = 0; i < baselineDigest.Length; i++)
                 {
                     Assert.AreEqual(
@@ -430,6 +431,7 @@ namespace CheckmateRPG.Tests
             int boardSize,
             HashSet<Vector2Int> occupied)
         {
+            // 2x board area gives a deterministic fast-path before falling back to full linear scan.
             const int randomRetryMultiplier = 2;
             int attempts = boardSize * boardSize * randomRetryMultiplier;
             for (int i = 0; i < attempts; i++)
