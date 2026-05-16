@@ -54,7 +54,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
         {
             if (!_isPhysicalCcEffect(mutation.EffectId))
                 return mutation;
-            if (!_simulationRuntime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState targetState) || targetState == null)
+            if (!_simulationRuntime.TryGetUnit(mutation.TargetId, out IReadOnlyUnitRuntimeState targetState))
                 return mutation;
             if ((targetState.StatusFlags & UnitStatusFlags.Stagger) != 0)
                 return mutation;
