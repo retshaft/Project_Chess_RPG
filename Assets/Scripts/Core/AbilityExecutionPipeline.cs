@@ -231,7 +231,7 @@ namespace CheckmateRPG.Core
 
             IReadOnlyList<Vector2Int> targetCells = request.Action.TargetCells ?? Array.Empty<Vector2Int>();
             if (targetCells.Count == 0)
-                return true;
+                return false;
 
             foreach (Vector2Int targetCell in targetCells)
             {
@@ -260,7 +260,7 @@ namespace CheckmateRPG.Core
                 return false;
 
             GameObject occupant = gridSystem.GetOccupant(cell);
-            if (occupant == null || !occupant.TryGetComponent(out UnitBrain occupantUnit) || occupantUnit == null)
+            if (occupant == null || !occupant.TryGetComponent(out UnitBrain occupantUnit))
                 return false;
             if (occupantUnit.IsDead || occupantUnit.ActorId == Guid.Empty)
                 return false;
@@ -351,7 +351,7 @@ namespace CheckmateRPG.Core
                 SeededRandomProvider.Shared.NextGuid(),
                 request.Action.ActorId,
                 ResourceMutationType.ActionPoint,
-                -Mathf.Max(0, request.Action.ApCost),
+                -request.Action.ApCost,
                 $"Ability:{request.Action.AbilityId}",
                 new MutationContext(
                     request.Action.ResolveTick,
