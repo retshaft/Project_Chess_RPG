@@ -1,6 +1,5 @@
 using CheckmateRPG.Grid;
 using CheckmateRPG.Core.Runtime.Processors;
-using CheckmateRPG.Data;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Actions
@@ -50,7 +49,7 @@ namespace CheckmateRPG.Core.Actions
         private static float GetAbilityApCost(CheckmateRPG.Units.UnitBrain actor, AbilityActionCommand action, AbilityDefinition definition)
         {
             float baseCost = definition != null ? Mathf.Max(0f, definition.Cost) : 0f;
-            if (baseCost <= 0f || actor == null || action == null || !IsJumpAbility(actor, action))
+            if (baseCost <= 0f || actor == null || action == null || !IsJumpAbility(action))
                 return baseCost;
 
             if (action.TargetCells == null || action.TargetCells.Count == 0)
@@ -62,11 +61,8 @@ namespace CheckmateRPG.Core.Actions
             return Mathf.Max(0f, baseCost * swampMultiplier);
         }
 
-        private static bool IsJumpAbility(CheckmateRPG.Units.UnitBrain actor, AbilityActionCommand action)
+        private static bool IsJumpAbility(AbilityActionCommand action)
         {
-            if (actor?.UnitData?.PieceType == ChessPieceType.Knight)
-                return true;
-
             string abilityId = action?.AbilityId ?? string.Empty;
             return abilityId.IndexOf("jump", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
                    abilityId.IndexOf("leap", System.StringComparison.OrdinalIgnoreCase) >= 0;
