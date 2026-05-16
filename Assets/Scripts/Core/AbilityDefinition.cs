@@ -17,6 +17,9 @@ namespace CheckmateRPG.Core
     public sealed class AbilityEffectDefinition
     {
         public string EffectId = string.Empty;
+        public bool AppliesStatusEffect;
+        public StatusEffectType StatusEffect = StatusEffectType.Stagger;
+        public bool IsPhysicalCC;
         [Min(1)] public int DurationTicks = 1;
         [Min(1)] public int TickInterval = 1;
         [Min(1)] public int InitialTickIn = 1;

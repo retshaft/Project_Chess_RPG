@@ -61,6 +61,8 @@ namespace CheckmateRPG.Core
         private PositionReservationSystem _positionReservationSystem;
         private PositionReservationSnapshot _positionReservations = PositionReservationSnapshot.Empty;
         private readonly Dictionary<string, AbilityDefinition> _abilityDefinitions = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, RegisteredEffectProfile> _effectProfilesById = new(StringComparer.Ordinal);
+        private readonly Dictionary<StatusEffectType, string> _effectIdsByStatus = new();
         private readonly Dictionary<Guid, Dictionary<string, AbilityRuntimeState>> _abilityStatesByActor = new();
         private ReplayRecorder _replayRecorder;
         private ActionJournal _actionJournal;
@@ -176,6 +178,8 @@ namespace CheckmateRPG.Core
                 id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null,
                 _simulationRuntime,
                 state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state),
+                IsPhysicalCcEffect,
+                SubstituteEffectWithStagger,
                 TryApplyAbilityActionCompleteMutation);
             _mutationCommitService = new MutationCommitService(_mutationProcessor);
             _reactionSystem = new ReactionSystem(
@@ -402,6 +406,7 @@ namespace CheckmateRPG.Core
             if (definition == null || string.IsNullOrWhiteSpace(definition.name))
                 return;
             _abilityDefinitions[definition.name] = definition;
+            RebuildEffectProfileRegistry();
         }
 
         public void UnregisterAbilityDefinition(AbilityDefinition definition)
@@ -409,6 +414,7 @@ namespace CheckmateRPG.Core
             if (definition == null || string.IsNullOrWhiteSpace(definition.name))
                 return;
             _abilityDefinitions.Remove(definition.name);
+            RebuildEffectProfileRegistry();
         }
 
         public void SyncRuntimeState(UnitBrain unit)
@@ -1418,6 +1424,123 @@ namespace CheckmateRPG.Core
             if (string.IsNullOrWhiteSpace(abilityId))
                 return false;
             return _abilityDefinitions.TryGetValue(abilityId, out definition);
+        }
+
+        private bool IsPhysicalCcEffect(string effectId)
+        {
+            return TryGetRegisteredEffectProfile(effectId, out RegisteredEffectProfile profile) && profile.IsPhysicalCC;
+        }
+
+        private ApplyEffectMutation SubstituteEffectWithStagger(ApplyEffectMutation mutation)
+        {
+            if (string.IsNullOrWhiteSpace(mutation.EffectId))
+                return mutation;
+            if (TryGetRegisteredEffectProfile(mutation.EffectId, out RegisteredEffectProfile currentProfile) &&
+                currentProfile.AppliesStatusEffect &&
+                currentProfile.StatusEffect == StatusEffectType.Stagger)
+            {
+                return mutation;
+            }
+            if (!TryResolveStatusEffectId(StatusEffectType.Stagger, out string staggerEffectId))
+                return mutation;
+            if (!TryGetRegisteredEffectProfile(staggerEffectId, out RegisteredEffectProfile staggerProfile))
+                return mutation;
+            if (string.Equals(mutation.EffectId, staggerProfile.EffectId, StringComparison.Ordinal))
+                return mutation;
+
+            return mutation with
+            {
+                EffectId = staggerProfile.EffectId,
+                DurationTicks = staggerProfile.DurationTicks,
+                TickInterval = staggerProfile.TickInterval,
+                InitialTickIn = staggerProfile.InitialTickIn,
+                StackCount = staggerProfile.StackCount,
+                Magnitude = staggerProfile.Magnitude,
+                StackPolicy = staggerProfile.StackPolicy,
+                MaxStackCap = staggerProfile.MaxStackCap
+            };
+        }
+
+        private bool TryResolveStatusEffectId(StatusEffectType statusEffect, out string effectId)
+        {
+            if (_effectIdsByStatus.TryGetValue(statusEffect, out effectId) && !string.IsNullOrWhiteSpace(effectId))
+                return true;
+
+            effectId = null;
+            return false;
+        }
+
+        private bool TryGetRegisteredEffectProfile(string effectId, out RegisteredEffectProfile profile)
+        {
+            if (string.IsNullOrWhiteSpace(effectId))
+            {
+                profile = default;
+                return false;
+            }
+
+            return _effectProfilesById.TryGetValue(effectId, out profile);
+        }
+
+        private void RebuildEffectProfileRegistry()
+        {
+            _effectProfilesById.Clear();
+            _effectIdsByStatus.Clear();
+
+            var abilityIds = new List<string>(_abilityDefinitions.Keys);
+            abilityIds.Sort(StringComparer.Ordinal);
+
+            for (int i = 0; i < abilityIds.Count; i++)
+            {
+                AbilityDefinition definition = _abilityDefinitions[abilityIds[i]];
+                if (definition == null || definition.EffectList == null)
+                    continue;
+
+                for (int effectIndex = 0; effectIndex < definition.EffectList.Count; effectIndex++)
+                {
+                    AbilityEffectDefinition effect = definition.EffectList[effectIndex];
+                    if (effect == null || string.IsNullOrWhiteSpace(effect.EffectId))
+                        continue;
+
+                    if (!_effectProfilesById.ContainsKey(effect.EffectId))
+                        _effectProfilesById[effect.EffectId] = RegisteredEffectProfile.Create(effect);
+
+                    if (!effect.AppliesStatusEffect || _effectIdsByStatus.ContainsKey(effect.StatusEffect))
+                        continue;
+
+                    _effectIdsByStatus[effect.StatusEffect] = effect.EffectId;
+                }
+            }
+        }
+
+        private readonly record struct RegisteredEffectProfile(
+            string EffectId,
+            bool AppliesStatusEffect,
+            StatusEffectType StatusEffect,
+            bool IsPhysicalCC,
+            int DurationTicks,
+            int TickInterval,
+            int InitialTickIn,
+            int StackCount,
+            float Magnitude,
+            EffectStackPolicy StackPolicy,
+            int MaxStackCap)
+        {
+            public static RegisteredEffectProfile Create(AbilityEffectDefinition effect)
+            {
+                int tickInterval = Mathf.Max(1, effect.TickInterval);
+                return new RegisteredEffectProfile(
+                    effect.EffectId,
+                    effect.AppliesStatusEffect,
+                    effect.StatusEffect,
+                    effect.IsPhysicalCC,
+                    Mathf.Max(1, effect.DurationTicks),
+                    tickInterval,
+                    Mathf.Clamp(effect.InitialTickIn, 1, tickInterval),
+                    Mathf.Max(1, effect.StackCount),
+                    Mathf.Max(0f, effect.Magnitude),
+                    effect.StackPolicy,
+                    effect.MaxStackCap);
+            }
         }
 
         private AbilityRuntimeState GetOrCreateAbilityRuntimeState(Guid actorId, string abilityId)
