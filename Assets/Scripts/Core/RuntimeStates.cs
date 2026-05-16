@@ -10,7 +10,8 @@ namespace CheckmateRPG.Core
         None = 0,
         Dead = 1 << 0,
         MoveLocked = 1 << 1,
-        AttackLocked = 1 << 2
+        AttackLocked = 1 << 2,
+        Stagger = 1 << 3
     }
 
     [Serializable]
