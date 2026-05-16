@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Abilities;
 using CheckmateRPG.Core.Actions;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Effects;
 using CheckmateRPG.Core.Events.ActionEvents;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Units;
+using CheckmateRPG.Grid;
 using UnityEngine;
 
 namespace CheckmateRPG.Core
@@ -68,15 +70,34 @@ namespace CheckmateRPG.Core
             if (!Validate(request))
                 return ActionResolutionResult.Failed();
 
-            AbilityResolveResult resolveResult = Resolve(request);
-            if (!resolveResult.Succeeded)
-                return ActionResolutionResult.Failed();
+            var mutationQueue = new MutationQueue();
+            EnqueueApConsumeMutation(request, mutationQueue);
 
-            IReadOnlyList<IRuntimeMutation> effectMutations = EffectApply(request, resolveResult);
-            IReadOnlyList<IRuntimeMutation> stateMutations = PostProcessResolveMutations(request, resolveResult);
-            IReadOnlyList<IRuntimeMutation> mutations = MergeMutations(effectMutations, stateMutations);
-            IReadOnlyList<IGameEvent> events = PostProcessResolve(request, resolveResult);
-            return new ActionResolutionResult(true, mutations, events);
+            int effectMutationCount;
+            if (!TryEnqueueRuntimeEffects(request, mutationQueue, out effectMutationCount))
+            {
+                AbilityResolveResult fallbackResolveResult = Resolve(request);
+                if (!fallbackResolveResult.Succeeded)
+                    return ActionResolutionResult.Failed();
+
+                IReadOnlyList<IRuntimeMutation> fallbackEffectMutations = EffectApply(request, fallbackResolveResult);
+                for (int i = 0; i < fallbackEffectMutations.Count; i++)
+                {
+                    IRuntimeMutation mutation = fallbackEffectMutations[i];
+                    if (mutation != null)
+                        mutationQueue.Enqueue(mutation);
+                }
+
+                effectMutationCount = fallbackResolveResult.EffectIntents.Count;
+            }
+
+            EnqueuePostResolveMutations(request, mutationQueue);
+            IReadOnlyList<IGameEvent> events = PostProcessResolve(
+                request,
+                ResolvePrimaryTargetCount(request),
+                effectMutationCount,
+                true);
+            return new ActionResolutionResult(true, mutationQueue.CreateSnapshot(), events);
         }
 
         private static bool Validate(AbilityQueueRequest request)
@@ -195,6 +216,171 @@ namespace CheckmateRPG.Core
             return mutations;
         }
 
+        private static bool TryEnqueueRuntimeEffects(
+            AbilityResolveRequest request,
+            MutationQueue mutationQueue,
+            out int enqueuedEffectMutationCount)
+        {
+            enqueuedEffectMutationCount = 0;
+            if (request.Action == null ||
+                request.Action.RuntimeEffects == null ||
+                request.Action.RuntimeEffects.Count == 0)
+            {
+                return false;
+            }
+
+            IReadOnlyList<Vector2Int> targetCells = request.Action.TargetCells ?? Array.Empty<Vector2Int>();
+            if (targetCells.Count == 0)
+                return true;
+
+            foreach (Vector2Int targetCell in targetCells)
+            {
+                if (!TryGetTargetUnitAtCell(targetCell, out UnitBrain targetUnit))
+                    continue;
+
+                foreach (EffectRuntimeState runtimeEffect in request.Action.RuntimeEffects)
+                {
+                    IRuntimeMutation translated = TranslateRuntimeEffectToMutation(request, runtimeEffect, targetUnit.ActorId);
+                    if (translated == null)
+                        continue;
+
+                    mutationQueue.Enqueue(translated);
+                    enqueuedEffectMutationCount++;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryGetTargetUnitAtCell(Vector2Int cell, out UnitBrain targetUnit)
+        {
+            targetUnit = null;
+            GridSystem gridSystem = GridSystem.Instance;
+            if (gridSystem == null || !gridSystem.IsValidCell(cell))
+                return false;
+
+            GameObject occupant = gridSystem.GetOccupant(cell);
+            if (occupant == null || !occupant.TryGetComponent(out UnitBrain occupantUnit) || occupantUnit == null)
+                return false;
+            if (occupantUnit.IsDead || occupantUnit.ActorId == Guid.Empty)
+                return false;
+
+            targetUnit = occupantUnit;
+            return true;
+        }
+
+        private static IRuntimeMutation TranslateRuntimeEffectToMutation(
+            AbilityResolveRequest request,
+            EffectRuntimeState runtimeEffect,
+            Guid targetActorId)
+        {
+            if (runtimeEffect == null || targetActorId == Guid.Empty)
+                return null;
+
+            Guid sourceId = runtimeEffect.SourceId != Guid.Empty
+                ? runtimeEffect.SourceId
+                : request.Action.ActorId;
+            int amount = Mathf.Max(0, Mathf.RoundToInt(runtimeEffect.Magnitude));
+            MutationContext context = new(
+                request.Action.ResolveTick,
+                request.Action.ActionId,
+                targetActorId,
+                nameof(AbilityActionCommand));
+
+            EffectType effectType = ResolveEffectType(runtimeEffect.EffectId);
+            switch (effectType)
+            {
+                case EffectType.Damage:
+                    return new DamageMutation(
+                        SeededRandomProvider.Shared.NextGuid(),
+                        targetActorId,
+                        sourceId,
+                        amount,
+                        IsCritical: false,
+                        Context: context);
+                case EffectType.Heal:
+                    return new HealMutation(
+                        SeededRandomProvider.Shared.NextGuid(),
+                        targetActorId,
+                        sourceId,
+                        amount,
+                        Context: context);
+                case EffectType.Buff:
+                case EffectType.Dot:
+                case EffectType.Cc:
+                default:
+                    return new ApplyEffectMutation(
+                        SeededRandomProvider.Shared.NextGuid(),
+                        runtimeEffect.EffectId,
+                        sourceId,
+                        targetActorId,
+                        Mathf.Max(1, runtimeEffect.RemainingTick),
+                        Mathf.Max(1, runtimeEffect.TickInterval),
+                        Mathf.Clamp(runtimeEffect.NextTickIn, 1, Mathf.Max(1, runtimeEffect.TickInterval)),
+                        Mathf.Max(1, runtimeEffect.StackCount),
+                        Mathf.Max(0f, runtimeEffect.Magnitude),
+                        runtimeEffect.StackPolicy,
+                        runtimeEffect.MaxStackCap,
+                        runtimeEffect.TimingPhase,
+                        runtimeEffect.ActionSpeedLevel,
+                        runtimeEffect.IsReaction,
+                        context);
+            }
+        }
+
+        private static EffectType ResolveEffectType(string effectId)
+        {
+            if (string.IsNullOrWhiteSpace(effectId))
+                return EffectType.Buff;
+
+            string[] tokens = effectId.Split(':');
+            if (tokens.Length < 2)
+                return EffectType.Buff;
+
+            return Enum.TryParse(tokens[1], true, out EffectType parsedType)
+                ? parsedType
+                : EffectType.Buff;
+        }
+
+        private static void EnqueueApConsumeMutation(AbilityResolveRequest request, MutationQueue mutationQueue)
+        {
+            if (request.Action == null || request.Action.ApCost <= 0 || request.Action.ActorId == Guid.Empty)
+                return;
+
+            mutationQueue.Enqueue(new ResourceMutation(
+                SeededRandomProvider.Shared.NextGuid(),
+                request.Action.ActorId,
+                ResourceMutationType.ActionPoint,
+                -Mathf.Max(0, request.Action.ApCost),
+                $"Ability:{request.Action.AbilityId}",
+                new MutationContext(
+                    request.Action.ResolveTick,
+                    request.Action.ActionId,
+                    request.Action.ActorId,
+                    nameof(ResourceMutation))));
+        }
+
+        private static void EnqueuePostResolveMutations(AbilityResolveRequest request, MutationQueue mutationQueue)
+        {
+            AbilityResolveResult resolved = new(true, Array.Empty<AbilityEffectIntent>());
+            IReadOnlyList<IRuntimeMutation> postResolveMutations = PostProcessResolveMutations(request, resolved);
+            for (int i = 0; i < postResolveMutations.Count; i++)
+            {
+                IRuntimeMutation mutation = postResolveMutations[i];
+                if (mutation != null)
+                    mutationQueue.Enqueue(mutation);
+            }
+        }
+
+        private static int ResolvePrimaryTargetCount(AbilityResolveRequest request)
+        {
+            int targetCellCount = request.Action.TargetCells?.Count ?? 0;
+            if (targetCellCount > 0)
+                return targetCellCount;
+
+            return request.Action.TargetIds?.Count ?? 0;
+        }
+
         private static IReadOnlyList<IRuntimeMutation> PostProcessResolveMutations(
             AbilityResolveRequest request,
             AbilityResolveResult resolveResult)
@@ -222,15 +408,27 @@ namespace CheckmateRPG.Core
             AbilityResolveRequest request,
             AbilityResolveResult resolveResult)
         {
-            int primaryTargetCount = request.Action.TargetIds?.Count ?? 0;
+            return PostProcessResolve(
+                request,
+                request.Action.TargetIds?.Count ?? 0,
+                resolveResult.EffectIntents.Count,
+                resolveResult.Succeeded);
+        }
+
+        private static IReadOnlyList<IGameEvent> PostProcessResolve(
+            AbilityResolveRequest request,
+            int primaryTargetCount,
+            int effectIntentCount,
+            bool succeeded)
+        {
             AbilityActionResolvedEvent resolvedEvent = new(
                 new AbilityActionResolvedPayload(
                     request.Action.ActionId,
                     request.Action.ActorId,
                     request.Action.AbilityId,
                     primaryTargetCount,
-                    resolveResult.EffectIntents.Count,
-                    resolveResult.Succeeded),
+                    effectIntentCount,
+                    succeeded),
                 request.Action.ActorId.ToString("N"),
                 request.Action.ActionId.ToString("N"));
 
