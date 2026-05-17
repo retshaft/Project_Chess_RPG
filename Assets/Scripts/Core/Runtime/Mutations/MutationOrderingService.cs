@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace CheckmateRPG.Core.Runtime.Mutations
 {
@@ -108,7 +109,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 DamageMutation damage => damage.Amount,
                 HealMutation heal => heal.Amount,
                 ApplyEffectMutation effect => effect.DurationTicks,
-                CooldownMutation cooldown => BitConverter.SingleToInt32Bits(cooldown.DurationChange),
+                CooldownMutation cooldown => Mathf.RoundToInt(cooldown.DurationChange * 1000f),
                 ResourceMutation resource => resource.Delta,
                 ReservationMutation reservation => (int)reservation.Operation,
                 _ => 0

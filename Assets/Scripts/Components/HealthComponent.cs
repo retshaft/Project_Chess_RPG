@@ -175,6 +175,7 @@ namespace CheckmateRPG.Components
 
                 // 방어력이 0 미만이 되지 않도록 처리
                 currentDefense = Mathf.Max(0f, currentDefense);
+                // defensePenetrationRatio: 무시할 방어력 비율 (0.3 => 방어력 30% 무시, 70%만 유효 방어력으로 적용)
                 float effectiveDefense = currentDefense * (1f - Mathf.Clamp01(defensePenetrationRatio));
 
                 // 피해량에서 방어력을 차감하되, 피해량이 0 이하로 떨어지지 않도록 보정 (최소 1의 피해는 줄지, 완전히 막을지 기획 확인 필요. 여기선 최소 0으로 보정)
