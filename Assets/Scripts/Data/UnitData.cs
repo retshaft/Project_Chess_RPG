@@ -6,6 +6,7 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+using CheckmateRPG.Core.Abilities;
 
 namespace CheckmateRPG.Data
 {
@@ -87,6 +88,8 @@ namespace CheckmateRPG.Data
         [Tooltip("Skill Points")]
         [Min(1f)] public float MaxSP = 24f;
         [Min(0f)] public float InitSP = 4f;
+        [Tooltip("기본 공격에 사용하는 AbilityData(평타 SP 획득량 등 참조).")]
+        public AbilityDataSO BasicAttackAbilityData;
 
         // ─── Action Costs ────────────────────────────────────────────────────────
 

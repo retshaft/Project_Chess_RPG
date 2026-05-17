@@ -7,6 +7,8 @@ namespace CheckmateRPG.Core.Runtime
     {
         Guid UnitId { get; }
         int HP { get; }
+        int CurrentSP { get; }
+        int MaxSP { get; }
         int SP { get; }
         Vector2Int Position { get; }
         Guid? CurrentActionId { get; }

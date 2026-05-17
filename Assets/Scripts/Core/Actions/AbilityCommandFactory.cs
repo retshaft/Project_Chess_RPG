@@ -42,6 +42,7 @@ namespace CheckmateRPG.Core.Actions
                 targetCells: targetCells,
                 runtimeEffects: runtimeEffects,
                 apCost: data.ApCost,
+                spCost: data.SPCost,
                 cooldownTicks: data.CooldownTicks);
         }
 

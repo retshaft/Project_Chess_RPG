@@ -15,7 +15,8 @@ namespace CheckmateRPG.Core.Actions
             bool isInterruptible = true,
             ActionDefinition? definition = null,
             ActionLockType intentLockType = ActionLockType.CastLock,
-            ActionConcurrencyPolicy concurrencyPolicy = ActionConcurrencyPolicy.Reject)
+            ActionConcurrencyPolicy concurrencyPolicy = ActionConcurrencyPolicy.Reject,
+            int spGain = 0)
             : base(
                 actorId,
                 startTick,
@@ -33,10 +34,12 @@ namespace CheckmateRPG.Core.Actions
             TargetId = targetId;
             Damage = damage;
             IsCritical = isCritical;
+            SPGain = Math.Max(0, spGain);
         }
 
         public Guid TargetId { get; }
         public int Damage { get; }
         public bool IsCritical { get; }
+        public int SPGain { get; }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Units;
 
 namespace CheckmateRPG.Core.Actions.Resolvers
@@ -53,7 +54,26 @@ namespace CheckmateRPG.Core.Actions.Resolvers
                 _unitsById(),
                 _currentTick());
 
-            return _executor.ResolveAbility(request);
+            ActionResolutionResult result = _executor.ResolveAbility(request);
+            if (!result.Success || action.SPCost <= 0)
+                return result;
+
+            var mergedMutations = new List<IRuntimeMutation>(result.RuntimeMutations.Count + 1);
+            mergedMutations.AddRange(result.RuntimeMutations);
+            mergedMutations.Add(new SPMutation(
+                SeededRandomProvider.Shared.NextGuid(),
+                action.ActorId,
+                -action.SPCost,
+                new MutationContext(
+                    action.ResolveTick,
+                    action.ActionId,
+                    action.ActorId,
+                    nameof(SPMutation))));
+
+            return new ActionResolutionResult(
+                result.Success,
+                mergedMutations.ToArray(),
+                result.Events);
         }
     }
 }

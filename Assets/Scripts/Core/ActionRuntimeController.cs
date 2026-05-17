@@ -26,6 +26,9 @@ namespace CheckmateRPG.Core
     {
         private const float DefaultActionSpeed = 1f;
         private const int DefaultRecoveryTicks = 1;
+        private const int DefaultAttackSPGain = 5;
+        private const int AutoRegenSPAmount = 2;
+        private const int AutoRegenIntervalTicks = 1;
         private const int DefaultSimulationSeed = 1001;
         private static readonly ActionDefinition MoveActionDefinition =
             new(InterruptPriority.Soft, InterruptWindow.CastingInterruptible, true, true);
@@ -429,7 +432,10 @@ namespace CheckmateRPG.Core
             {
                 UnitRuntimeState baseline = unit.MutableRuntimeState;
                 int baselineHp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : baseline.HP;
-                int baselineSp = unit.StatusEffects != null ? Mathf.RoundToInt(unit.StatusEffects.CurrentSp) : baseline.SP;
+                int baselineMaxSp = unit.UnitData != null ? Mathf.Max(0, Mathf.RoundToInt(unit.UnitData.MaxSP)) : baseline.MaxSP;
+                int baselineCurrentSp = unit.UnitData != null
+                    ? Mathf.Clamp(Mathf.RoundToInt(unit.UnitData.InitSP), 0, baselineMaxSp)
+                    : baseline.CurrentSP;
                 Vector2Int baselinePosition = unit.Movement != null ? unit.Movement.GridPosition : baseline.Position;
                 UnitStatusFlags baselineFlags = UnitStatusFlags.None;
                 if (unit.IsDead)
@@ -444,7 +450,8 @@ namespace CheckmateRPG.Core
                 baseline.SeedBaseline(
                     unit.ActorId,
                     baselineHp,
-                    baselineSp,
+                    baselineCurrentSp,
+                    baselineMaxSp,
                     baselinePosition,
                     baseline.CurrentActionId,
                     baseline.RecoveryUntilTick,
@@ -454,7 +461,6 @@ namespace CheckmateRPG.Core
 
             state = _simulationRuntime.GetMutableUnit(unit.ActorId);
             int hp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : state.HP;
-            int sp = unit.StatusEffects != null ? Mathf.RoundToInt(unit.StatusEffects.CurrentSp) : state.SP;
             Vector2Int position = unit.Movement != null ? unit.Movement.GridPosition : state.Position;
             UnitStatusFlags flags = UnitStatusFlags.None;
             if (unit.IsDead)
@@ -466,7 +472,7 @@ namespace CheckmateRPG.Core
             if (unit.StatusEffects != null && unit.StatusEffects.HasStatus(StatusEffectType.Stagger))
                 flags |= UnitStatusFlags.Stagger;
 
-            _simulationRuntime.SetUnitDerivedState(unit.ActorId, sp, flags);
+            _simulationRuntime.SetUnitDerivedState(unit.ActorId, flags);
             _simulationRuntime.SetUnitHP(unit.ActorId, hp, OwnershipOwners.DamageMutationProcessor);
             _simulationRuntime.SetUnitPosition(unit.ActorId, position, OwnershipOwners.MovementMutationProcessor);
         }
@@ -501,6 +507,9 @@ namespace CheckmateRPG.Core
         {
             int startTick = _scheduler.CurrentTick + 1;
             int damage = actor.UnitData != null ? Mathf.RoundToInt(actor.UnitData.AttackDamage) : 0;
+            int spGain = actor.UnitData != null && actor.UnitData.BasicAttackAbilityData != null
+                ? Mathf.Max(0, actor.UnitData.BasicAttackAbilityData.SPGain)
+                : DefaultAttackSPGain;
             return new AttackActionCommand(
                 actor.ActorId,
                 targetId,
@@ -509,7 +518,8 @@ namespace CheckmateRPG.Core
                 startTick,
                 ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
                 DefaultRecoveryTicks,
-                definition: AttackActionDefinition);
+                definition: AttackActionDefinition,
+                spGain: spGain);
         }
 
         private void BindQueuedAction(UnitBrain actor, IActionCommand command)
@@ -538,6 +548,7 @@ namespace CheckmateRPG.Core
                 _actionJournal.RecordTick(_scheduler.CurrentTick);
             _timelineRecorder?.RecordTick(_scheduler.CurrentTick);
             ResetMutationQueueDebugSnapshot();
+            IReadOnlyList<IGameEvent> autoRegenEvents = ExecuteSpAutoRegen();
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             RecordResolveOrderJournal(ready);
@@ -571,6 +582,7 @@ namespace CheckmateRPG.Core
 
             var stagedEvents = new List<IGameEvent>();
             AppendEvents(stagedEvents, _positionReservations.ConflictEvents);
+            AppendEvents(stagedEvents, autoRegenEvents);
             AppendEvents(stagedEvents, mutationApplyInput.ActionEvents);
             AppendEvents(stagedEvents, commitResult.StagedEvents);
             AppendEvents(stagedEvents, cleanupResult.StagedEvents);
@@ -1139,13 +1151,42 @@ namespace CheckmateRPG.Core
 
         private int GetCurrentSp(Guid actorId)
         {
-            if (_simulationRuntime != null &&
-                _simulationRuntime.TryGetMutableUnit(actorId, out UnitRuntimeState state))
+            return _simulationRuntime != null ? _simulationRuntime.GetUnitSP(actorId) : 0;
+        }
+
+        private IReadOnlyList<IGameEvent> ExecuteSpAutoRegen()
+        {
+            if (_simulationRuntime == null || _mutationCommitService == null || _scheduler == null)
+                return Array.Empty<IGameEvent>();
+            if (AutoRegenSPAmount <= 0 || AutoRegenIntervalTicks <= 0)
+                return Array.Empty<IGameEvent>();
+            if (_scheduler.CurrentTick <= 0 || _scheduler.CurrentTick % AutoRegenIntervalTicks != 0)
+                return Array.Empty<IGameEvent>();
+
+            var queue = new MutationQueue();
+            foreach (UnitRuntimeState unitState in _simulationRuntime.EnumerateMutableUnits())
             {
-                return state.SP;
+                if (unitState == null || (unitState.StatusFlags & UnitStatusFlags.Dead) != 0)
+                    continue;
+
+                queue.Enqueue(new SPMutation(
+                    SeededRandomProvider.Shared.NextGuid(),
+                    unitState.UnitId,
+                    AutoRegenSPAmount,
+                    new MutationContext(
+                        _scheduler.CurrentTick,
+                        Guid.Empty,
+                        unitState.UnitId,
+                        nameof(SPMutation))));
             }
 
-            return 0;
+            if (queue.Count == 0)
+                return Array.Empty<IGameEvent>();
+
+            MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
+            RecordMutationCommitJournal(commitResult);
+            _timelineRecorder?.RecordMutations(commitResult.AppliedMutations, MutationCommitPhase.RuntimeApply.ToString());
+            return commitResult.StagedEvents;
         }
 
         private void RecordActionRequestJournal(IActionCommand action, string details)

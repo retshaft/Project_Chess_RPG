@@ -151,7 +151,8 @@ namespace CheckmateRPG.Core
                 request.TargetIds ?? Array.Empty<Guid>(),
                 request.CurrentTick + 1,
                 request.Definition.CastSpeed,
-                definition: AbilityActionDefinition);
+                definition: AbilityActionDefinition,
+                spCost: Mathf.Max(0, request.Definition.SPCost));
 
             return request.QueueAction(action);
         }

@@ -19,6 +19,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 MoveMutation => MutationOrderingStage.Movement,
                 DamageMutation => MutationOrderingStage.Damage,
                 HealMutation => MutationOrderingStage.Damage,
+                SPMutation => MutationOrderingStage.Damage,
                 DeathMutation => MutationOrderingStage.Death,
                 CooldownMutation => MutationOrderingStage.Cleanup,
                 AbilityActionCompleteMutation => MutationOrderingStage.Cleanup,
