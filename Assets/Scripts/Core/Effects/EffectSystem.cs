@@ -450,7 +450,8 @@ namespace CheckmateRPG.Core.Effects
                     state.SourceId,
                     state.TargetId,
                     state.RemainingTick,
-                    state.StackCount),
+                    state.StackCount,
+                    state.IsHidden),
                 state.SourceId.ToString("N"),
                 state.TargetId.ToString("N")));
         }
@@ -466,7 +467,8 @@ namespace CheckmateRPG.Core.Effects
                     tickIndex,
                     state.RemainingTick,
                     state.StackCount,
-                    deltaHp),
+                    deltaHp,
+                    state.IsHidden),
                 state.SourceId.ToString("N"),
                 state.TargetId.ToString("N")));
         }
@@ -478,7 +480,8 @@ namespace CheckmateRPG.Core.Effects
                     state.EffectId,
                     state.SourceId,
                     state.TargetId,
-                    state.StackCount),
+                    state.StackCount,
+                    state.IsHidden),
                 state.SourceId.ToString("N"),
                 state.TargetId.ToString("N")));
         }
@@ -504,7 +507,8 @@ namespace CheckmateRPG.Core.Effects
                 appliedTick,
                 requested.StackPolicy,
                 requested.MaxStackCap,
-                requested.MaxApplicationsPerTick);
+                requested.MaxApplicationsPerTick,
+                requested.IsHidden);
 
             runtime.RegisterEffect(effectKey, created);
             if (!runtime.TryGetMutableEffect(effectKey, out EffectRuntimeState runtimeEffect))

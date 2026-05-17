@@ -10,5 +10,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         bool IsCritical,
         MutationContext Context = default,
         DamageType DamageType = DamageType.True,
-        bool IsTrueDamage = false) : IRuntimeMutation;
+        bool IsTrueDamage = false,
+        float DefPenetrationRatio = 0f) : IRuntimeMutation;
 }

@@ -117,7 +117,8 @@ namespace CheckmateRPG.Core.Actions
                 isReaction: false,
                 appliedTick: Mathf.Max(0, tick),
                 stackPolicy: EffectStackPolicy.Refresh,
-                maxStackCap: Mathf.Max(1, data.MaxStacks));
+                maxStackCap: Mathf.Max(1, data.MaxStacks),
+                isHidden: data.IsHidden);
         }
 
         private static string BuildEffectId(string abilityId, EffectDataSO data, int index)

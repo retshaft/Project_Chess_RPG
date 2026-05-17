@@ -27,9 +27,10 @@ namespace CheckmateRPG.Core.Effects
             int appliedTick = 0,
             EffectStackPolicy stackPolicy = EffectStackPolicy.Refresh,
             int maxStackCap = int.MaxValue,
-            int maxApplicationsPerTick = 0)
+            int maxApplicationsPerTick = 0,
+            bool isHidden = false)
         {
-            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction, appliedTick, stackPolicy, maxStackCap, maxApplicationsPerTick);
+            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction, appliedTick, stackPolicy, maxStackCap, maxApplicationsPerTick, isHidden);
         }
 
         public EffectRuntimeState(EffectRuntimeState source)
@@ -52,7 +53,8 @@ namespace CheckmateRPG.Core.Effects
                 source.AppliedTick,
                 source.StackPolicy,
                 source.MaxStackCap,
-                source.MaxApplicationsPerTick);
+                source.MaxApplicationsPerTick,
+                source.IsHidden);
 
             RemainingDuration = source.RemainingDuration;
             Lifecycle = source.Lifecycle;
@@ -70,6 +72,7 @@ namespace CheckmateRPG.Core.Effects
         public EffectTimingPhase TimingPhase { get; private set; } = EffectTimingPhase.OnTickEnd;
         public ActionSpeedTier ActionSpeedLevel { get; private set; } = ActionSpeedTier.Normal;
         public bool IsReaction { get; private set; }
+        public bool IsHidden { get; private set; }
         public EffectStackPolicy StackPolicy { get; private set; } = EffectStackPolicy.Refresh;
         public int MaxStackCap { get; private set; } = int.MaxValue;
         public int MaxApplicationsPerTick { get; private set; } = EffectStackPolicyRules.DefaultMaxApplicationsPerTick;
@@ -98,7 +101,8 @@ namespace CheckmateRPG.Core.Effects
             int appliedTick = 0,
             EffectStackPolicy stackPolicy = EffectStackPolicy.Refresh,
             int maxStackCap = int.MaxValue,
-            int maxApplicationsPerTick = 0)
+            int maxApplicationsPerTick = 0,
+            bool isHidden = false)
         {
             EffectId = effectId ?? string.Empty;
             SourceId = sourceId;
@@ -116,6 +120,7 @@ namespace CheckmateRPG.Core.Effects
             AppliedTick = appliedTick;
             StackPolicy = stackPolicy;
             MaxApplicationsPerTick = EffectStackPolicyRules.ResolveMaxApplicationsPerTick(maxApplicationsPerTick);
+            IsHidden = isHidden;
             Lifecycle = EffectLifecycle.Applied;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace CheckmateRPG.Core.Runtime.Mutations
 {
@@ -81,6 +82,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 HealMutation heal => heal.SourceId,
                 DeathMutation death => death.SourceId,
                 ApplyEffectMutation effect => effect.SourceId,
+                CooldownMutation cooldown => cooldown.Context.TargetRuntime,
                 _ => Guid.Empty
             };
         }
@@ -91,6 +93,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
             {
                 ApplyEffectMutation effect => effect.EffectId ?? string.Empty,
                 AbilityActionCompleteMutation abilityComplete => abilityComplete.AbilityId ?? string.Empty,
+                CooldownMutation cooldown => cooldown.TargetAbilityId ?? string.Empty,
                 ReservationMutation reservation => reservation.ReservationKey ?? string.Empty,
                 ResourceMutation resource => resource.Reason ?? string.Empty,
                 _ => string.Empty
@@ -106,6 +109,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 DamageMutation damage => damage.Amount,
                 HealMutation heal => heal.Amount,
                 ApplyEffectMutation effect => effect.DurationTicks,
+                CooldownMutation cooldown => Mathf.RoundToInt(cooldown.DurationChange * 1000f),
                 ResourceMutation resource => resource.Delta,
                 ReservationMutation reservation => (int)reservation.Operation,
                 _ => 0

@@ -44,7 +44,8 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 actionSpeedLevel: resolvedMutation.ActionSpeedLevel,
                 isReaction: resolvedMutation.IsReaction,
                 stackPolicy: resolvedMutation.StackPolicy,
-                maxStackCap: resolvedMutation.MaxStackCap);
+                maxStackCap: resolvedMutation.MaxStackCap,
+                isHidden: resolvedMutation.IsHidden);
 
             _ = _applyEffect(state);
             return Array.Empty<IGameEvent>();

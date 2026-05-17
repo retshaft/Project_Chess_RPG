@@ -29,6 +29,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 return Array.Empty<IGameEvent>();
 
             int amount = Mathf.Max(0, mutation.Amount);
+            float defPenetrationRatio = Mathf.Clamp01(mutation.DefPenetrationRatio);
             if (mutation.IsTrueDamage)
             {
                 target.Health.ApplyTrueDamage(amount);
@@ -38,7 +39,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 switch (mutation.DamageType)
                 {
                     case DamageType.Physical:
-                        target.Health.TakeDamage(amount);
+                        target.Health.TakeDamage(amount, defPenetrationRatio);
                         break;
                     case DamageType.Magical:
                         target.Health.ApplyMagicDamage(amount);

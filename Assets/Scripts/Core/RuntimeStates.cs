@@ -82,5 +82,20 @@ namespace CheckmateRPG.Core
             CooldownRemaining = Mathf.Max(0, cooldownRemaining);
             Locked = locked;
         }
+
+        public void MutateCooldownByDelta(float durationChange, int currentTick, string ownerName)
+        {
+            OwnershipValidationService.Default.EnsureAuthorized(ownerName, OwnershipStateKeys.Cooldown);
+
+            int deltaTicks = Mathf.RoundToInt(durationChange);
+            int nextRemaining = Mathf.Max(0, CooldownRemaining + deltaTicks);
+
+            CooldownRemaining = nextRemaining;
+            CooldownEndTick = Mathf.Max(currentTick, currentTick + nextRemaining);
+            if (!PendingActionId.HasValue && CooldownRemaining == 0)
+                Locked = false;
+            else if (CooldownRemaining > 0)
+                Locked = true;
+        }
     }
 }
