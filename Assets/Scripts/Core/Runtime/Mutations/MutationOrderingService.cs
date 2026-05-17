@@ -111,6 +111,7 @@ namespace CheckmateRPG.Core.Runtime.Mutations
                 ApplyEffectMutation effect => effect.DurationTicks,
                 CooldownMutation cooldown => Mathf.RoundToInt(cooldown.DurationChange * 1000f),
                 ResourceMutation resource => resource.Delta,
+                SPMutation sp => sp.Amount,
                 ReservationMutation reservation => (int)reservation.Operation,
                 _ => 0
             };

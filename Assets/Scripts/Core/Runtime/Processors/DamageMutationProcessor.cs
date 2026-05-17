@@ -13,6 +13,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
 {
     public sealed class DamageMutationProcessor
     {
+        private const int HitTakenSPBonus = 10;
         private readonly Func<Guid, UnitBrain> _unitLookup;
         private readonly SimulationRuntime _simulationRuntime;
 
@@ -22,11 +23,11 @@ namespace CheckmateRPG.Core.Runtime.Processors
             _simulationRuntime = simulationRuntime ?? throw new ArgumentNullException(nameof(simulationRuntime));
         }
 
-        public IReadOnlyList<IGameEvent> Apply(DamageMutation mutation)
+        public DamageProcessResult ApplyWithGeneratedMutations(DamageMutation mutation)
         {
             UnitBrain target = _unitLookup(mutation.TargetId);
             if (target == null || target.Health == null)
-                return Array.Empty<IGameEvent>();
+                return DamageProcessResult.Empty;
 
             int amount = Mathf.Max(0, mutation.Amount);
             float defPenetrationRatio = Mathf.Clamp01(mutation.DefPenetrationRatio);
@@ -68,7 +69,27 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 mutation.MutationId.ToString("N"),
                 mutation.TargetId.ToString("N"));
 
-            return new IGameEvent[] { damageAppliedEvent };
+            IReadOnlyList<IRuntimeMutation> generatedMutations = new IRuntimeMutation[]
+            {
+                new SPMutation(
+                    SeededRandomProvider.Shared.NextGuid(),
+                    mutation.TargetId,
+                    HitTakenSPBonus,
+                    new MutationContext(
+                        mutation.Context.Tick,
+                        mutation.Context.SourceAction,
+                        mutation.TargetId,
+                        nameof(SPMutation)))
+            };
+
+            return new DamageProcessResult(
+                new IGameEvent[] { damageAppliedEvent },
+                generatedMutations);
+        }
+
+        public IReadOnlyList<IGameEvent> Apply(DamageMutation mutation)
+        {
+            return ApplyWithGeneratedMutations(mutation).Events;
         }
 
         public IReadOnlyList<IGameEvent> Apply(HealMutation mutation)
@@ -98,6 +119,14 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 mutation.TargetId.ToString("N"));
 
             return new IGameEvent[] { unitKilledEvent };
+        }
+
+        public readonly record struct DamageProcessResult(
+            IReadOnlyList<IGameEvent> Events,
+            IReadOnlyList<IRuntimeMutation> GeneratedMutations)
+        {
+            public static DamageProcessResult Empty =>
+                new(Array.Empty<IGameEvent>(), Array.Empty<IRuntimeMutation>());
         }
     }
 }

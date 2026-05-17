@@ -41,6 +41,15 @@ namespace CheckmateRPG.Core.Actions.Resolvers
                     action.ActionId,
                     action.TargetId,
                     nameof(DamageMutation)));
+            SPMutation spGainMutation = new(
+                SeededRandomProvider.Shared.NextGuid(),
+                action.ActorId,
+                Math.Max(0, action.SPGain),
+                new MutationContext(
+                    action.ResolveTick,
+                    action.ActionId,
+                    action.ActorId,
+                    nameof(SPMutation)));
             AttackActionResolvedEvent attackResolvedEvent = new(
                 new AttackActionResolvedPayload(action.ActionId, action.ActorId, action.TargetId, finalDamage, isCritical),
                 action.ActionId.ToString("N"),
@@ -48,7 +57,7 @@ namespace CheckmateRPG.Core.Actions.Resolvers
 
             return new ActionResolutionResult(
                 true,
-                new IRuntimeMutation[] { mutation },
+                new IRuntimeMutation[] { mutation, spGainMutation },
                 new IGameEvent[] { attackResolvedEvent });
         }
     }

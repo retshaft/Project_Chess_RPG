@@ -35,6 +35,7 @@ namespace CheckmateRPG.Core
     public sealed class AbilityDefinition : ScriptableObject
     {
         [Min(0f)] public float Cost = 0f;
+        [Min(0)] public int SPCost = 0;
         [Min(0)] public int Cooldown = 0;
         public ActionSpeedTier CastSpeed = ActionSpeedTier.Normal;
         public AbilityTargetingRule TargetingRule = AbilityTargetingRule.SingleTarget;

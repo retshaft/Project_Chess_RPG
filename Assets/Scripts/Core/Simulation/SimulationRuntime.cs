@@ -291,13 +291,71 @@ namespace CheckmateRPG.Core.Simulation
             MarkActiveEffectViewDirty();
         }
 
-        internal void SetUnitDerivedState(Guid unitId, int sp, UnitStatusFlags statusFlags)
+        internal void SetUnitDerivedState(Guid unitId, UnitStatusFlags statusFlags)
         {
             if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
                 return;
 
-            state.SyncDerivedState(unitId, sp, statusFlags);
+            state.SyncDerivedState(unitId, statusFlags);
             MarkRuntimeStateViewDirty();
+        }
+
+        internal bool TryApplyUnitSPDelta(Guid unitId, int delta, string ownerName, out int previousSP, out int currentSP, out int maxSP)
+        {
+            previousSP = 0;
+            currentSP = 0;
+            maxSP = 0;
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
+                return false;
+
+            previousSP = state.CurrentSP;
+            maxSP = state.MaxSP;
+            int nextSP = previousSP + delta;
+            bool changed = state.SetSP(nextSP, maxSP, ownerName);
+            currentSP = state.CurrentSP;
+            maxSP = state.MaxSP;
+            if (changed)
+                MarkRuntimeStateViewDirty();
+            return changed;
+        }
+
+        internal int GetUnitSP(Guid unitId)
+        {
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
+                return 0;
+
+            return state.CurrentSP;
+        }
+
+        internal int GetUnitMaxSP(Guid unitId)
+        {
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
+                return 0;
+
+            return state.MaxSP;
+        }
+
+        internal bool IsUnitAlive(Guid unitId)
+        {
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
+                return false;
+
+            return (state.StatusFlags & UnitStatusFlags.Dead) == 0;
+        }
+
+        internal IEnumerable<Guid> EnumerateUnitIds()
+        {
+            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in _runtimeStates)
+                yield return pair.Key;
+        }
+
+        internal IEnumerable<UnitRuntimeState> EnumerateMutableUnits()
+        {
+            foreach (KeyValuePair<Guid, UnitRuntimeState> pair in _runtimeStates)
+            {
+                if (pair.Value != null)
+                    yield return pair.Value;
+            }
         }
 
         internal void SetUnitHP(Guid unitId, int hp, string ownerName)
@@ -489,7 +547,7 @@ namespace CheckmateRPG.Core.Simulation
             {
                 UnitRuntimeState state = pair.Value != null ? new UnitRuntimeState(pair.Value) : new UnitRuntimeState();
                 if (state.UnitId == Guid.Empty)
-                    state.SyncDerivedState(pair.Key, state.SP, state.StatusFlags);
+                    state.SyncDerivedState(pair.Key, state.StatusFlags);
                 clone[pair.Key] = state;
             }
 
@@ -540,6 +598,8 @@ namespace CheckmateRPG.Core.Simulation
 
                 UnitId = source.UnitId;
                 HP = source.HP;
+                CurrentSP = source.CurrentSP;
+                MaxSP = source.MaxSP;
                 SP = source.SP;
                 Position = source.Position;
                 CurrentActionId = source.CurrentActionId;
@@ -550,6 +610,8 @@ namespace CheckmateRPG.Core.Simulation
 
             public Guid UnitId { get; }
             public int HP { get; }
+            public int CurrentSP { get; }
+            public int MaxSP { get; }
             public int SP { get; }
             public Vector2Int Position { get; }
             public Guid? CurrentActionId { get; }

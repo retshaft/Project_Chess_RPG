@@ -21,6 +21,7 @@ namespace CheckmateRPG.Core.Actions
             IReadOnlyList<Vector2Int> targetCells = null,
             IReadOnlyList<EffectRuntimeState> runtimeEffects = null,
             int apCost = 0,
+            int spCost = 0,
             int cooldownTicks = 0)
             : base(
                 actorId,
@@ -38,6 +39,7 @@ namespace CheckmateRPG.Core.Actions
             TargetCells = targetCells ?? Array.Empty<Vector2Int>();
             RuntimeEffects = CloneRuntimeEffects(runtimeEffects);
             ApCost = Math.Max(0, apCost);
+            SPCost = Math.Max(0, spCost);
             CooldownTicks = Math.Max(0, cooldownTicks);
         }
 
@@ -46,6 +48,7 @@ namespace CheckmateRPG.Core.Actions
         public IReadOnlyList<Vector2Int> TargetCells { get; }
         public IReadOnlyList<EffectRuntimeState> RuntimeEffects { get; }
         public int ApCost { get; }
+        public int SPCost { get; }
         public int CooldownTicks { get; }
 
         private static IReadOnlyList<EffectRuntimeState> CloneRuntimeEffects(IReadOnlyList<EffectRuntimeState> runtimeEffects)

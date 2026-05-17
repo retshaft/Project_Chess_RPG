@@ -413,7 +413,8 @@ namespace CheckmateRPG.Tests
                 state.SeedBaseline(
                     unitId,
                     hp: 120,
-                    sp: 20,
+                    currentSP: 20,
+                    maxSP: 20,
                     position: position,
                     currentActionId: null,
                     recoveryUntilTick: 0,

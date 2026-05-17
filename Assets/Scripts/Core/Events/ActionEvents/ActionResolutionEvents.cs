@@ -26,6 +26,13 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         int RemainingHp,
         bool IsCritical);
 
+    public readonly record struct SPChangedPayload(
+        Guid UnitId,
+        int PreviousSP,
+        int CurrentSP,
+        int MaxSP,
+        int Delta);
+
     public readonly record struct MutationAppliedPayload(
         Guid MutationId,
         Guid TargetId,
@@ -66,6 +73,9 @@ namespace CheckmateRPG.Core.Events.ActionEvents
 
     public sealed record DamageAppliedEvent(DamageAppliedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<DamageAppliedPayload>(Payload, EventCategory.Simulation, Source, Target);
+
+    public sealed record SPChangedEvent(SPChangedPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<SPChangedPayload>(Payload, EventCategory.Simulation, Source, Target);
 
     public sealed record MutationAppliedEvent(MutationAppliedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<MutationAppliedPayload>(Payload, EventCategory.Simulation, Source, Target);

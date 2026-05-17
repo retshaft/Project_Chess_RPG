@@ -34,7 +34,7 @@ namespace CheckmateRPG.Core.Actions
                     APActionReason.Attack),
                 AbilityActionCommand ability => new ActionCostBreakdown(
                     Mathf.Max(0f, GetAbilityApCost(context.Actor, ability, context.AbilityDefinition) * multiplier),
-                    0,
+                    Mathf.Max(0, ability.SPCost > 0 ? ability.SPCost : (context.AbilityDefinition != null ? context.AbilityDefinition.SPCost : 0)),
                     Mathf.Max(0, context.AbilityDefinition != null ? context.AbilityDefinition.Cooldown : 0),
                     APActionReason.Skill),
                 _ => new ActionCostBreakdown(0f, 0, 0, APActionReason.System)

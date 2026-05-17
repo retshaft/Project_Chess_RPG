@@ -26,6 +26,7 @@ namespace CheckmateRPG.Core.Runtime.Ownership
             return new OwnershipRegistry(new[]
             {
                 new OwnershipRule(OwnershipStateKeys.HP, OwnershipOwners.DamageMutationProcessor),
+                new OwnershipRule(OwnershipStateKeys.SP, OwnershipOwners.SPMutationProcessor),
                 new OwnershipRule(OwnershipStateKeys.Position, OwnershipOwners.MovementMutationProcessor),
                 new OwnershipRule(OwnershipStateKeys.Cooldown, OwnershipOwners.TickScheduler),
                 new OwnershipRule(OwnershipStateKeys.EffectStack, OwnershipOwners.EffectSystem),
