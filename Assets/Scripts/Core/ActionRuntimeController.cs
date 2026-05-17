@@ -180,6 +180,8 @@ namespace CheckmateRPG.Core
                 state => _effectSystem != null && _effectSystem.ApplyOrRefreshEffect(state),
                 IsPhysicalCcEffect,
                 SubstituteEffectWithStagger,
+                ResolveAbilityRuntimeState,
+                () => _scheduler != null ? _scheduler.CurrentTick : 0,
                 TryApplyAbilityActionCompleteMutation);
             _mutationCommitService = new MutationCommitService(_mutationProcessor);
             _reactionSystem = new ReactionSystem(
@@ -266,7 +268,8 @@ namespace CheckmateRPG.Core
                     _scheduler != null ? _scheduler.CurrentTick : 0,
                     Guid.Empty,
                     effectState.TargetId,
-                    nameof(ApplyEffectMutation))));
+                    nameof(ApplyEffectMutation)),
+                IsHidden: effectState.IsHidden));
 
             MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
             RecordMutationCommitJournal(commitResult);
@@ -1457,7 +1460,8 @@ namespace CheckmateRPG.Core
                 StackCount = staggerProfile.StackCount,
                 Magnitude = staggerProfile.Magnitude,
                 StackPolicy = staggerProfile.StackPolicy,
-                MaxStackCap = staggerProfile.MaxStackCap
+                MaxStackCap = staggerProfile.MaxStackCap,
+                IsHidden = staggerProfile.IsHidden
             };
         }
 
@@ -1517,6 +1521,7 @@ namespace CheckmateRPG.Core
             bool AppliesStatusEffect,
             StatusEffectType StatusEffect,
             bool IsPhysicalCC,
+            bool IsHidden,
             int DurationTicks,
             int TickInterval,
             int InitialTickIn,
@@ -1533,6 +1538,7 @@ namespace CheckmateRPG.Core
                     effect.AppliesStatusEffect,
                     effect.StatusEffect,
                     effect.IsPhysicalCC,
+                    effect.IsHidden,
                     Mathf.Max(1, effect.DurationTicks),
                     tickInterval,
                     Mathf.Clamp(effect.InitialTickIn, 1, tickInterval),
@@ -1558,6 +1564,11 @@ namespace CheckmateRPG.Core
             }
 
             return state;
+        }
+
+        private AbilityRuntimeState ResolveAbilityRuntimeState(Guid actorId, string abilityId)
+        {
+            return TryGetAbilityRuntimeState(actorId, abilityId, out AbilityRuntimeState state) ? state : null;
         }
 
         private bool TryGetAbilityRuntimeState(Guid actorId, string abilityId, out AbilityRuntimeState state)

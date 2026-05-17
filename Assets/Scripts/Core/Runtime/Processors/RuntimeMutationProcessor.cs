@@ -20,6 +20,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
         private readonly DamageMutationProcessor _damageProcessor;
         private readonly MovementMutationProcessor _movementProcessor;
         private readonly EffectMutationProcessor _effectProcessor;
+        private readonly CooldownMutationProcessor _cooldownProcessor;
         private readonly Func<AbilityActionCompleteMutation, bool> _applyAbilityActionComplete;
 
         public RuntimeMutationProcessor(
@@ -28,6 +29,8 @@ namespace CheckmateRPG.Core.Runtime.Processors
             Func<EffectRuntimeState, bool> applyEffect,
             Func<string, bool> isPhysicalCcEffect,
             Func<ApplyEffectMutation, ApplyEffectMutation> substituteWithStagger,
+            Func<Guid, string, AbilityRuntimeState> abilityStateLookup,
+            Func<int> currentTickProvider,
             Func<AbilityActionCompleteMutation, bool> applyAbilityActionComplete)
         {
             if (unitLookup == null)
@@ -40,12 +43,17 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 throw new ArgumentNullException(nameof(isPhysicalCcEffect));
             if (substituteWithStagger == null)
                 throw new ArgumentNullException(nameof(substituteWithStagger));
+            if (abilityStateLookup == null)
+                throw new ArgumentNullException(nameof(abilityStateLookup));
+            if (currentTickProvider == null)
+                throw new ArgumentNullException(nameof(currentTickProvider));
             if (applyAbilityActionComplete == null)
                 throw new ArgumentNullException(nameof(applyAbilityActionComplete));
 
             _damageProcessor = new DamageMutationProcessor(unitLookup, simulationRuntime);
             _movementProcessor = new MovementMutationProcessor(unitLookup, simulationRuntime);
             _effectProcessor = new EffectMutationProcessor(simulationRuntime, applyEffect, isPhysicalCcEffect, substituteWithStagger);
+            _cooldownProcessor = new CooldownMutationProcessor(abilityStateLookup, currentTickProvider);
             _applyAbilityActionComplete = applyAbilityActionComplete;
         }
 
@@ -153,6 +161,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 MovementMutation movement => ToApplyResult(_movementProcessor.ApplyWithGeneratedMutations(movement)),
                 MoveMutation move => ToApplyResult(_movementProcessor.ApplyWithGeneratedMutations(move)),
                 ApplyEffectMutation effect => new MutationApplyResult(_effectProcessor.Apply(effect), Array.Empty<IRuntimeMutation>()),
+                CooldownMutation cooldown => new MutationApplyResult(_cooldownProcessor.Apply(cooldown), Array.Empty<IRuntimeMutation>()),
                 AbilityActionCompleteMutation abilityComplete => new MutationApplyResult(ApplyAbilityStateMutation(abilityComplete), Array.Empty<IRuntimeMutation>()),
                 ReservationMutation => new MutationApplyResult(Array.Empty<IGameEvent>(), Array.Empty<IRuntimeMutation>()),
                 ResourceMutation => new MutationApplyResult(Array.Empty<IGameEvent>(), Array.Empty<IRuntimeMutation>()),

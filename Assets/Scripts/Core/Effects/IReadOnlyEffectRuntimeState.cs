@@ -48,6 +48,7 @@ namespace CheckmateRPG.Core.Effects
         /// <see cref="EffectTimingPhase.OnPostResolve"/> phase.
         /// </summary>
         bool IsReaction { get; }
+        bool IsHidden { get; }
         EffectStackPolicy StackPolicy { get; }
         int MaxStackCap { get; }
         int MaxApplicationsPerTick { get; }

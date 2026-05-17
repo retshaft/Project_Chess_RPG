@@ -7,7 +7,8 @@ namespace CheckmateRPG.Core.Events.EffectEvents
         Guid SourceId,
         Guid TargetId,
         int RemainingTick,
-        int StackCount);
+        int StackCount,
+        bool IsHidden);
 
     public readonly record struct EffectTickPayload(
         string EffectId,
@@ -17,13 +18,15 @@ namespace CheckmateRPG.Core.Events.EffectEvents
         int TickIndex,
         int RemainingTick,
         int StackCount,
-        int DeltaHp);
+        int DeltaHp,
+        bool IsHidden);
 
     public readonly record struct EffectExpiredPayload(
         string EffectId,
         Guid SourceId,
         Guid TargetId,
-        int StackCount);
+        int StackCount,
+        bool IsHidden);
 
     public sealed record EffectAppliedEvent(EffectAppliedPayload Payload, string Source = "", string Target = "")
         : BaseGameEvent<EffectAppliedPayload>(Payload, EventCategory.Simulation, Source, Target);

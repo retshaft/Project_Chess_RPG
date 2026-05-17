@@ -47,7 +47,8 @@ namespace CheckmateRPG.Core
         int StackCount,
         float Magnitude,
         EffectStackPolicy StackPolicy,
-        int MaxStackCap);
+        int MaxStackCap,
+        bool IsHidden);
 
     public sealed class AbilityExecutionPipeline : IAbilityExecutor
     {
@@ -206,6 +207,7 @@ namespace CheckmateRPG.Core
                     intent.Magnitude,
                     intent.StackPolicy,
                     intent.MaxStackCap,
+                    IsHidden: intent.IsHidden,
                     Context: new MutationContext(
                         request.Action.ResolveTick,
                         request.Action.ActionId,
@@ -324,7 +326,8 @@ namespace CheckmateRPG.Core
                         runtimeEffect.TimingPhase,
                         runtimeEffect.ActionSpeedLevel,
                         runtimeEffect.IsReaction,
-                        context);
+                        context,
+                        runtimeEffect.IsHidden);
             }
         }
 
@@ -511,7 +514,8 @@ namespace CheckmateRPG.Core
                 Mathf.Max(1, effect.StackCount),
                 Mathf.Max(0f, effect.Magnitude),
                 effect.StackPolicy,
-                effect.MaxStackCap);
+                effect.MaxStackCap,
+                effect.IsHidden);
         }
     }
 }

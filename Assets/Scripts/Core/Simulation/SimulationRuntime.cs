@@ -580,8 +580,10 @@ namespace CheckmateRPG.Core.Simulation
                 TimingPhase = source.TimingPhase;
                 ActionSpeedLevel = source.ActionSpeedLevel;
                 IsReaction = source.IsReaction;
+                IsHidden = source.IsHidden;
                 StackPolicy = source.StackPolicy;
                 MaxStackCap = source.MaxStackCap;
+                MaxApplicationsPerTick = source.MaxApplicationsPerTick;
             }
 
             public string EffectId { get; }
@@ -599,8 +601,10 @@ namespace CheckmateRPG.Core.Simulation
             public EffectTimingPhase TimingPhase { get; }
             public ActionSpeedTier ActionSpeedLevel { get; }
             public bool IsReaction { get; }
+            public bool IsHidden { get; }
             public EffectStackPolicy StackPolicy { get; }
             public int MaxStackCap { get; }
+            public int MaxApplicationsPerTick { get; }
         }
     }
 }

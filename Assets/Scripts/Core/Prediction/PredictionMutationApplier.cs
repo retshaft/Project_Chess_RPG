@@ -146,7 +146,8 @@ namespace CheckmateRPG.Core.Prediction
                 actionSpeedLevel: mutation.ActionSpeedLevel,
                 isReaction: mutation.IsReaction,
                 stackPolicy: mutation.StackPolicy,
-                maxStackCap: mutation.MaxStackCap);
+                maxStackCap: mutation.MaxStackCap,
+                isHidden: mutation.IsHidden);
 
             runtime.RegisterEffect(effectState);
         }
