@@ -42,10 +42,16 @@ namespace CheckmateRPG.Testing
         private void Start()
         {
             _mainCamera = Camera.main;
-            RefreshPlayerUnits();
             if (_useInputToSelect)
+            {
+                RefreshPlayerUnits();
                 SelectFirstPlayerUnit();
-            RebuildOverlay();
+                RebuildOverlay();
+                return;
+            }
+
+            if (_selectedUnit != null)
+                RebuildOverlay();
         }
 
         private void Update()
@@ -78,14 +84,9 @@ namespace CheckmateRPG.Testing
             if (_selectedUnit == null || _selectedUnit.IsDead || _selectedUnit.Movement == null)
             {
                 if (_useInputToSelect)
-                {
                     SelectFirstPlayerUnit();
-                    RebuildOverlay();
-                }
                 else
-                {
                     ClearOverlay();
-                }
 
                 return;
             }

@@ -65,6 +65,8 @@ namespace CheckmateRPG.Testing
 
         private void Awake()
         {
+            EnsureSelectionOverlay();
+
             if (!_spawnOnAwake)
                 return;
 
@@ -92,7 +94,6 @@ namespace CheckmateRPG.Testing
         {
             EnsureGridSystem();
             EnsureAPManager(_enableAPDebugLogger);
-            EnsureSelectionOverlay();
             SpawnUnits();
         }
 
@@ -729,7 +730,6 @@ namespace CheckmateRPG.Testing
             _selectedUnit = unit;
             APDebugLogger.SetCurrentTurnUnit(unit);
 
-            _selectionOverlay ??= EnsureSelectionOverlay();
             if (unit == null)
                 _selectionOverlay.ClearSelection();
             else
@@ -738,11 +738,10 @@ namespace CheckmateRPG.Testing
 
         private BattleSelectionOverlayController EnsureSelectionOverlay()
         {
-            if (_selectionOverlay == null && !TryGetComponent(out _selectionOverlay))
+            if (!TryGetComponent(out _selectionOverlay))
                 _selectionOverlay = gameObject.AddComponent<BattleSelectionOverlayController>();
 
-            if (_selectionOverlay != null)
-                _selectionOverlay.SetUseInputSelection(false);
+            _selectionOverlay.SetUseInputSelection(false);
 
             return _selectionOverlay;
         }
