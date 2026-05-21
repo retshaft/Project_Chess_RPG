@@ -72,13 +72,19 @@ namespace CheckmateRPG.Units
                 if (bid.RequiredAP > teamAp)
                     continue;
 
-                if (!TryExecuteCommand(bid.Command))
-                    continue;
-
                 if (!TrySpendTeamAP(bid.RequiredAP))
+                {
+                    teamAp = GetCurrentTeamAP();
                     continue;
+                }
 
                 teamAp -= bid.RequiredAP;
+
+                if (!TryExecuteCommand(bid.Command))
+                {
+                    RefundTeamAP(bid.RequiredAP);
+                    teamAp = GetCurrentTeamAP();
+                }
             }
         }
 
@@ -113,6 +119,13 @@ namespace CheckmateRPG.Units
             if (APManager.Instance == null)
                 return false;
             return APManager.Instance.TrySpend(amount);
+        }
+
+        private static void RefundTeamAP(float amount)
+        {
+            if (APManager.Instance == null || amount <= 0f)
+                return;
+            APManager.Instance.AddAP(amount, APSource.Refund);
         }
     }
 }
