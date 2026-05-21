@@ -69,8 +69,6 @@ namespace CheckmateRPG.Units
             for (int i = 0; i < _pendingBids.Count; i++)
             {
                 ActionBid bid = _pendingBids[i];
-                if (!bid.IsValid)
-                    continue;
                 if (bid.RequiredAP > teamAp)
                     continue;
 
