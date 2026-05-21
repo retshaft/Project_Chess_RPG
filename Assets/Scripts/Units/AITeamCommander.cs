@@ -52,10 +52,7 @@ namespace CheckmateRPG.Units
             }
 
             _manualTickCounter++;
-            if (_manualTickCounter % Mathf.Max(1, _evaluationTickInterval) != 0)
-                return;
-
-            EvaluateAndExecuteTeamActions();
+            HandleSchedulerTick(_manualTickCounter);
         }
 
         public void TickCommander(int logicalTick)
@@ -66,8 +63,6 @@ namespace CheckmateRPG.Units
         private void BindTickScheduler()
         {
             TickScheduler scheduler = TickScheduler.EnsureExists();
-            if (scheduler == null)
-                return;
 
             if (_tickScheduler != null)
                 _tickScheduler.OnTick -= HandleSchedulerTick;
@@ -78,6 +73,7 @@ namespace CheckmateRPG.Units
 
         private void HandleSchedulerTick(int currentTick)
         {
+            Debug.Assert(currentTick >= 0, "[AITeamCommander] Logical tick must not be negative.");
             if (_evaluationTickInterval <= 0)
                 return;
             if (currentTick < 0 || currentTick % _evaluationTickInterval != 0)
