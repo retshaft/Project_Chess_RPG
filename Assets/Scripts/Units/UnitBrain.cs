@@ -104,6 +104,10 @@ namespace CheckmateRPG.Units
         private const float ThreatPenalty = 45f;
         private const float MovePredictionScoreMultiplier = 0.25f;
         private const float MoveOccupancyConflictPenalty = 20f;
+        private const float BidKingKillValue = 1000f;
+        private const float BidLethalBonus = 200f;
+        private const float BidMoveDistancePenalty = 5f;
+        private const float BidIdleMoveScore = 1f;
 
         [SerializeField, Min(1)] private int _maxScenariosPerTick = 24;
 
@@ -163,15 +167,6 @@ namespace CheckmateRPG.Units
             if (Health != null)
                 Health.OnDeath -= HandleDeath;
             _runtimeController?.UnregisterUnit(this);
-        }
-
-        private void FixedUpdate()
-        {
-            if (!_isInitialised || IsDead)
-                return;
-
-            _runtimeController?.SyncRuntimeState(this);
-            EvaluateDecision();
         }
 
         // ─── Public Command API ───────────────────────────────────────────────────
@@ -235,6 +230,96 @@ namespace CheckmateRPG.Units
         public void ClearTarget()
         {
             _currentTarget = null;
+        }
+
+        public ActionBid GetBestActionBid()
+        {
+            if (!_isInitialised || IsDead || _unitData == null || Movement == null)
+                return default;
+
+            if (_runtimeController == null)
+                _runtimeController = ActionRuntimeController.EnsureExists();
+            if (_runtimeController == null)
+                return default;
+
+            GridSystem grid = GridSystem.Instance;
+            if (grid == null)
+                return default;
+
+            bool canAttack = Combat != null && Combat.CanAttack;
+            Vector2Int origin = Movement.GridPosition;
+            float bestScore = float.MinValue;
+            ActionBid bestBid = default;
+
+            UnitBrain bestTarget = null;
+            Vector2Int bestTargetCell = default;
+            float bestTargetValue = 0f;
+
+            for (int x = 0; x < GridSystem.GridWidth; x++)
+            {
+                for (int y = 0; y < GridSystem.GridHeight; y++)
+                {
+                    GameObject occupant = grid.GetOccupant(x, y);
+                    if (!TryGetTargetBrain(occupant, out UnitBrain targetBrain))
+                        continue;
+
+                    Vector2Int targetCell = targetBrain.Movement.GridPosition;
+                    float targetValue = 0f;
+                    if (targetBrain.UnitData != null && targetBrain.UnitData.PieceType == ChessPieceType.King)
+                        targetValue = BidKingKillValue;
+                    else if (targetBrain.UnitData != null)
+                        targetValue = Mathf.Max(0f, targetBrain.UnitData.KillValue);
+
+                    if (targetValue > bestTargetValue)
+                    {
+                        bestTargetValue = targetValue;
+                        bestTarget = targetBrain;
+                        bestTargetCell = targetCell;
+                    }
+
+                    if (!canAttack || !IsAttackRange(origin, targetCell))
+                        continue;
+
+                    float attackScore = targetValue;
+                    if (CanEliminateTarget(targetBrain))
+                        attackScore += BidLethalBonus;
+
+                    IActionCommand attackCommand = _runtimeController.BuildAttackPredictionCommand(this, targetBrain.ActorId);
+                    if (attackCommand != null && attackScore > bestScore)
+                    {
+                        bestScore = attackScore;
+                        bestBid = new ActionBid(this, attackCommand, Mathf.Max(0f, _unitData.AttackCostAP), attackScore);
+                    }
+                }
+            }
+
+            float moveBaseCost = Mathf.Max(0f, _unitData.MoveCostAP);
+            for (int x = 0; x < GridSystem.GridWidth; x++)
+            {
+                for (int y = 0; y < GridSystem.GridHeight; y++)
+                {
+                    Vector2Int candidate = new Vector2Int(x, y);
+                    if (!Movement.CanReachCell(candidate))
+                        continue;
+
+                    float moveScore = BidIdleMoveScore;
+                    if (bestTarget != null)
+                    {
+                        int distance = ManhattanDistance(candidate, bestTargetCell);
+                        moveScore = bestTargetValue - distance * BidMoveDistancePenalty;
+                    }
+
+                    IActionCommand moveCommand = _runtimeController.BuildMovePredictionCommand(this, candidate);
+                    if (moveCommand == null || moveScore <= bestScore)
+                        continue;
+
+                    float moveCost = moveBaseCost * grid.GetMoveCostMultiplier(candidate);
+                    bestScore = moveScore;
+                    bestBid = new ActionBid(this, moveCommand, moveCost, moveScore);
+                }
+            }
+
+            return bestBid;
         }
 
         // ─── Event Handlers ───────────────────────────────────────────────────────
