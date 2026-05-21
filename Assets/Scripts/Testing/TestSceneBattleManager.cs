@@ -730,9 +730,6 @@ namespace CheckmateRPG.Testing
             APDebugLogger.SetCurrentTurnUnit(unit);
 
             _selectionOverlay ??= EnsureSelectionOverlay();
-            if (_selectionOverlay == null)
-                return;
-
             if (unit == null)
                 _selectionOverlay.ClearSelection();
             else
