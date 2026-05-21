@@ -314,7 +314,7 @@ namespace CheckmateRPG.Tests
 
             return new ActionJournalEntry(
                 tick,
-                sequence: 0,
+                Sequence: 0,
                 entryType,
                 actionId,
                 actorId,
