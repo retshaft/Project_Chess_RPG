@@ -49,6 +49,7 @@ namespace CheckmateRPG.Testing
         private int _pendingPushForce;
         private bool _battleEnded;
         private UnitBrain _selectedUnit;
+        private BattleSelectionOverlayController _selectionOverlay;
 
         private enum Team
         {
@@ -91,6 +92,7 @@ namespace CheckmateRPG.Testing
         {
             EnsureGridSystem();
             EnsureAPManager(_enableAPDebugLogger);
+            EnsureSelectionOverlay();
             SpawnUnits();
         }
 
@@ -726,6 +728,26 @@ namespace CheckmateRPG.Testing
         {
             _selectedUnit = unit;
             APDebugLogger.SetCurrentTurnUnit(unit);
+
+            _selectionOverlay ??= EnsureSelectionOverlay();
+            if (_selectionOverlay == null)
+                return;
+
+            if (unit == null)
+                _selectionOverlay.ClearSelection();
+            else
+                _selectionOverlay.SetSelectedUnit(unit);
+        }
+
+        private BattleSelectionOverlayController EnsureSelectionOverlay()
+        {
+            if (_selectionOverlay == null && !TryGetComponent(out _selectionOverlay))
+                _selectionOverlay = gameObject.AddComponent<BattleSelectionOverlayController>();
+
+            if (_selectionOverlay != null)
+                _selectionOverlay.SetUseInputSelection(false);
+
+            return _selectionOverlay;
         }
 
         private UnitBrain FindFirstLivingFriendlyUnit()
