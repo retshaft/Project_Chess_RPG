@@ -16,5 +16,7 @@ namespace CheckmateRPG.Units
         public IActionCommand Command { get; }
         public float RequiredAP { get; }
         public float Score { get; }
+
+        public bool IsValid => Executor != null && Command != null && RequiredAP > 0f;
     }
 }
