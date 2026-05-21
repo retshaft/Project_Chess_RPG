@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CheckmateRPG.Core.Simulation;
 using CheckmateRPG.Core.Simulation.Validation;
 
 namespace CheckmateRPG.Core.Determinism
@@ -64,7 +65,7 @@ namespace CheckmateRPG.Core.Determinism
                 issues.Add(new ValidationIssue(
                     severity,
                     BuildMessage(entry),
-                    unitId: null,
+                    UnitId: null,
                     runtime.CurrentTick));
             }
 
