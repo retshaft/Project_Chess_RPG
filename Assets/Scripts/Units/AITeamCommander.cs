@@ -1,131 +1,101 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
-using CheckmateRPG.Core;
-using CheckmateRPG.Core.Actions;
+using ProjectChessRPG.Core.Actions;
+using ProjectChessRPG.Core; // APManager 등 핵심 코어 네임스페이스에 맞게 수정
 
-namespace CheckmateRPG.Units
+namespace ProjectChessRPG.Units
 {
     public sealed class AITeamCommander : MonoBehaviour
     {
-        [SerializeField] private Team _team;
-        [SerializeField, Min(0.1f)] private float _evaluationInterval = 0.5f;
-        [SerializeField] private List<UnitBrain> _teamMembers = new();
+        [SerializeField] private Team _team = Team.Enemy;
+        
+        // Float 시간 대신 논리적 틱(Tick)을 사용한다. (예: 초당 10틱 시뮬레이션 시 5틱 = 0.5초)
+        [SerializeField, Min(1)] private int _evaluationTickInterval = 5;
+        
+        [SerializeField] private List<UnitBrain> _teamMembers = new List<UnitBrain>();
 
         public Team Team => _team;
 
-        private readonly List<ActionBid> _pendingBids = new();
-        private float _elapsed;
+        // GC 방지를 위해 리스트를 미리 할당하여 재사용
+        private readonly List<ActionBid> _pendingBids = new List<ActionBid>();
+        private int _tickCounter = 0;
         private ActionRuntimeController _runtimeController;
-
-        private static readonly Comparison<ActionBid> BidComparison = CompareBids;
 
         public void RegisterUnit(UnitBrain unit)
         {
-            if (unit == null || _teamMembers.Contains(unit))
-                return;
-            _teamMembers.Add(unit);
+            if (unit != null && !_teamMembers.Contains(unit))
+                _teamMembers.Add(unit);
         }
 
         public void UnregisterUnit(UnitBrain unit)
         {
-            if (unit == null)
-                return;
-            _teamMembers.Remove(unit);
+            if (unit != null)
+                _teamMembers.Remove(unit);
         }
 
-        public void TickCommander(float deltaTime)
+        // Time.deltaTime 대신 논리적 프레임이 넘어갈 때마다 호출되어야 함
+        public void TickCommander() 
         {
-            if (deltaTime <= 0f)
+            _tickCounter++;
+            if (_tickCounter < _evaluationTickInterval)
                 return;
+                
+            _tickCounter = 0; // 주기 초기화
+            EvaluateAndExecuteTeamActions();
+        }
 
-            _elapsed += deltaTime;
-            if (_elapsed < _evaluationInterval)
-                return;
-            _elapsed = 0f;
-
+        private void EvaluateAndExecuteTeamActions()
+        {
             _pendingBids.Clear();
+
+            // 1. 모든 유닛의 입찰 수집
             for (int i = 0; i < _teamMembers.Count; i++)
             {
                 UnitBrain unit = _teamMembers[i];
-                if (unit == null || unit.IsDead)
-                    continue;
-                if (unit.RuntimeState != null && unit.RuntimeState.CurrentActionId.HasValue)
-                    continue;
+                if (unit == null || unit.IsDead) continue; // 추후 상태 검사 로직 추가 필요
 
                 ActionBid bid = unit.GetBestActionBid();
-                if (!bid.IsValid)
-                    continue;
-
-                _pendingBids.Add(bid);
+                if (bid.IsValid)
+                {
+                    _pendingBids.Add(bid);
+                }
             }
 
-            if (_pendingBids.Count == 0)
-                return;
+            // 입찰이 없으면 조기 종료
+            if (_pendingBids.Count == 0) return;
 
-            _pendingBids.Sort(BidComparison);
+            // 2. 점수(Score) 기반 내림차순 정렬 (구조체 리스트의 in-place 정렬로 GC 방지)
+            _pendingBids.Sort((a, b) => b.Score.CompareTo(a.Score));
 
-            float teamAp = GetCurrentTeamAP();
+            // 3. AP 기반 승인 및 실행
+            // 주의: APManager 구조에 맞게 변경
+            float currentTeamAP = APManager.Instance.GetCurrentAP(_team);
+
             for (int i = 0; i < _pendingBids.Count; i++)
             {
                 ActionBid bid = _pendingBids[i];
-                if (bid.RequiredAP > teamAp)
-                    continue;
 
-                if (!TrySpendTeamAP(bid.RequiredAP))
+                if (currentTeamAP >= bid.RequiredAP)
                 {
-                    teamAp = GetCurrentTeamAP();
-                    continue;
-                }
-
-                teamAp -= bid.RequiredAP;
-
-                if (!TryExecuteCommand(bid.Command))
-                {
-                    RefundTeamAP(bid.RequiredAP);
-                    teamAp = GetCurrentTeamAP();
+                    if (TryExecuteCommand(bid.Command))
+                    {
+                        // 시뮬레이션 파이프라인에서 AP를 차감할 것이므로, 
+                        // 여기서는 로컬 검증용으로만 차감 처리
+                        currentTeamAP -= bid.RequiredAP;
+                    }
                 }
             }
-        }
-
-        private static int CompareBids(ActionBid a, ActionBid b)
-        {
-            return b.Score.CompareTo(a.Score);
         }
 
         private bool TryExecuteCommand(IActionCommand command)
         {
-            if (command == null)
-                return false;
-
             if (_runtimeController == null)
                 _runtimeController = ActionRuntimeController.EnsureExists();
-            if (_runtimeController == null || _runtimeController.Scheduler == null)
-                return false;
+
+            if (_runtimeController?.Scheduler == null) return false;
 
             ActionAdmissionResult result = _runtimeController.Scheduler.ScheduleAction(command);
             return result.Status != ActionAdmissionStatus.Rejected;
-        }
-
-        private static float GetCurrentTeamAP()
-        {
-            if (APManager.Instance == null)
-                return 0f;
-            return APManager.Instance.CurrentAP;
-        }
-
-        private static bool TrySpendTeamAP(float amount)
-        {
-            if (APManager.Instance == null)
-                return false;
-            return APManager.Instance.TrySpend(amount);
-        }
-
-        private static void RefundTeamAP(float amount)
-        {
-            if (APManager.Instance == null || amount <= 0f)
-                return;
-            APManager.Instance.AddAP(amount, APSource.Refund);
         }
     }
 }
