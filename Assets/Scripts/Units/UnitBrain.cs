@@ -249,7 +249,10 @@ namespace CheckmateRPG.Units
             bool canAttack = Combat != null && Combat.CanAttack;
             Vector2Int origin = Movement.GridPosition;
             float bestScore = float.MinValue;
-            ActionBid bestBid = default;
+            bool bestIsAttack = false;
+            Guid bestAttackTargetId = Guid.Empty;
+            Vector2Int bestMoveDestination = default;
+            float bestRequiredAp = 0f;
 
             UnitBrain bestTarget = null;
             Vector2Int bestTargetCell = default;
@@ -284,11 +287,12 @@ namespace CheckmateRPG.Units
                     if (CanEliminateTarget(targetBrain))
                         attackScore += BidLethalBonus;
 
-                    IActionCommand attackCommand = _runtimeController.BuildAttackPredictionCommand(this, targetBrain.ActorId);
-                    if (attackCommand != null && attackScore > bestScore)
+                    if (attackScore > bestScore)
                     {
                         bestScore = attackScore;
-                        bestBid = new ActionBid(this, attackCommand, Mathf.Max(0f, _unitData.AttackCostAP), attackScore);
+                        bestIsAttack = true;
+                        bestAttackTargetId = targetBrain.ActorId;
+                        bestRequiredAp = Mathf.Max(0f, _unitData.AttackCostAP);
                     }
                 }
             }
@@ -309,17 +313,28 @@ namespace CheckmateRPG.Units
                         moveScore = bestTargetValue - distance * BidMoveDistancePenalty;
                     }
 
-                    IActionCommand moveCommand = _runtimeController.BuildMovePredictionCommand(this, candidate);
-                    if (moveCommand == null || moveScore <= bestScore)
+                    if (moveScore <= bestScore)
                         continue;
 
                     float moveCost = moveBaseCost * grid.GetMoveCostMultiplier(candidate);
                     bestScore = moveScore;
-                    bestBid = new ActionBid(this, moveCommand, moveCost, moveScore);
+                    bestIsAttack = false;
+                    bestMoveDestination = candidate;
+                    bestRequiredAp = moveCost;
                 }
             }
 
-            return bestBid;
+            if (bestScore == float.MinValue)
+                return default;
+
+            IActionCommand bestCommand = bestIsAttack
+                ? _runtimeController.BuildAttackPredictionCommand(this, bestAttackTargetId)
+                : _runtimeController.BuildMovePredictionCommand(this, bestMoveDestination);
+
+            if (bestCommand == null)
+                return default;
+
+            return new ActionBid(this, bestCommand, bestRequiredAp, bestScore);
         }
 
         // ─── Event Handlers ───────────────────────────────────────────────────────
