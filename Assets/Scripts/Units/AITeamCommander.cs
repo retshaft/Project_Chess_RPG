@@ -66,7 +66,7 @@ namespace CheckmateRPG.Units
         private void BindTickScheduler()
         {
             TickScheduler scheduler = TickScheduler.EnsureExists();
-            if (scheduler == null || scheduler == _tickScheduler)
+            if (scheduler == null)
                 return;
 
             if (_tickScheduler != null)
@@ -80,7 +80,7 @@ namespace CheckmateRPG.Units
         {
             if (_evaluationTickInterval <= 0)
                 return;
-            if (currentTick <= 0 || currentTick % _evaluationTickInterval != 0)
+            if (currentTick < 0 || currentTick % _evaluationTickInterval != 0)
                 return;
             if (_lastEvaluatedTick == currentTick)
                 return;
@@ -110,7 +110,10 @@ namespace CheckmateRPG.Units
             _pendingBids.Sort((a, b) => b.Score.CompareTo(a.Score));
 
             APManager apManager = APManager.Instance;
-            float currentTeamAP = apManager != null ? apManager.CurrentAP : float.PositiveInfinity;
+            if (apManager == null)
+                return;
+
+            float currentTeamAP = apManager.CurrentAP;
 
             for (int i = 0; i < _pendingBids.Count; i++)
             {
