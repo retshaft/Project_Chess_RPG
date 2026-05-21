@@ -187,7 +187,8 @@ namespace CheckmateRPG.Testing
                 return;
             }
 
-            IReadOnlyList<IActionCommand> activeActions = runtime.Scheduler.GetActiveActions();
+            List<IActionCommand> activeActions = new List<IActionCommand>(runtime.Scheduler.GetActiveActions());
+            
             Guid queuedActionId = Guid.Empty;
             for (int i = activeActions.Count - 1; i >= 0; i--)
             {
