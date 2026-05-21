@@ -120,7 +120,7 @@ namespace CheckmateRPG.Core
 
             canvasGO.AddComponent<GraphicRaycaster>();
 
-            Font font = _debugFont != null ? _debugFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+            Font font = _debugFont != null ? _debugFont : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             CreateGauge(canvasGO.transform);
             _apText = CreateText("APValueText", canvasGO.transform, font, _apTextOffset, _apFontSize, Color.white);
             _warningText = CreateText("APWarningText", canvasGO.transform, font, _warningTextOffset, _warningFontSize, _warningColor);
