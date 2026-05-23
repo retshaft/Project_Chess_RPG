@@ -1,4 +1,5 @@
 using System;
+using CheckmateRPG.Core;
 using System.Collections.Generic;
 using CheckmateRPG.Core.Simulation.Spatial;
 using UnityEngine;
@@ -24,7 +25,9 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         Guid TargetId,
         int Damage,
         int RemainingHp,
-        bool IsCritical);
+        bool IsCritical,
+        DamageType DamageType = DamageType.True,
+        bool IsTrueDamage = true);
 
     public readonly record struct SPChangedPayload(
         Guid UnitId,

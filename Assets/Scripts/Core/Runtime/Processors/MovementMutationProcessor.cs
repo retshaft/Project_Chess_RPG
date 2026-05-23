@@ -29,8 +29,24 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 return MovementProcessResult.Empty;
 
             Vector2Int origin = unit.Movement.GridPosition;
-            MovementResolution resolution = ResolveMovementResolution(unit, origin, mutation.To);
+            Vector3 beforeWorld = unit.transform.position;
+            bool directMoveResolution = mutation.UseDirectDestinationResolution;
+            MovementResolution resolution = ResolveMovementResolution(unit, origin, mutation.To, directMoveResolution);
             bool moved = unit.Movement.ApplyResolvedMovement(resolution.FinalCell);
+            if (BattleDiagnostics.ShouldLogMovement(unit))
+            {
+                Vector2Int afterGrid = unit.Movement.GridPosition;
+                Vector3 afterWorld = unit.transform.position;
+                Vector2Int worldToGridAfter = GridSystem.Instance != null
+                    ? GridSystem.Instance.WorldToGrid(afterWorld)
+                    : new Vector2Int(-1, -1);
+                Debug.Log(
+                    $"[MovementDebug][Mutation] Tick={mutation.Context.Tick}, Unit={mutation.TargetId:N}, " +
+                    $"RequestedTo={mutation.To}, ResolvedFinal={resolution.FinalCell}, HitWall={resolution.HitWall}, " +
+                    $"CollidedTarget={resolution.CollidedTargetId:N}, GridBefore={origin}, GridAfter={afterGrid}, " +
+                    $"WorldBefore={beforeWorld}, WorldAfter={afterWorld}, WorldToGridAfter={worldToGridAfter}, Applied={moved}");
+            }
+
             if (!moved)
                 return MovementProcessResult.Empty;
 
@@ -124,7 +140,11 @@ namespace CheckmateRPG.Core.Runtime.Processors
             return false;
         }
 
-        private static MovementResolution ResolveMovementResolution(UnitBrain pushedUnit, Vector2Int origin, Vector2Int requestedDestination)
+        private static MovementResolution ResolveMovementResolution(
+            UnitBrain pushedUnit,
+            Vector2Int origin,
+            Vector2Int requestedDestination,
+            bool directMoveResolution)
         {
             GridSystem grid = GridSystem.Instance;
             if (grid == null)
@@ -132,6 +152,9 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
             Vector2Int clampedDestination = grid.ClampToValidCell(requestedDestination);
             bool wallSplat = clampedDestination != requestedDestination;
+            if (directMoveResolution)
+                return new MovementResolution(clampedDestination, wallSplat, Guid.Empty);
+
             Vector2Int direction = new(
                 Mathf.Clamp(requestedDestination.x - origin.x, -1, 1),
                 Mathf.Clamp(requestedDestination.y - origin.y, -1, 1));

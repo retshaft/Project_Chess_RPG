@@ -20,6 +20,10 @@ namespace CheckmateRPG.Testing
 
         [Header("Debug")]
         [SerializeField] private bool _enableAPDebugLogger = true;
+        [SerializeField] private bool _enableDamageDebug;
+        [SerializeField] private bool _enableMovementDebug;
+        [SerializeField] private bool _movementDebugOnlyKnight = true;
+        [SerializeField] private bool _includeUnitNameInDebugLogs = true;
         [SerializeField] private bool _spawnOnAwake = true;
         [SerializeField] private bool _enableMouseInputAdapter = true;
         [SerializeField] private bool _logQueuedInputCommands = true;
@@ -50,6 +54,7 @@ namespace CheckmateRPG.Testing
         private bool _battleEnded;
         private UnitBrain _selectedUnit;
         private BattleSelectionOverlayController _selectionOverlay;
+        private BattleDiagnosticsLogger _diagnosticsLogger;
 
         private enum Team
         {
@@ -66,6 +71,7 @@ namespace CheckmateRPG.Testing
         private void Awake()
         {
             EnsureSelectionOverlay();
+            EnsureBattleDiagnosticsLogger();
 
             if (!_spawnOnAwake)
                 return;
@@ -237,12 +243,21 @@ namespace CheckmateRPG.Testing
             }
 
             runtime.SyncRuntimeState(knight);
+            if (ShouldLogMovementFor(knight))
+            {
+                Debug.Log(
+                    $"[MovementDebug][F2] Requested knight jump. Actor={knight.ActorId:N}, From={source}, " +
+                    $"RequestedDestination={destination}, SpikesBypassed={spikesBypassed}");
+            }
+
             bool queued = knight.QueueMoveAction(destination);
             if (!queued)
             {
                 Debug.LogWarning($"[TestSceneBattleManager][F2] Failed to enqueue MoveActionCommand from {source} to {destination}.");
                 return;
             }
+
+            LogScheduledMoveCommand(runtime, knight, destination, "F2");
 
             Debug.Log(
                 $"[TestSceneBattleManager][F2] Enqueued knight jump move from {source} to sanctuary {destination}. " +
@@ -685,6 +700,13 @@ namespace CheckmateRPG.Testing
             if (!GridSystem.Instance.IsValidCell(targetCell))
                 return;
 
+            if (_selectedUnit != null && ShouldLogMovementFor(_selectedUnit))
+            {
+                Debug.Log(
+                    $"[MovementDebug][Input] ClickedCell={targetCell}, HitPoint={hit.point}, " +
+                    $"SelectedActor={_selectedUnit.ActorId:N}");
+            }
+
             if (!TryHandleSelectionAtCell(targetCell))
                 TryHandleActionAtCell(targetCell);
         }
@@ -715,11 +737,21 @@ namespace CheckmateRPG.Testing
                 ? _selectedUnit.QueueAttackAction(targetUnit.gameObject)
                 : _selectedUnit.QueueMoveAction(cell);
 
+            if (!hasEnemyTarget && ShouldLogMovementFor(_selectedUnit))
+            {
+                Debug.Log(
+                    $"[MovementDebug][InputQueue] RequestedCell={cell}, Actor={_selectedUnit.ActorId:N}, " +
+                    $"Queued={queued}");
+            }
+
             if (!queued)
                 return;
 
             AbilityActionCommand command = BuildInputAbilityCommand(_selectedUnit, cell, targetUnit);
             APDebugLogger.RecordQueuedCommand(command);
+
+            if (!hasEnemyTarget && TryGetRuntime(out ActionRuntimeController runtime))
+                LogScheduledMoveCommand(runtime, _selectedUnit, cell, "Input");
 
             if (_logQueuedInputCommands && command != null)
                 Debug.Log($"[TestSceneBattleManager] Enqueued input command: {APDebugLogger.LastQueuedCommandSummary}");
@@ -744,6 +776,52 @@ namespace CheckmateRPG.Testing
             _selectionOverlay.SetUseInputSelection(false);
 
             return _selectionOverlay;
+        }
+
+        private BattleDiagnosticsLogger EnsureBattleDiagnosticsLogger()
+        {
+            if (!TryGetComponent(out _diagnosticsLogger))
+                _diagnosticsLogger = gameObject.AddComponent<BattleDiagnosticsLogger>();
+
+            _diagnosticsLogger.Configure(
+                _enableDamageDebug,
+                _enableMovementDebug,
+                _movementDebugOnlyKnight,
+                _includeUnitNameInDebugLogs);
+            return _diagnosticsLogger;
+        }
+
+        private bool ShouldLogMovementFor(UnitBrain unit)
+        {
+            if (!_enableMovementDebug || unit == null)
+                return false;
+            if (!_movementDebugOnlyKnight)
+                return true;
+            return unit.UnitData != null && unit.UnitData.PieceType == ChessPieceType.Knight;
+        }
+
+        private void LogScheduledMoveCommand(ActionRuntimeController runtime, UnitBrain actor, Vector2Int requestedCell, string sourceTag)
+        {
+            if (runtime == null || runtime.Scheduler == null || actor == null || !ShouldLogMovementFor(actor))
+                return;
+
+            MoveActionCommand latestMove = null;
+            foreach (IActionCommand action in runtime.Scheduler.GetActiveActions())
+            {
+                if (action is MoveActionCommand move && move.ActorId == actor.ActorId)
+                {
+                    if (latestMove == null || move.QueuedTick >= latestMove.QueuedTick)
+                        latestMove = move;
+                }
+            }
+
+            if (latestMove == null)
+                return;
+
+            Debug.Log(
+                $"[MovementDebug][{sourceTag}Scheduled] Actor={actor.ActorId:N}, RequestedCell={requestedCell}, " +
+                $"ScheduledFrom={latestMove.From}, ScheduledTo={latestMove.To}, ActionId={latestMove.ActionId:N}, " +
+                $"QueuedTick={latestMove.QueuedTick}, ResolveTick={latestMove.ResolveTick}");
         }
 
         private UnitBrain FindFirstLivingFriendlyUnit()

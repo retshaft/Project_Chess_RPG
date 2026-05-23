@@ -8,5 +8,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         Guid TargetId,
         Vector2Int From,
         Vector2Int To,
-        MutationContext Context = default) : IRuntimeMutation;
+        MutationContext Context = default,
+        bool UseDirectDestinationResolution = false) : IRuntimeMutation;
 }
