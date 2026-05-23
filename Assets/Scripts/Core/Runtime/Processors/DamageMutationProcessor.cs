@@ -65,7 +65,9 @@ namespace CheckmateRPG.Core.Runtime.Processors
                     mutation.TargetId,
                     amount,
                     actualRemainingHp,
-                    mutation.IsCritical),
+                    mutation.IsCritical,
+                    mutation.DamageType,
+                    mutation.IsTrueDamage),
                 mutation.MutationId.ToString("N"),
                 mutation.TargetId.ToString("N"));
 

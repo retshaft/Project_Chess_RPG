@@ -24,6 +24,10 @@ namespace CheckmateRPG.Testing
     {
         [Header("Debug")]
         [SerializeField] private bool _enableAPDebugLogger = true;
+        [SerializeField] private bool _enableDamageDebug;
+        [SerializeField] private bool _enableMovementDebug;
+        [SerializeField] private bool _movementDebugOnlyKnight = true;
+        [SerializeField] private bool _includeUnitNameInDebugLogs = true;
 
         [Header("Meta Progression Sample")]
         [SerializeField] private bool _applyMetaToPlayerKnight = true;
@@ -57,6 +61,7 @@ namespace CheckmateRPG.Testing
         {
             EnsureGridSystem();
             EnsureAPManager(_enableAPDebugLogger);
+            EnsureBattleDiagnosticsLogger();
             SpawnAllUnits();
             EnsureSelectionOverlay();
         }
@@ -336,6 +341,19 @@ namespace CheckmateRPG.Testing
         {
             if (!TryGetComponent(out BattleSelectionOverlayController _))
                 gameObject.AddComponent<BattleSelectionOverlayController>();
+        }
+
+        private void EnsureBattleDiagnosticsLogger()
+        {
+            BattleDiagnosticsLogger logger = TryGetComponent(out BattleDiagnosticsLogger existing)
+                ? existing
+                : gameObject.AddComponent<BattleDiagnosticsLogger>();
+
+            logger.Configure(
+                _enableDamageDebug,
+                _enableMovementDebug,
+                _movementDebugOnlyKnight,
+                _includeUnitNameInDebugLogs);
         }
     }
 }

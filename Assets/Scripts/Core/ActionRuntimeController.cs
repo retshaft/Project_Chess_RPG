@@ -307,7 +307,14 @@ namespace CheckmateRPG.Core
             if (actor.Movement == null || !actor.Movement.CanReachCell(destination))
                 return false;
 
-            IActionCommand command = CreateMoveCommand(actor, destination);
+            MoveActionCommand command = (MoveActionCommand)CreateMoveCommand(actor, destination);
+            if (BattleDiagnostics.ShouldLogMovement(actor))
+            {
+                Debug.Log(
+                    $"[MovementDebug][RuntimeQueue] Tick={_scheduler.CurrentTick}, Actor={actor.ActorId:N}, " +
+                    $"From={command.From}, Requested={destination}, ScheduledTo={command.To}, ActionId={command.ActionId:N}");
+            }
+
             return TryReserveAndQueueAction(
                 actor,
                 command,
