@@ -27,7 +27,7 @@ namespace CheckmateRPG.Core.Events.ActionEvents
         int RemainingHp,
         bool IsCritical,
         DamageType DamageType = DamageType.True,
-        bool IsTrueDamage = false);
+        bool IsTrueDamage = true);
 
     public readonly record struct SPChangedPayload(
         Guid UnitId,

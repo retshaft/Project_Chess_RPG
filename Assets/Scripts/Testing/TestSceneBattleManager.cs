@@ -100,7 +100,6 @@ namespace CheckmateRPG.Testing
         {
             EnsureGridSystem();
             EnsureAPManager(_enableAPDebugLogger);
-            EnsureBattleDiagnosticsLogger();
             SpawnUnits();
         }
 

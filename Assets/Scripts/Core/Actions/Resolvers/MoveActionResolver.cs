@@ -32,7 +32,8 @@ namespace CheckmateRPG.Core.Actions.Resolvers
                     action.ResolveTick,
                     action.ActionId,
                     action.ActorId,
-                    nameof(MovementMutation)));
+                    nameof(MovementMutation)),
+                UseDirectDestinationResolution: true);
             MoveActionResolvedEvent resolvedEvent = new(
                 new MoveActionResolvedPayload(action.ActionId, action.ActorId, action.From, action.To),
                 action.ActionId.ToString("N"),

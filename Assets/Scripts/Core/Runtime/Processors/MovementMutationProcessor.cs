@@ -30,10 +30,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
             Vector2Int origin = unit.Movement.GridPosition;
             Vector3 beforeWorld = unit.transform.position;
-            bool directMoveResolution = string.Equals(
-                mutation.Context.MutationReason,
-                nameof(MovementMutation),
-                StringComparison.Ordinal);
+            bool directMoveResolution = mutation.UseDirectDestinationResolution;
             MovementResolution resolution = ResolveMovementResolution(unit, origin, mutation.To, directMoveResolution);
             bool moved = unit.Movement.ApplyResolvedMovement(resolution.FinalCell);
             if (BattleDiagnostics.ShouldLogMovement(unit))
