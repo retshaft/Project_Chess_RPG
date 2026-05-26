@@ -13,6 +13,10 @@ MonoBehaviour:
   m_Name: KnightUnitData
   m_EditorClassIdentifier: 
   UnitName: Knight
+  Prefab: {fileID: 0}
+  PieceType: 1
+  MovePattern: 1
+  BaseRole: "\uB3CC\uACA9\uAE30\uC0AC"
   MaxHealth: 120
   Defense: 0.15
   Resistance: 0.1
@@ -21,9 +25,14 @@ MonoBehaviour:
   AttackRange: 1
   KillValue: 12
   MaxSP: 60
-  MoveAPCost: 4
-  AttackAPCost: 6
+  InitSP: 4
+  BasicAttackAbilityData: {fileID: 0}
+  MoveCostAP: 4
+  AttackCostAP: 6
+  ActionSpeed: 1
   MoveRange: 3
-  MoveSpeed: 5
+  SpeedLevel: 1
+  MoveSpeed: 0.8
+  ActionDelay: 2.5
   Weight: 2
   IsBoss: 0
