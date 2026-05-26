@@ -860,15 +860,14 @@ namespace CheckmateRPG.Units
 
         private bool IsAttackRange(Vector2Int origin, Vector2Int targetCell)
         {
-            return IsAttackRange(origin, targetCell, _unitData != null ? _unitData.AttackRange : 1);
+            ChessPieceType pieceType = _unitData != null ? _unitData.PieceType : ChessPieceType.Pawn;
+            int attackRange = _unitData != null ? _unitData.AttackRange : 1;
+            bool isEnemy = _team != null && _team.IsEnemy;
+            return CombatPatternRules.IsAttackReachable(pieceType, isEnemy, origin, targetCell, attackRange);
         }
 
-        private static bool IsAttackRange(Vector2Int origin, Vector2Int targetCell, int attackRange)
-        {
-            int dx = Mathf.Abs(origin.x - targetCell.x);
-            int dy = Mathf.Abs(origin.y - targetCell.y);
-            return Mathf.Max(dx, dy) <= Mathf.Max(1, attackRange);
-        }
+        private static bool IsAttackRange(Vector2Int origin, Vector2Int targetCell, int attackRange, ChessPieceType pieceType = ChessPieceType.Pawn) =>
+            CombatPatternRules.IsAttackReachable(pieceType, isEnemy: false, origin, targetCell, attackRange);
 
         private bool TryGetTargetCell(GameObject target, out Vector2Int targetCell)
         {

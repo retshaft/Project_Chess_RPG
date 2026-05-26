@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Components;
+using CheckmateRPG.Core;
 using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
 
@@ -8,10 +9,18 @@ namespace CheckmateRPG.Testing
 {
     public class BattleSelectionOverlayController : MonoBehaviour
     {
+        public enum OverlayMode
+        {
+            Move,
+            Attack,
+            Skill
+        }
+
         private static readonly Vector2Int InvalidCell = new Vector2Int(-1, -1);
 
         [SerializeField] private bool _useInputToSelect = true;
-        [SerializeField] private Color _overlayColor = new Color(0.15f, 0.75f, 1f, 0.95f);
+        [SerializeField] private Color _moveOverlayColor = new Color(0.15f, 0.75f, 1f, 0.95f);
+        [SerializeField] private Color _attackOverlayColor = new Color(0.95f, 0.2f, 0.25f, 0.95f);
         [SerializeField] private float _overlayHeight = 0.035f;
         [SerializeField] private float _overlayWidth = 0.06f;
 
@@ -21,6 +30,7 @@ namespace CheckmateRPG.Testing
         private Material _overlayMaterial;
         private UnitBrain _selectedUnit;
         private Vector2Int _lastOverlayCell = InvalidCell;
+        private OverlayMode _overlayMode = OverlayMode.Move;
 
         public void SetUseInputSelection(bool useInputToSelect)
         {
@@ -31,6 +41,15 @@ namespace CheckmateRPG.Testing
         {
             _selectedUnit = unit;
             _lastOverlayCell = unit != null && unit.Movement != null ? unit.Movement.GridPosition : InvalidCell;
+            RebuildOverlay();
+        }
+
+        public void SetOverlayMode(OverlayMode mode)
+        {
+            if (_overlayMode == mode)
+                return;
+
+            _overlayMode = mode;
             RebuildOverlay();
         }
 
@@ -163,7 +182,14 @@ namespace CheckmateRPG.Testing
                 return;
 
             _lastOverlayCell = _selectedUnit.Movement.GridPosition;
-            foreach (Vector2Int cell in _selectedUnit.Movement.GetReachableCells())
+            IReadOnlyList<Vector2Int> cells = _overlayMode switch
+            {
+                OverlayMode.Attack => BuildAttackCells(_selectedUnit),
+                OverlayMode.Skill => new List<Vector2Int>(),
+                _ => _selectedUnit.Movement.GetReachableCells()
+            };
+
+            foreach (Vector2Int cell in cells)
             {
                 _overlayTiles.Add(CreateTileOutline(cell));
             }
@@ -196,8 +222,9 @@ namespace CheckmateRPG.Testing
             line.receiveShadows = false;
             line.alignment = LineAlignment.View;
             line.material = GetOverlayMaterial();
-            line.startColor = _overlayColor;
-            line.endColor = _overlayColor;
+            Color overlayColor = GetCurrentOverlayColor();
+            line.startColor = overlayColor;
+            line.endColor = overlayColor;
 
             float halfSize = GridSystem.Instance.TileSize * 0.5f;
             Vector3 center = GridSystem.Instance.GridToWorld(cell);
@@ -227,8 +254,59 @@ namespace CheckmateRPG.Testing
                 shader = Shader.Find("Hidden/Internal-Colored");
 
             _overlayMaterial = new Material(shader);
-            _overlayMaterial.color = _overlayColor;
+            _overlayMaterial.color = Color.white;
             return _overlayMaterial;
+        }
+
+        private Color GetCurrentOverlayColor()
+        {
+            return _overlayMode == OverlayMode.Attack ? _attackOverlayColor : _moveOverlayColor;
+        }
+
+        private static IReadOnlyList<Vector2Int> BuildAttackCells(UnitBrain selectedUnit)
+        {
+            var attackCells = new List<Vector2Int>();
+            if (selectedUnit == null || selectedUnit.UnitData == null || selectedUnit.Movement == null || GridSystem.Instance == null)
+                return attackCells;
+
+            int attackRange = Mathf.Max(1, selectedUnit.UnitData.AttackRange);
+            Vector2Int origin = selectedUnit.Movement.GridPosition;
+            bool isEnemy = selectedUnit.TryGetComponent(out TeamComponent selectedTeam) && selectedTeam.IsEnemy;
+
+            for (int x = 0; x < GridSystem.GridWidth; x++)
+            {
+                for (int y = 0; y < GridSystem.GridHeight; y++)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    GameObject occupant = GridSystem.Instance.GetOccupant(cell);
+                    if (occupant == null || !occupant.TryGetComponent(out UnitBrain targetBrain) || targetBrain.IsDead)
+                        continue;
+                    if (!targetBrain.TryGetComponent(out TeamComponent targetTeam))
+                        continue;
+                    if (targetTeam.IsEnemy == selectedTeam.IsEnemy)
+                        continue;
+
+                    bool inRange = CombatPatternRules.IsAttackReachable(
+                        selectedUnit.UnitData.PieceType,
+                        isEnemy,
+                        origin,
+                        cell,
+                        attackRange,
+                        sampleCell =>
+                        {
+                            if (sampleCell == origin || sampleCell == cell)
+                                return false;
+                            GameObject block = GridSystem.Instance.GetOccupant(sampleCell);
+                            return block != null;
+                        });
+                    if (!inRange)
+                        continue;
+
+                    attackCells.Add(cell);
+                }
+            }
+
+            return attackCells;
         }
 
         private void RefreshPlayerUnits()

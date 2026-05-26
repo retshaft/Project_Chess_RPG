@@ -527,16 +527,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Testing.TestSceneBattleManager
   _pawnData: {fileID: 11400000, guid: c1a1b2c3d4e5f60718293a4b5c6d7e8f, type: 2}
   _knightData: {fileID: 11400000, guid: d2b3c4d5e6f708192a3b4c5d6e7f8091, type: 2}
-  _kingData: {fileID: 11400000, guid: 43dea94ca3eb40542a0f215918ba7088, type: 2}
-  _enableAPDebugLogger: 0
-  _enableDamageDebug: 1
-  _enableMovementDebug: 1
+  _enableAPDebugLogger: 1
+  _enableDamageDebug: 0
+  _enableMovementDebug: 0
   _movementDebugOnlyKnight: 1
   _includeUnitNameInDebugLogs: 1
   _spawnOnAwake: 1
   _enableMouseInputAdapter: 1
   _logQueuedInputCommands: 1
-  _preferKingDefeatVictory: 1
   _inputCamera: {fileID: 100000002}
   _inputRaycastMask:
     serializedVersion: 2

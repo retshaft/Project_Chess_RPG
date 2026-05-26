@@ -1,4 +1,5 @@
 using System;
+using CheckmateRPG.Core.Runtime.Mutations;
 
 namespace CheckmateRPG.Core.Actions
 {
@@ -8,6 +9,7 @@ namespace CheckmateRPG.Core.Actions
             Guid actorId,
             Guid targetId,
             int damage,
+            DamageType damageType,
             bool isCritical,
             int startTick,
             ActionSpeedTier speedTier,
@@ -33,12 +35,14 @@ namespace CheckmateRPG.Core.Actions
 
             TargetId = targetId;
             Damage = damage;
+            DamageType = damageType;
             IsCritical = isCritical;
             SPGain = Math.Max(0, spGain);
         }
 
         public Guid TargetId { get; }
         public int Damage { get; }
+        public DamageType DamageType { get; }
         public bool IsCritical { get; }
         public int SPGain { get; }
     }

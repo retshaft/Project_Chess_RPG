@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
   m_Name: KnightUnitData
   m_EditorClassIdentifier: 
-  UnitName: Knight
+  UnitName: Rook
   Prefab: {fileID: 0}
-  PieceType: 1
-  MovePattern: 1
-  BaseRole: "\uB3CC\uACA9\uAE30\uC0AC"
-  MaxHealth: 120
-  Defense: 0.15
-  Resistance: 0.1
-  AttackDamage: 14
+  PieceType: 3
+  MovePattern: 3
+  BaseRole: "\uD3EC\uD2B8\uB9AC\uC2A4"
+  MaxHealth: 1200
+  Defense: 90
+  Resistance: 0
+  AttackDamage: 300
   AttackCooldown: 1.2
   AttackRange: 1
   KillValue: 12

@@ -32,6 +32,15 @@ namespace CheckmateRPG.Components
                                  (_statusEffects == null || _statusEffects.CanAttack);
         public AbilityRuntimeState BasicAttackRuntimeState { get; private set; } = new(string.Empty, 1);
 
+        /// <summary>
+        /// Returns true when target cell satisfies this unit's attack pattern/range rules.
+        /// Does not check cooldown/AP/death status.
+        /// </summary>
+        public bool IsTargetInAttackRange(GameObject target)
+        {
+            return IsInRange(target);
+        }
+
         // ─── Private State ────────────────────────────────────────────────────────
 
         private float _attackDamage;
@@ -42,10 +51,13 @@ namespace CheckmateRPG.Components
         private float _cooldownRemaining;
         private bool  _isDead;
         private StatusEffectComponent _statusEffects;
+        private TeamComponent _teamComponent;
+        private ChessPieceType _pieceType = ChessPieceType.Pawn;
 
         private void Awake()
         {
             _statusEffects = GetComponent<StatusEffectComponent>();
+            _teamComponent = GetComponent<TeamComponent>();
         }
 
         // ─── Initialisation ───────────────────────────────────────────────────────
@@ -58,6 +70,7 @@ namespace CheckmateRPG.Components
             _attackDamage    = data.AttackDamage;
             _attackCooldown  = data.AttackCooldown;
             _attackRange     = data.AttackRange;
+            _pieceType       = data.PieceType;
             _attackAPCost    = Mathf.Max(0f, data.AttackCostAP);
             _actionSpeed     = Mathf.Max(0.1f, data.ActionSpeed);
             _cooldownRemaining = 0f;
@@ -107,7 +120,9 @@ namespace CheckmateRPG.Components
 
             if (!IsInRange(target))
             {
-                Debug.Log($"[CombatComponent] {target.name} is out of attack range.");
+                Debug.Log(
+                    $"[CombatComponent][AttackFail:Range] Attacker={gameObject.name}, " +
+                    $"Target={target.name}, AttackRange={_attackRange}");
                 return;
             }
 
@@ -120,7 +135,12 @@ namespace CheckmateRPG.Components
 
             float apCost = GetAttackAPCost();
             if (!TrySpendAP(apCost))
+            {
+                Debug.Log(
+                    $"[CombatComponent][AttackFail:AP] Attacker={gameObject.name}, Target={target.name}, " +
+                    $"RequiredAP={apCost:0.0}");
                 return;
+            }
 
             float damage = _attackDamage;
             if (_statusEffects != null)
@@ -130,6 +150,14 @@ namespace CheckmateRPG.Components
                 health.ApplyDamage(damage, DamageType.Physical);
             else
                 damageable.TakeDamage(damage);
+
+            float targetHp = health != null ? health.CurrentHealth : -1f;
+            string attackerTeam = ResolveTeamTag(gameObject);
+            string targetTeam = ResolveTeamTag(target);
+            string targetHpText = targetHp >= 0f ? targetHp.ToString("0.0") : "N/A";
+            Debug.Log(
+                $"[CombatComponent][AttackSuccess] {attackerTeam}:{gameObject.name} -> {targetTeam}:{target.name}, " +
+                $"Damage={damage:0.0}, TargetHP={targetHpText}");
 
             float actionSpeed = _actionSpeed * (_statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f);
             _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
@@ -160,25 +188,37 @@ namespace CheckmateRPG.Components
         /// </summary>
         private bool IsInRange(GameObject target)
         {
-            // Prefer grid distance when both units are tracked on the grid
             MovementComponent targetMovement = target.GetComponent<MovementComponent>();
             MovementComponent selfMovement   = GetComponent<MovementComponent>();
 
             if (targetMovement != null && selfMovement != null)
             {
-                int distance = ChebyshevDistance(selfMovement.GridPosition, targetMovement.GridPosition);
-                return distance <= _attackRange;
+                Func<Vector2Int, bool> blocked = null;
+                if (GridSystem.Instance != null)
+                {
+                    Vector2Int selfCell = selfMovement.GridPosition;
+                    Vector2Int targetCell = targetMovement.GridPosition;
+                    blocked = cell =>
+                    {
+                        if (cell == selfCell || cell == targetCell)
+                            return false;
+                        GameObject occupant = GridSystem.Instance.GetOccupant(cell);
+                        return occupant != null;
+                    };
+                }
+
+                return CombatPatternRules.IsAttackReachable(
+                    _pieceType,
+                    _teamComponent != null && _teamComponent.IsEnemy,
+                    selfMovement.GridPosition,
+                    targetMovement.GridPosition,
+                    _attackRange,
+                    blocked);
             }
 
-            // Fallback: world-space distance (1.5 per range step covers diagonal tiles at √2 distance)
             float tileSize   = GridSystem.Instance != null ? 1f : 1f; // reserved for future tile-size injection
             float worldRange = _attackRange * tileSize * 1.5f;
             return Vector3.Distance(transform.position, target.transform.position) <= worldRange;
-        }
-
-        private static int ChebyshevDistance(Vector2Int a, Vector2Int b)
-        {
-            return Mathf.Max(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
         }
 
         private float GetAttackAPCost()
@@ -215,6 +255,13 @@ namespace CheckmateRPG.Components
                 return false;
 
             return true;
+        }
+
+        private static string ResolveTeamTag(GameObject target)
+        {
+            if (target == null || !target.TryGetComponent(out TeamComponent team))
+                return "Unknown";
+            return team.IsEnemy ? "Enemy" : "Player";
         }
     }
 }

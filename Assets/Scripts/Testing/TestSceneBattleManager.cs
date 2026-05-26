@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using CheckmateRPG.Components;
 using CheckmateRPG.Core;
 using CheckmateRPG.Core.Actions;
@@ -17,6 +19,7 @@ namespace CheckmateRPG.Testing
         [Header("Unit Data")]
         [SerializeField] private UnitData _pawnData;
         [SerializeField] private UnitData _knightData;
+        [SerializeField] private UnitData _kingData;
 
         [Header("Debug")]
         [SerializeField] private bool _enableAPDebugLogger = true;
@@ -27,6 +30,7 @@ namespace CheckmateRPG.Testing
         [SerializeField] private bool _spawnOnAwake = true;
         [SerializeField] private bool _enableMouseInputAdapter = true;
         [SerializeField] private bool _logQueuedInputCommands = true;
+        [SerializeField] private bool _preferKingDefeatVictory = true;
         [SerializeField] private Camera _inputCamera;
         [SerializeField] private LayerMask _inputRaycastMask = ~0;
 
@@ -34,6 +38,7 @@ namespace CheckmateRPG.Testing
         private readonly List<UnitRecord> _allUnits = new();
         private const string DebugPushAbilityId = "debug_force_push";
         private const string DebugAoeChainAbilityId = "debug_aoe_explosion_chain";
+        private const string DebugSkillPlaceholderAbilityId = "debug_skill_placeholder";
         private static readonly Vector2Int[] KnightOffsets =
         {
             new(1, 2),
@@ -55,6 +60,20 @@ namespace CheckmateRPG.Testing
         private UnitBrain _selectedUnit;
         private BattleSelectionOverlayController _selectionOverlay;
         private BattleDiagnosticsLogger _diagnosticsLogger;
+        private UnitData _runtimeKingData;
+        private Canvas _commandCanvas;
+        private GameObject _commandPanel;
+        private Button _moveModeButton;
+        private Button _attackModeButton;
+        private Button _skillModeButton;
+        private InputMode _currentInputMode = InputMode.Move;
+
+        private enum InputMode
+        {
+            Move,
+            Attack,
+            Skill
+        }
 
         private enum Team
         {
@@ -72,6 +91,7 @@ namespace CheckmateRPG.Testing
         {
             EnsureSelectionOverlay();
             EnsureBattleDiagnosticsLogger();
+            EnsureCommandModeUI();
 
             if (!_spawnOnAwake)
                 return;
@@ -111,10 +131,21 @@ namespace CheckmateRPG.Testing
                 return;
             }
 
+            UnitData kingData = ResolveKingData();
+            if (kingData == null)
+            {
+                Debug.LogError("[TestSceneBattleManager] King UnitData could not be resolved.");
+                return;
+            }
+
             SpawnUnit("Blue Pawn", _pawnData, new Vector2Int(1, 0), Team.Blue);
             SpawnUnit("Blue Knight", _knightData, new Vector2Int(3, 0), Team.Blue);
+            SpawnUnit("Blue King", kingData, new Vector2Int(5, 0), Team.Blue);
             SpawnUnit("Red Pawn", _pawnData, new Vector2Int(6, 7), Team.Red);
             SpawnUnit("Red Knight", _knightData, new Vector2Int(4, 7), Team.Red);
+            SpawnUnit("Red King", kingData, new Vector2Int(2, 7), Team.Red);
+
+            Debug.Log($"[TestSceneBattleManager] Victory condition: {(_preferKingDefeatVictory ? "King Defeat" : "Team Elimination")}.");
         }
 
         private void HandleDebugScenarioHotkeys()
@@ -529,6 +560,18 @@ namespace CheckmateRPG.Testing
         {
             bool blueAlive = HasLivingUnits(Team.Blue);
             bool redAlive = HasLivingUnits(Team.Red);
+            bool blueKingAlive = HasLivingKing(Team.Blue);
+            bool redKingAlive = HasLivingKing(Team.Red);
+
+            if (_preferKingDefeatVictory && (!blueKingAlive || !redKingAlive))
+            {
+                _battleEnded = true;
+                string result = blueKingAlive == redKingAlive
+                    ? "Draw (Both Kings Down)"
+                    : (blueKingAlive ? "Blue Victory (Red King Down)" : "Red Victory (Blue King Down)");
+                Debug.Log($"[TestSceneBattleManager] Battle ended: {result}");
+                return;
+            }
 
             if (!blueAlive || !redAlive)
             {
@@ -552,6 +595,58 @@ namespace CheckmateRPG.Testing
             }
 
             return false;
+        }
+
+        private bool HasLivingKing(Team team)
+        {
+            if (!_teams.TryGetValue(team, out List<UnitRecord> roster))
+                return false;
+
+            foreach (UnitRecord record in roster)
+            {
+                if (record.Brain == null || record.Brain.IsDead || record.Brain.UnitData == null)
+                    continue;
+
+                if (record.Brain.UnitData.PieceType == ChessPieceType.King)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private UnitData ResolveKingData()
+        {
+            if (_kingData != null)
+                return _kingData;
+
+            if (_runtimeKingData != null)
+                return _runtimeKingData;
+
+            UnitData source = _knightData != null ? _knightData : _pawnData;
+            if (source == null)
+                return null;
+
+            _runtimeKingData = ScriptableObject.CreateInstance<UnitData>();
+            _runtimeKingData.UnitName = "Runtime King";
+            _runtimeKingData.BaseRole = "King";
+            _runtimeKingData.PieceType = ChessPieceType.King;
+            _runtimeKingData.SyncDefaultChessMetadata();
+            _runtimeKingData.MaxHealth = Mathf.Max(1f, source.MaxHealth * 1.35f);
+            _runtimeKingData.Defense = Mathf.Clamp01(source.Defense + 0.08f);
+            _runtimeKingData.Resistance = Mathf.Clamp01(source.Resistance + 0.08f);
+            _runtimeKingData.AttackDamage = Mathf.Max(1f, source.AttackDamage * 1.2f);
+            _runtimeKingData.AttackCooldown = Mathf.Max(0.25f, source.AttackCooldown);
+            _runtimeKingData.AttackRange = Mathf.Max(1, source.AttackRange);
+            _runtimeKingData.KillValue = Mathf.Max(source.KillValue, 20f);
+            _runtimeKingData.MaxSP = Mathf.Max(source.MaxSP, 100f);
+            _runtimeKingData.MoveCostAP = Mathf.Max(1f, source.MoveCostAP + 2f);
+            _runtimeKingData.AttackCostAP = Mathf.Max(1f, source.AttackCostAP + 2f);
+            _runtimeKingData.ActionSpeed = Mathf.Max(0.5f, source.ActionSpeed);
+            _runtimeKingData.MoveRange = 1;
+            _runtimeKingData.MoveSpeed = source.MoveSpeed;
+            _runtimeKingData.Weight = Mathf.Max(source.Weight, 3);
+            _runtimeKingData.IsBoss = true;
+            return _runtimeKingData;
         }
 
         private UnitBrain FindNearestEnemy(UnitRecord source)
@@ -685,6 +780,9 @@ namespace CheckmateRPG.Testing
             if (!_enableMouseInputAdapter || !Input.GetMouseButtonDown(0))
                 return;
 
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                return;
+
             if (GridSystem.Instance == null)
                 return;
 
@@ -732,10 +830,43 @@ namespace CheckmateRPG.Testing
 
             UnitBrain targetUnit = GetUnitAtCell(cell);
             bool hasEnemyTarget = targetUnit != null && !targetUnit.IsDead && !IsSameTeam(_selectedUnit, targetUnit);
+            bool queued = false;
 
-            bool queued = hasEnemyTarget
-                ? _selectedUnit.QueueAttackAction(targetUnit.gameObject)
-                : _selectedUnit.QueueMoveAction(cell);
+            switch (_currentInputMode)
+            {
+                case InputMode.Move:
+                    queued = _selectedUnit.QueueMoveAction(cell);
+                    break;
+                case InputMode.Attack:
+                    if (!hasEnemyTarget)
+                    {
+                        Debug.Log("[TestSceneBattleManager][AttackMode] No enemy target on clicked cell.");
+                        return;
+                    }
+
+                    if (_selectedUnit.Combat == null || !_selectedUnit.Combat.IsTargetInAttackRange(targetUnit.gameObject))
+                    {
+                        Debug.Log(
+                            $"[TestSceneBattleManager][AttackMode] Target out of range. " +
+                            $"Attacker={_selectedUnit.name}, Target={targetUnit.name}, " +
+                            $"Piece={_selectedUnit.UnitData?.PieceType}, Range={_selectedUnit.UnitData?.AttackRange}");
+                        return;
+                    }
+                    queued = _selectedUnit.QueueAttackAction(targetUnit.gameObject);
+                    break;
+                case InputMode.Skill:
+                    if (!TryQueueSkillPlaceholder(_selectedUnit, targetUnit, cell))
+                    {
+                        Debug.Log(
+                            $"[TestSceneBattleManager][SkillMode] Queue failed. Actor={_selectedUnit.name}, Cell={cell}");
+                        return;
+                    }
+                    Debug.Log(
+                        $"[TestSceneBattleManager][SkillMode] Queued placeholder skill. Actor={_selectedUnit.name}, " +
+                        $"Target={(targetUnit != null ? targetUnit.name : "Self")}, Cell={cell}");
+                    queued = true;
+                    return;
+            }
 
             if (!hasEnemyTarget && ShouldLogMovementFor(_selectedUnit))
             {
@@ -745,7 +876,12 @@ namespace CheckmateRPG.Testing
             }
 
             if (!queued)
+            {
+                Debug.Log(
+                    $"[TestSceneBattleManager][InputQueue] Action queue failed. Mode={_currentInputMode}, " +
+                    $"Actor={_selectedUnit.name}, Cell={cell}");
                 return;
+            }
 
             AbilityActionCommand command = BuildInputAbilityCommand(_selectedUnit, cell, targetUnit);
             APDebugLogger.RecordQueuedCommand(command);
@@ -761,11 +897,15 @@ namespace CheckmateRPG.Testing
         {
             _selectedUnit = unit;
             APDebugLogger.SetCurrentTurnUnit(unit);
+            if (_commandPanel != null)
+                _commandPanel.SetActive(unit != null && !unit.IsDead);
 
             if (unit == null)
                 _selectionOverlay.ClearSelection();
             else
                 _selectionOverlay.SetSelectedUnit(unit);
+
+            SyncOverlayMode();
         }
 
         private BattleSelectionOverlayController EnsureSelectionOverlay()
@@ -776,6 +916,133 @@ namespace CheckmateRPG.Testing
             _selectionOverlay.SetUseInputSelection(false);
 
             return _selectionOverlay;
+        }
+
+        private void EnsureCommandModeUI()
+        {
+            if (_commandCanvas != null)
+                return;
+
+            EnsureEventSystem();
+
+            GameObject canvasObject = new GameObject("BattleCommandCanvas");
+            canvasObject.transform.SetParent(transform, false);
+            _commandCanvas = canvasObject.AddComponent<Canvas>();
+            _commandCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            canvasObject.AddComponent<GraphicRaycaster>();
+
+            _commandPanel = new GameObject("CommandPanel");
+            _commandPanel.transform.SetParent(canvasObject.transform, false);
+            RectTransform panelRect = _commandPanel.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0f);
+            panelRect.anchorMax = new Vector2(0.5f, 0f);
+            panelRect.pivot = new Vector2(0.5f, 0f);
+            panelRect.anchoredPosition = new Vector2(0f, 24f);
+            panelRect.sizeDelta = new Vector2(520f, 72f);
+
+            HorizontalLayoutGroup layout = _commandPanel.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 12f;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.padding = new RectOffset(12, 12, 12, 12);
+
+            Image panelBackground = _commandPanel.AddComponent<Image>();
+            panelBackground.color = new Color(0f, 0f, 0f, 0.45f);
+
+            _moveModeButton = CreateModeButton(_commandPanel.transform, "Move", new Color(0.2f, 0.55f, 0.95f, 0.92f), () => SetInputMode(InputMode.Move));
+            _attackModeButton = CreateModeButton(_commandPanel.transform, "Attack", new Color(0.92f, 0.2f, 0.2f, 0.92f), () => SetInputMode(InputMode.Attack));
+            _skillModeButton = CreateModeButton(_commandPanel.transform, "Skill", new Color(0.45f, 0.45f, 0.45f, 0.92f), () => SetInputMode(InputMode.Skill));
+
+            _commandPanel.SetActive(false);
+            RefreshModeButtonVisuals();
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (EventSystem.current != null)
+                return;
+
+            var eventSystemObject = new GameObject("EventSystem");
+            eventSystemObject.AddComponent<EventSystem>();
+            eventSystemObject.AddComponent<StandaloneInputModule>();
+        }
+
+        private Button CreateModeButton(Transform parent, string label, Color color, Action onClick)
+        {
+            GameObject buttonObject = new GameObject(label + "Button");
+            buttonObject.transform.SetParent(parent, false);
+
+            RectTransform rect = buttonObject.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(0f, 48f);
+
+            Image image = buttonObject.AddComponent<Image>();
+            image.color = color;
+
+            Button button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.onClick.AddListener(() => onClick?.Invoke());
+
+            GameObject textObject = new GameObject(label + "Text");
+            textObject.transform.SetParent(buttonObject.transform, false);
+            RectTransform textRect = textObject.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            Text text = textObject.AddComponent<Text>();
+            text.text = label;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.fontSize = 20;
+            text.color = Color.white;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.raycastTarget = false;
+
+            return button;
+        }
+
+        private void SetInputMode(InputMode mode)
+        {
+            _currentInputMode = mode;
+            RefreshModeButtonVisuals();
+            SyncOverlayMode();
+        }
+
+        private void RefreshModeButtonVisuals()
+        {
+            SetButtonAlpha(_moveModeButton, _currentInputMode == InputMode.Move ? 1f : 0.55f);
+            SetButtonAlpha(_attackModeButton, _currentInputMode == InputMode.Attack ? 1f : 0.55f);
+            SetButtonAlpha(_skillModeButton, _currentInputMode == InputMode.Skill ? 1f : 0.55f);
+        }
+
+        private static void SetButtonAlpha(Button button, float alpha)
+        {
+            if (button == null || button.targetGraphic == null)
+                return;
+
+            Color c = button.targetGraphic.color;
+            c.a = Mathf.Clamp01(alpha);
+            button.targetGraphic.color = c;
+        }
+
+        private void SyncOverlayMode()
+        {
+            if (_selectionOverlay == null)
+                return;
+
+            BattleSelectionOverlayController.OverlayMode overlayMode = _currentInputMode switch
+            {
+                InputMode.Attack => BattleSelectionOverlayController.OverlayMode.Attack,
+                InputMode.Skill => BattleSelectionOverlayController.OverlayMode.Skill,
+                _ => BattleSelectionOverlayController.OverlayMode.Move
+            };
+            _selectionOverlay.SetOverlayMode(overlayMode);
         }
 
         private BattleDiagnosticsLogger EnsureBattleDiagnosticsLogger()
@@ -902,6 +1169,37 @@ namespace CheckmateRPG.Testing
                 ActionSpeedTier.Normal,
                 targetCells: targetCells,
                 apCost: apCost);
+        }
+
+        private bool TryQueueSkillPlaceholder(UnitBrain actor, UnitBrain targetUnit, Vector2Int targetCell)
+        {
+            if (actor == null)
+                return false;
+            if (!TryGetRuntime(out ActionRuntimeController runtime))
+                return false;
+
+            AbilityDefinition definition = BuildDebugAbilityDefinition(
+                DebugSkillPlaceholderAbilityId,
+                AbilityTargetingRule.SingleTarget,
+                effects: null,
+                castSpeed: ActionSpeedTier.Normal);
+
+            IReadOnlyList<Guid> targetIds = targetUnit != null
+                ? new[] { targetUnit.ActorId }
+                : new[] { actor.ActorId };
+
+            bool queued = runtime.TryEnqueueAbility(actor, definition, targetIds);
+            if (!queued)
+                return false;
+
+            if (_logQueuedInputCommands)
+            {
+                Debug.Log(
+                    $"[TestSceneBattleManager] Enqueued skill placeholder action. " +
+                    $"Actor={actor.ActorId:N}, TargetCell={targetCell}, TargetCount={targetIds.Count}");
+            }
+
+            return true;
         }
 
         private static int ManhattanDistance(Vector2Int a, Vector2Int b)

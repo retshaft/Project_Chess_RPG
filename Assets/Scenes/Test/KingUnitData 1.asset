@@ -10,30 +10,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
-  m_Name: PawnUnitData
+  m_Name: KingUnitData 1
   m_EditorClassIdentifier: 
-  UnitName: Pawn
+  UnitName: King
   Prefab: {fileID: 0}
-  PieceType: 2
-  MovePattern: 4
-  BaseRole: "\uB300\uC8FC\uAD50"
-  MaxHealth: 700
-  Defense: 25
-  Resistance: 0.2
-  AttackDamage: 200
-  AttackCooldown: 1
+  PieceType: 5
+  MovePattern: 2
+  BaseRole: "\uAD70\uC8FC"
+  MaxHealth: 900
+  Defense: 55
+  Resistance: 0.3
+  AttackDamage: 190
+  AttackCooldown: 1.2
   AttackRange: 1
-  BasicAttackDamageType: 1
-  KillValue: 8
-  MaxSP: 50
+  BasicAttackDamageType: 0
+  KillValue: 12
+  MaxSP: 60
   InitSP: 4
   BasicAttackAbilityData: {fileID: 0}
   MoveCostAP: 4
   AttackCostAP: 6
   ActionSpeed: 1
-  MoveRange: 2
+  MoveRange: 3
   SpeedLevel: 1
   MoveSpeed: 0.8
   ActionDelay: 2.5
-  Weight: 1
+  Weight: 2
   IsBoss: 0

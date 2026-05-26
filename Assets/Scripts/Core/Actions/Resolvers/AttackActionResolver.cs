@@ -40,7 +40,9 @@ namespace CheckmateRPG.Core.Actions.Resolvers
                     action.ResolveTick,
                     action.ActionId,
                     action.TargetId,
-                    nameof(DamageMutation)));
+                    nameof(DamageMutation)),
+                DamageType: action.DamageType,
+                IsTrueDamage: action.DamageType == DamageType.True);
             SPMutation spGainMutation = new(
                 SeededRandomProvider.Shared.NextGuid(),
                 action.ActorId,

@@ -30,6 +30,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 return DamageProcessResult.Empty;
 
             int amount = Mathf.Max(0, mutation.Amount);
+            float beforeHp = target.Health.CurrentHealth;
             float defPenetrationRatio = Mathf.Clamp01(mutation.DefPenetrationRatio);
             if (mutation.IsTrueDamage)
             {
@@ -51,7 +52,9 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 }
             }
 
-            int actualRemainingHp = Mathf.RoundToInt(target.Health.CurrentHealth);
+            float afterHp = target.Health.CurrentHealth;
+            int actualDamage = Mathf.Max(0, Mathf.RoundToInt(beforeHp - afterHp));
+            int actualRemainingHp = Mathf.RoundToInt(afterHp);
             bool isDead = target.Health.IsDead;
 
             _simulationRuntime.SetUnitHP(mutation.TargetId, actualRemainingHp, OwnershipOwners.DamageMutationProcessor);
@@ -63,13 +66,17 @@ namespace CheckmateRPG.Core.Runtime.Processors
                     mutation.MutationId,
                     mutation.SourceId,
                     mutation.TargetId,
-                    amount,
+                    actualDamage,
                     actualRemainingHp,
                     mutation.IsCritical,
                     mutation.DamageType,
                     mutation.IsTrueDamage),
                 mutation.MutationId.ToString("N"),
                 mutation.TargetId.ToString("N"));
+
+            Debug.Log(
+                $"[DamageMutationProcessor] Type={mutation.DamageType}, True={mutation.IsTrueDamage}, " +
+                $"Raw={amount}, Applied={actualDamage}, HP:{Mathf.RoundToInt(beforeHp)}->{actualRemainingHp}");
 
             IReadOnlyList<IRuntimeMutation> generatedMutations = new IRuntimeMutation[]
             {

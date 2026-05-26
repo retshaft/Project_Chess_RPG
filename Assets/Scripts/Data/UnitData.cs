@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 using CheckmateRPG.Core.Abilities;
+using CheckmateRPG.Core;
 
 namespace CheckmateRPG.Data
 {
@@ -78,6 +79,9 @@ namespace CheckmateRPG.Data
 
         [Tooltip("Maximum grid distance at which the unit can attack (Chebyshev distance).")]
         [Min(1)] public int AttackRange = 1;
+
+        [Tooltip("Damage type used by this unit's basic attack.")]
+        public DamageType BasicAttackDamageType = DamageType.Physical;
 
         [Tooltip("AI scoring value awarded when this unit is defeated.")]
         [Min(0f)] public float KillValue = 10f;

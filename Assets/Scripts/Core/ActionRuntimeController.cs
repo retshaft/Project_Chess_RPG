@@ -18,6 +18,7 @@ using CheckmateRPG.Core.Simulation.Validation;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 using CheckmateRPG.Units;
+using CheckmateRPG.Components;
 using UnityEngine;
 
 namespace CheckmateRPG.Core
@@ -514,6 +515,7 @@ namespace CheckmateRPG.Core
         {
             int startTick = _scheduler.CurrentTick + 1;
             int damage = actor.UnitData != null ? Mathf.RoundToInt(actor.UnitData.AttackDamage) : 0;
+            DamageType damageType = actor.UnitData != null ? actor.UnitData.BasicAttackDamageType : DamageType.Physical;
             int spGain = actor.UnitData != null && actor.UnitData.BasicAttackAbilityData != null
                 ? Mathf.Max(0, actor.UnitData.BasicAttackAbilityData.SPGain)
                 : DefaultAttackSPGain;
@@ -521,6 +523,7 @@ namespace CheckmateRPG.Core
                 actor.ActorId,
                 targetId,
                 damage,
+                damageType,
                 isCritical: false,
                 startTick,
                 ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
@@ -1359,7 +1362,7 @@ namespace CheckmateRPG.Core
             string detail = action switch
             {
                 MoveActionCommand move => $"From=({move.From.x},{move.From.y}) To=({move.To.x},{move.To.y})",
-                AttackActionCommand attack => $"Target={attack.TargetId:N} Damage={attack.Damage} Critical={attack.IsCritical}",
+                AttackActionCommand attack => $"Target={attack.TargetId:N} Damage={attack.Damage} Type={attack.DamageType} Critical={attack.IsCritical}",
                 AbilityActionCommand ability => $"Ability={ability.AbilityId} Targets={ability.TargetIds.Count}",
                 _ => string.Empty
             };
@@ -1768,14 +1771,27 @@ namespace CheckmateRPG.Core
                     return false;
 
                 int range = 1;
+                ChessPieceType pieceType = ChessPieceType.Pawn;
+                bool isEnemy = false;
                 if (attackerBrain.UnitData != null)
+                {
                     range = Mathf.Max(1, attackerBrain.UnitData.AttackRange);
+                    pieceType = attackerBrain.UnitData.PieceType;
+                }
+                if (attackerBrain.TryGetComponent(out TeamComponent attackerTeam))
+                    isEnemy = attackerTeam.IsEnemy;
 
-                int distance = Mathf.Max(
-                    Mathf.Abs(attacker.Position.x - target.Position.x),
-                    Mathf.Abs(attacker.Position.y - target.Position.y));
-
-                return distance <= range;
+                return CombatPatternRules.IsAttackReachable(
+                    pieceType,
+                    isEnemy,
+                    attacker.Position,
+                    target.Position,
+                    range,
+                    sampleCell =>
+                    {
+                        IReadOnlyList<IReadOnlyUnitRuntimeState> occupants = _controller._simulationRuntime.GetUnitsAtPosition(sampleCell);
+                        return occupants != null && occupants.Count > 0;
+                    });
             }
         }
 
