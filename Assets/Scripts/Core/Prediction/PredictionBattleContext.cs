@@ -21,6 +21,8 @@ namespace CheckmateRPG.Core.Prediction
         private readonly SimulationRuntime _runtime;
         private readonly Func<Vector2Int, bool> _isCellValid;
         private readonly Func<Guid, int> _attackRangeLookup;
+        private readonly Func<Guid, int> _attackCountLookup;
+        private readonly Func<Guid, float> _attackDamageRatioLookup;
 
         /// <param name="runtime">The cloned runtime to query.</param>
         /// <param name="isCellValid">
@@ -31,16 +33,22 @@ namespace CheckmateRPG.Core.Prediction
         /// Returns the attack range (in Chebyshev distance) for a given unit id.
         /// Pass <c>_ => 1</c> for the default melee range.
         /// </param>
+        /// <param name="attackCountLookup">Returns attack count for a given unit id.</param>
+        /// <param name="attackDamageRatioLookup">Returns attack damage ratio for a given unit id.</param>
         /// <param name="criticalDamageMultiplier">Multiplier applied to critical hits.</param>
         public PredictionBattleContext(
             SimulationRuntime runtime,
             Func<Vector2Int, bool> isCellValid,
             Func<Guid, int> attackRangeLookup,
+            Func<Guid, int> attackCountLookup = null,
+            Func<Guid, float> attackDamageRatioLookup = null,
             int criticalDamageMultiplier = 2)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _isCellValid = isCellValid ?? throw new ArgumentNullException(nameof(isCellValid));
             _attackRangeLookup = attackRangeLookup ?? throw new ArgumentNullException(nameof(attackRangeLookup));
+            _attackCountLookup = attackCountLookup;
+            _attackDamageRatioLookup = attackDamageRatioLookup;
             CriticalDamageMultiplier = Math.Max(1, criticalDamageMultiplier);
         }
 
@@ -100,6 +108,44 @@ namespace CheckmateRPG.Core.Prediction
                 Math.Abs(attacker.Position.y - target.Position.y));
 
             return distance <= range;
+        }
+
+        public int GetAttackCount(Guid unitId)
+        {
+            return _attackCountLookup != null ? Math.Max(1, _attackCountLookup(unitId)) : 1;
+        }
+
+        public float GetAttackDamageRatio(Guid unitId)
+        {
+            return _attackDamageRatioLookup != null ? Math.Max(0f, _attackDamageRatioLookup(unitId)) : 1f;
+        }
+
+        public float GetDefPenetrationRatio(Guid attackerId, Guid targetId)
+        {
+            // Prediction 환경에서는 패시브 상태 등을 직접 가져오기 어렵기 때문에,
+            // 별도의 Lookup Delegate를 추가하거나 임시로 0f를 반환한다.
+            // 추후 필요시 _defPenetrationLookup 등을 통해 주입받을 수 있다.
+            return 0f;
+        }
+
+        public float GetAttackDamageMultiplier(Guid unitId)
+        {
+            return 1f;
+        }
+
+        public void NotifyAttackPerformed(Guid unitId)
+        {
+            // Prediction 환경에서는 실제 소모를 처리하지 않음
+        }
+
+        public void NotifyAttackStart(Guid attackerId, Guid targetId)
+        {
+            // Prediction 환경에서는 패시브 이벤트를 발생시키지 않음
+        }
+
+        public int GetOnHitEffectCount(Guid unitId, CheckmateRPG.Core.StatusEffectType type)
+        {
+            return 0;
         }
     }
 }

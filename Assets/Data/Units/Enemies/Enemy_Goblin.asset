@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
+  m_Name: Enemy_Goblin
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
+  AIProfile: {fileID: 0}
+  UnitName: Goblin
+  Icon: {fileID: 0}
+  Prefab: {fileID: 8707844099598015420, guid: 018e5feb8247c834aa99d12685e99c39, type: 3}
+  PieceType: 0
+  MovePattern: 0
+  BaseRole: "\uCC99\uD6C4\uB300"
+  MaxHealth: 30
+  Defense: 0
+  Resistance: 0.1
+  Style: 0
+  AttackCount: 1
+  AttackDamageRatio: 1
+  AttackDamage: 10
+  AttackCooldown: 1
+  AttackRange: 1
+  BasicAttackDamageType: 0
+  KillValue: 10
+  MaxSP: 10
+  InitSP: 4
+  BasicAttackAbilityData: {fileID: 0}
+  BasicAttackAbility: {fileID: 0}
+  DeploymentCost: 2
+  MoveCostAP: 8
+  AttackCostAP: 8
+  ActionSpeed: 1
+  MoveRange: 3
+  SpeedLevel: 1
+  MoveSpeed: 0.8
+  ActionDelay: 2.5
+  Weight: 1
+  IsBoss: 0
+  InitialSkillLevels: []
+  Abilities: []

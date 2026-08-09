@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99151c6bd4dc35b4e93bc2ad41a3d3c1, type: 3}
+  m_Name: Elena_c5
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.NotationNodeData
+  NodeId: Elena_c5
+  NotationCoord: c5
+  NodeType: 0
+  Description: "\uC2DC\uC2E4\uB9AC\uC5B8 \uC624\uD504\uB2DD: \uCE58\uBA85\uD0C0 \uD655\uB960
+    +10%"
+  TPCost: 2
+  Prerequisites: []
+  Bonuses:
+  - Stat: 1
+    FlatBonus: 8
+    PercentBonus: 0

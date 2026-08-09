@@ -52,5 +52,6 @@ namespace CheckmateRPG.Core.Effects
         EffectStackPolicy StackPolicy { get; }
         int MaxStackCap { get; }
         int MaxApplicationsPerTick { get; }
+        System.Collections.Generic.IReadOnlyList<CheckmateRPG.Core.StatModifiers.StatModifierOverride> StatOverrides { get; }
     }
 }

@@ -9,6 +9,7 @@ using UnityEngine;
 using CheckmateRPG.Data;
 using CheckmateRPG.Grid;
 using CheckmateRPG.MovementPatterns;
+using CheckmateRPG.Units;
 using Core = CheckmateRPG.Core;
 
 namespace CheckmateRPG.Components
@@ -38,7 +39,8 @@ namespace CheckmateRPG.Components
 
         [SerializeField] private float _knockbackSpeed = 8f;
         [SerializeField] private float _splatDamagePercent = 0.1f;
-        [SerializeField] private float _boundarySplatDamagePercent = 0.25f;
+        [SerializeField] private float _boundarySplatDamagePercent = 0.1f;
+        [SerializeField] private float _yOffset = 0.75f;
 
         private int   _moveRange;
         private float _moveSpeed;
@@ -88,7 +90,7 @@ namespace CheckmateRPG.Components
 
             // Register occupancy and snap transform
             GridSystem.Instance.SetOccupant(startCell, gameObject);
-            transform.position = GridSystem.Instance.GridToWorld(startCell);
+            transform.position = GridSystem.Instance.GridToWorld(startCell) + new Vector3(0f, _yOffset, 0f);
 
             CurrentMoveCostMultiplier = GridSystem.Instance.GetMoveCostMultiplier(startCell) * GetActionCostMultiplier();
             GridSystem.Instance.ApplyTileEffects(gameObject, startCell);
@@ -132,20 +134,7 @@ namespace CheckmateRPG.Components
             if (destination != GridPosition && !GridSystem.Instance.IsCellFree(destination))
                 return false;
 
-            if (destination != GridPosition)
-            {
-                GridSystem.Instance.ClearCell(GridPosition);
-                GridSystem.Instance.SetOccupant(destination, gameObject);
-                GridPosition = destination;
-            }
-
-            CurrentMoveCostMultiplier = GridSystem.Instance.GetMoveCostMultiplier(destination) * GetActionCostMultiplier();
-            GridSystem.Instance.ApplyTileEffects(gameObject, destination);
-            transform.position = GridSystem.Instance.GridToWorld(destination);
-            IsMoving = false;
-            TryHandlePawnPromotion(destination);
-            OnMoveCompleted?.Invoke(destination);
-            _statusEffects?.NotifyAction(Core.UnitActionType.Move);
+            StartMovementCoroutine(MoveCoroutine(destination));
             return true;
         }
 
@@ -156,6 +145,14 @@ namespace CheckmateRPG.Components
             IsMoving = true;
             OnMoveStarted?.Invoke(destination);
 
+            Vector2Int startGridPos = GridPosition;
+
+            if (TryGetComponent(out UnitBrain brain) && Core.ActionRuntimeController.Instance != null)
+            {
+                var payload = new Core.MoveStartedPayload(brain.ActorId, startGridPos.x, startGridPos.y, destination.x, destination.y);
+                Core.ActionRuntimeController.Instance.EventBus.Publish(new Core.MoveStartedEvent(payload, brain.ActorId.ToString("N")));
+            }
+
             // Update occupancy immediately to prevent double-booking
             GridSystem.Instance.ClearCell(GridPosition);
             GridSystem.Instance.SetOccupant(destination, gameObject);
@@ -165,12 +162,13 @@ namespace CheckmateRPG.Components
             GridSystem.Instance.ApplyTileEffects(gameObject, destination);
 
             Vector3 startPos  = transform.position;
-            Vector3 targetPos = GridSystem.Instance.GridToWorld(destination);
+            Vector3 targetPos = GridSystem.Instance.GridToWorld(destination) + new Vector3(0f, _yOffset, 0f);
             float   elapsed   = 0f;
-            float   actionSpeed = GetActionSpeedMultiplier();
+            
             float   baseSpeed = _moveSpeed + GridSystem.Instance.GetMoveSpeedModifier(destination);
-            float   speed     = Mathf.Max(0.1f, baseSpeed * actionSpeed);
-            float   duration  = Vector3.Distance(startPos, targetPos) / speed;
+            float   speedInCellsPerSecond = Mathf.Max(0.1f, baseSpeed);
+            float   worldSpeed = speedInCellsPerSecond * GridSystem.Instance.TileSize;
+            float   duration  = Vector3.Distance(startPos, targetPos) / worldSpeed;
 
             // Avoid NaN/Infinity if speed is extremely small or positions are identical.
             if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration))
@@ -190,91 +188,34 @@ namespace CheckmateRPG.Components
                 yield return null;
             }
 
-            transform.position = targetPos;
             IsMoving = false;
 
             TryHandlePawnPromotion(destination);
             OnMoveCompleted?.Invoke(destination);
 
+            if (TryGetComponent(out UnitBrain finalBrain) && Core.ActionRuntimeController.Instance != null)
+            {
+                var payload = new Core.Events.ActionEvents.MoveCompletedPayload(finalBrain.ActorId, startGridPos, destination);
+                Core.ActionRuntimeController.Instance.EventBus.Publish(new Core.Events.ActionEvents.MoveCompletedEvent(payload, finalBrain.ActorId.ToString("N")));
+            }
+
             _statusEffects?.NotifyAction(Core.UnitActionType.Move);
         }
 
-        public void ApplyKnockback(Vector2Int direction, int force, bool applySplatDamage = true)
+
+
+        public bool TestCanMove(Vector2Int fromCell, Vector2Int targetCell)
         {
             if (GridSystem.Instance == null)
-                return;
+                return false;
+            
+            if (fromCell == targetCell)
+                return false;
 
-            if (force <= 0 || direction == Vector2Int.zero)
-                return;
+            if (_movePattern == null)
+                return false;
 
-            direction = new Vector2Int(Mathf.Clamp(direction.x, -1, 1), Mathf.Clamp(direction.y, -1, 1));
-
-            int effectiveWeight = Weight;
-            if (_statusEffects != null && _statusEffects.HasStatus(Core.StatusEffectType.Stagger) && !IsBoss)
-                effectiveWeight = Math.Max(0, effectiveWeight - 1);
-
-            int distance = Math.Max(0, force - effectiveWeight);
-            if (distance <= 0)
-                return;
-
-            Vector2Int origin = GridPosition;
-            Vector2Int finalCell = origin;
-            GameObject collisionTarget = null;
-            bool hitBoundary = false;
-
-            for (int step = 1; step <= distance; step++)
-            {
-                Vector2Int next = origin + direction * step;
-
-                if (!GridSystem.Instance.IsValidCell(next))
-                {
-                    hitBoundary = true;
-                    break;
-                }
-
-                if (!GridSystem.Instance.IsCellFree(next))
-                {
-                    collisionTarget = GridSystem.Instance.GetOccupant(next);
-                    break;
-                }
-
-                finalCell = next;
-            }
-
-            if (applySplatDamage)
-            {
-                if (collisionTarget != null)
-                {
-                    ApplySplatDamage(gameObject, _splatDamagePercent);
-                    ApplySplatDamage(collisionTarget, _splatDamagePercent);
-                }
-                else if (hitBoundary)
-                {
-                    ApplySplatDamage(gameObject, _boundarySplatDamagePercent);
-                }
-            }
-
-            if (finalCell != origin)
-                StartMovementCoroutine(ForcedMoveCoroutine(finalCell, _knockbackSpeed));
-        }
-
-        public void ApplyGrab(Vector2Int sourceCell, int force)
-        {
-            Vector2Int delta = sourceCell - GridPosition;
-            Vector2Int direction;
-
-            if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
-                direction = new Vector2Int(Mathf.Clamp(delta.x, -1, 1), 0);
-            else
-                direction = new Vector2Int(0, Mathf.Clamp(delta.y, -1, 1));
-
-            if (direction == Vector2Int.zero)
-                return;
-
-            ApplyKnockback(direction, force);
-
-            if (_statusEffects != null && _statusEffects.HasStatus(Core.StatusEffectType.Stagger))
-                _statusEffects.ApplyGrabVulnerability();
+            return _movePattern.CanMove(fromCell, targetCell, gameObject);
         }
 
         public bool CanReachCell(Vector2Int targetGridPosition, bool logFailures = false)
@@ -350,44 +291,7 @@ namespace CheckmateRPG.Components
             return reachableCells;
         }
 
-        private IEnumerator ForcedMoveCoroutine(Vector2Int destination, float speed)
-        {
-            IsMoving = true;
-            OnMoveStarted?.Invoke(destination);
 
-            GridSystem.Instance.ClearCell(GridPosition);
-            GridSystem.Instance.SetOccupant(destination, gameObject);
-            GridPosition = destination;
-
-            CurrentMoveCostMultiplier = GridSystem.Instance.GetMoveCostMultiplier(destination) * GetActionCostMultiplier();
-            GridSystem.Instance.ApplyTileEffects(gameObject, destination);
-
-            Vector3 startPos = transform.position;
-            Vector3 targetPos = GridSystem.Instance.GridToWorld(destination);
-            float elapsed = 0f;
-            float duration = Vector3.Distance(startPos, targetPos) / Mathf.Max(0.1f, speed);
-
-            if (duration <= 0f || float.IsNaN(duration) || float.IsInfinity(duration))
-            {
-                transform.position = targetPos;
-                IsMoving = false;
-                TryHandlePawnPromotion(destination);
-                OnMoveCompleted?.Invoke(destination);
-                yield break;
-            }
-
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                transform.position = Vector3.Lerp(startPos, targetPos, elapsed / duration);
-                yield return null;
-            }
-
-            transform.position = targetPos;
-            IsMoving = false;
-            TryHandlePawnPromotion(destination);
-            OnMoveCompleted?.Invoke(destination);
-        }
 
         private void StartMovementCoroutine(IEnumerator routine)
         {
@@ -408,12 +312,14 @@ namespace CheckmateRPG.Components
             bool isEnemy = TryGetComponent(out TeamComponent team) && team.IsEnemy;
             int promotionRow = isEnemy ? 0 : GridSystem.GridHeight - 1;
             bool reachedPromotionRank = destination.y == promotionRow;
-            bool reachedEighthFile = destination.x == GridSystem.GridWidth - 1;
 
-            if (!reachedPromotionRank && !reachedEighthFile)
+            if (!reachedPromotionRank)
                 return;
 
-            Debug.Log($"[MovementComponent] Pawn promotion triggered for {gameObject.name} at {destination}. TODO: choose promotion piece.");
+            if (TryGetComponent(out UnitBrain brain))
+            {
+                brain.StartPromotion();
+            }
         }
 
         private float GetActionCostMultiplier()
@@ -438,33 +344,12 @@ namespace CheckmateRPG.Components
 
         private bool TrySpendAP(float cost)
         {
-            if (cost <= 0f)
-                return true;
-
-            if (Core.APManager.Instance == null)
-            {
-                Debug.LogWarning("[MovementComponent] APManager not found. Move cancelled.");
-                return false;
-            }
-
-            if (!Core.APManager.Instance.TrySpend(new Core.ActionPointCost(cost, Core.APActionReason.Move), out _))
-                return false;
-
+            // AP is already deducted by ActionCostReservation when the scheduler commits the action.
+            // AITeamCommander also manages its own AP before scheduling.
             return true;
         }
 
-        private static void ApplySplatDamage(GameObject target, float percent)
-        {
-            if (target == null)
-                return;
 
-            if (!target.TryGetComponent(out HealthComponent health) || health.IsDead)
-                return;
-
-            float damage = health.MaxHealth * Mathf.Max(0f, percent);
-            if (damage > 0f)
-                health.ApplyTrueDamage(damage);
-        }
 
         // ─── Helpers ──────────────────────────────────────────────────────────────
 

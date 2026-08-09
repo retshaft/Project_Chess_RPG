@@ -21,6 +21,12 @@ namespace CheckmateRPG.Components
         /// <summary>Raised whenever health changes. Parameters: (currentHp, maxHp).</summary>
         public event Action<float, float> OnHealthChanged;
 
+        /// <summary>Raised when unit takes damage. Parameters: (damage amount, damage type).</summary>
+        public event Action<float, DamageType> OnDamageTaken;
+
+        /// <summary>Raised when unit is healed. Parameter: heal amount.</summary>
+        public event Action<float> OnHealed;
+
         /// <summary>Raised once when health reaches 0.</summary>
         public event Action OnDeath;
 
@@ -120,6 +126,9 @@ namespace CheckmateRPG.Components
             _currentHealth = Mathf.Min(_maxHealth, _currentHealth + amount);
 
             OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+            
+            if (amount > 0f)
+                OnHealed?.Invoke(amount);
         }
 
         // ─── Private Helpers ──────────────────────────────────────────────────────
@@ -152,6 +161,9 @@ namespace CheckmateRPG.Components
                 amount *= _damageTakenMultiplier;
 
             _currentHealth = Mathf.Max(0f, _currentHealth - amount);
+
+            if (amount > 0f)
+                OnDamageTaken?.Invoke(amount, damageType);
 
             OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
 

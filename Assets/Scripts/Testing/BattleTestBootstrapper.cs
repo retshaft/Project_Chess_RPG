@@ -147,8 +147,17 @@ namespace CheckmateRPG.Testing
                 _ => 1f
             };
             data.MaxSP = 100f;
-            data.MoveCostAP = 4f;
-            data.AttackCostAP = 6f;
+            data.MoveCostAP = pieceType switch
+            {
+                ChessPieceType.Pawn => 8f,
+                ChessPieceType.Knight => 24f,
+                ChessPieceType.Bishop => 24f,
+                ChessPieceType.Rook => 36f,
+                ChessPieceType.Queen => 48f,
+                ChessPieceType.King => 24f,
+                _ => 8f
+            };
+            data.AttackCostAP = data.MoveCostAP;
             data.ActionSpeed = 1f;
             data.MoveRange = 7;
             data.MoveSpeed = 5f;

@@ -6,6 +6,8 @@ public class TestSceneSetup : MonoBehaviour
 {
     [Header("Graybox Map")]
     [SerializeField] private bool _buildGrayboxOnAwake = true;
+    [SerializeField] private GameObject _primaryTilePrefab; // 체크무늬 타일 A (예: 밝은 색)
+    [SerializeField] private GameObject _secondaryTilePrefab; // 체크무늬 타일 B (예: 어두운 색)
     [SerializeField] private float _tileHeight = 0.08f;
     [SerializeField] private float _tileInset = 0.05f;
     [SerializeField] private float _boardYOffset = -0.02f;
@@ -28,13 +30,23 @@ public class TestSceneSetup : MonoBehaviour
         foreach (Material material in _tileMaterials.Values)
         {
             if (material != null)
-                Destroy(material);
+            {
+                if (Application.isPlaying)
+                    Destroy(material);
+                else
+                    DestroyImmediate(material);
+            }
         }
 
         _tileMaterials.Clear();
 
         if (_boardMaterial != null)
-            Destroy(_boardMaterial);
+        {
+            if (Application.isPlaying)
+                Destroy(_boardMaterial);
+            else
+                DestroyImmediate(_boardMaterial);
+        }
     }
 
     private static void EnsureGridSystem()
@@ -42,18 +54,37 @@ public class TestSceneSetup : MonoBehaviour
         if (GridSystem.Instance != null)
             return;
 
+        var grid = FindObjectOfType<GridSystem>();
+        if (grid != null)
+            return;
+
         var gridGO = new GameObject("GridSystem");
         gridGO.AddComponent<GridSystem>();
     }
 
-    private void BuildGrayboxMap()
+    [ContextMenu("Build Graybox Map")]
+    public void BuildGrayboxMap()
     {
+        EnsureGridSystem();
+
         GridSystem grid = GridSystem.Instance;
         if (grid == null)
+            grid = FindObjectOfType<GridSystem>();
+            
+        if (grid == null)
+        {
+            Debug.LogError("[TestSceneSetup] GridSystem could not be found or created.");
             return;
+        }
 
-        if (_mapRoot != null)
-            Destroy(_mapRoot);
+        Transform existingMap = transform.Find("GrayboxMap");
+        if (existingMap != null)
+        {
+            if (Application.isPlaying)
+                Destroy(existingMap.gameObject);
+            else
+                DestroyImmediate(existingMap.gameObject);
+        }
 
         _mapRoot = new GameObject("GrayboxMap");
         _mapRoot.transform.SetParent(transform, false);
@@ -61,6 +92,19 @@ public class TestSceneSetup : MonoBehaviour
         CreateBoardPlane(grid, _mapRoot.transform);
         CreateTileCubes(grid, _mapRoot.transform);
         Debug.Log("[TestSceneSetup] Graybox map generated.");
+    }
+
+    [ContextMenu("Clear Graybox Map")]
+    public void ClearGrayboxMap()
+    {
+        Transform existingMap = transform.Find("GrayboxMap");
+        if (existingMap != null)
+        {
+            if (Application.isPlaying)
+                Destroy(existingMap.gameObject);
+            else
+                DestroyImmediate(existingMap.gameObject);
+        }
     }
 
     private void CreateBoardPlane(GridSystem grid, Transform parent)
@@ -96,17 +140,44 @@ public class TestSceneSetup : MonoBehaviour
             for (int y = 0; y < GridSystem.GridHeight; y++)
             {
                 Vector2Int cell = new Vector2Int(x, y);
-                var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                tile.name = $"Tile_{x}_{y}";
-                tile.transform.SetParent(parent, false);
-                tile.transform.position = grid.GridToWorld(cell) + new Vector3(0f, cubeHeight * 0.5f, 0f);
-                tile.transform.localScale = new Vector3(tileScale, cubeHeight, tileScale);
+                GameObject tile;
+                
+                // (x + y)의 짝/홀수 여부로 체스판 패턴 결정
+                bool isPrimary = (x + y) % 2 == 0;
+                GameObject prefabToUse = isPrimary ? _primaryTilePrefab : _secondaryTilePrefab;
 
-                if (!tile.TryGetComponent(out Renderer renderer))
-                    continue;
+                if (prefabToUse != null)
+                {
+                    // 커스텀 프리팹(2mx2m)을 사용할 경우, 별도 Scale이나 Inset을 적용하지 않고 원본 그대로 배치합니다.
+                    tile = Instantiate(prefabToUse, parent);
+                    tile.name = $"Tile_{x}_{y}";
+                    tile.transform.position = grid.GridToWorld(cell);
+                    
+                    // 타일이 너무 일률적으로 보이는 것을 방지하기 위해 90도 단위로 무작위 회전을 줍니다.
+                    int rotationSteps = UnityEngine.Random.Range(0, 4);
+                    tile.transform.rotation = Quaternion.Euler(0f, rotationSteps * 90f, 0f);
+                }
+                else
+                {
+                    // 프리팹이 하나라도 할당되지 않은 경우, 기존의 회색박스 큐브를 생성합니다.
+                    tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    tile.name = $"Tile_{x}_{y}";
+                    tile.transform.SetParent(parent, false);
+                    tile.transform.position = grid.GridToWorld(cell) + new Vector3(0f, cubeHeight * 0.5f, 0f);
+                    tile.transform.localScale = new Vector3(tileScale, cubeHeight, tileScale);
 
-                TileType tileType = grid.GetTileType(cell);
-                renderer.material = GetOrCreateTileMaterial(tileType);
+                    if (tile.TryGetComponent(out Renderer renderer))
+                    {
+                        TileType tileType = grid.GetTileType(cell);
+                        renderer.material = GetOrCreateTileMaterial(tileType);
+                        
+                        // 그레이박스 상태일 때도 격자 무늬가 보이게 색상을 살짝 다르게 줍니다.
+                        if (tileType == TileType.Normal)
+                        {
+                            renderer.material.color = isPrimary ? new Color(0.18f, 0.18f, 0.18f) : new Color(0.12f, 0.12f, 0.12f);
+                        }
+                    }
+                }
             }
         }
     }

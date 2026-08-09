@@ -22,6 +22,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
         private readonly EffectMutationProcessor _effectProcessor;
         private readonly CooldownMutationProcessor _cooldownProcessor;
         private readonly SPMutationProcessor _spProcessor;
+        private readonly PhysicsMutationProcessor _physicsProcessor;
         private readonly Func<AbilityActionCompleteMutation, bool> _applyAbilityActionComplete;
 
         public RuntimeMutationProcessor(
@@ -56,6 +57,7 @@ namespace CheckmateRPG.Core.Runtime.Processors
             _effectProcessor = new EffectMutationProcessor(simulationRuntime, applyEffect, isPhysicalCcEffect, substituteWithStagger);
             _cooldownProcessor = new CooldownMutationProcessor(abilityStateLookup, currentTickProvider);
             _spProcessor = new SPMutationProcessor(simulationRuntime);
+            _physicsProcessor = new PhysicsMutationProcessor(unitLookup, simulationRuntime);
             _applyAbilityActionComplete = applyAbilityActionComplete;
         }
 
@@ -162,6 +164,8 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 DeathMutation death => new MutationApplyResult(_damageProcessor.Apply(death), Array.Empty<IRuntimeMutation>()),
                 MovementMutation movement => ToApplyResult(_movementProcessor.ApplyWithGeneratedMutations(movement)),
                 MoveMutation move => ToApplyResult(_movementProcessor.ApplyWithGeneratedMutations(move)),
+                KnockbackMutation knockback => ToApplyResult(_physicsProcessor.ApplyWithGeneratedMutations(knockback)),
+                GrabMutation grab => ToApplyResult(_physicsProcessor.ApplyWithGeneratedMutations(grab)),
                 SPMutation sp => new MutationApplyResult(_spProcessor.Apply(sp), Array.Empty<IRuntimeMutation>()),
                 ApplyEffectMutation effect => new MutationApplyResult(_effectProcessor.Apply(effect), Array.Empty<IRuntimeMutation>()),
                 CooldownMutation cooldown => new MutationApplyResult(_cooldownProcessor.Apply(cooldown), Array.Empty<IRuntimeMutation>()),
@@ -184,6 +188,13 @@ namespace CheckmateRPG.Core.Runtime.Processors
             return new MutationApplyResult(
                 damageResult.Events ?? Array.Empty<IGameEvent>(),
                 damageResult.GeneratedMutations ?? Array.Empty<IRuntimeMutation>());
+        }
+
+        private static MutationApplyResult ToApplyResult(PhysicsProcessResult physicsResult)
+        {
+            return new MutationApplyResult(
+                physicsResult.Events ?? Array.Empty<IGameEvent>(),
+                physicsResult.GeneratedMutations ?? Array.Empty<IRuntimeMutation>());
         }
 
         private static MutationApplyResult MarkUnhandled(out bool handled)

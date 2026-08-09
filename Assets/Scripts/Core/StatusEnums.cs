@@ -32,7 +32,14 @@ namespace CheckmateRPG.Core
         Poison,
         Virus,
         GrabVulnerability,
-        FrozenBossDebuff
+        FrozenBossDebuff,
+        Stun,
+        Root,
+        Silence,
+        Disarm,
+        Taunt,
+        Stealth,
+        Haste
     }
 
     public enum UnitActionType

@@ -646,6 +646,7 @@ namespace CheckmateRPG.Core.Simulation
                 StackPolicy = source.StackPolicy;
                 MaxStackCap = source.MaxStackCap;
                 MaxApplicationsPerTick = source.MaxApplicationsPerTick;
+                StatOverrides = source.StatOverrides;
             }
 
             public string EffectId { get; }
@@ -667,6 +668,7 @@ namespace CheckmateRPG.Core.Simulation
             public EffectStackPolicy StackPolicy { get; }
             public int MaxStackCap { get; }
             public int MaxApplicationsPerTick { get; }
+            public System.Collections.Generic.IReadOnlyList<CheckmateRPG.Core.StatModifiers.StatModifierOverride> StatOverrides { get; }
         }
     }
 }

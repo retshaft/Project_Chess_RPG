@@ -24,6 +24,9 @@ namespace CheckmateRPG.Components
 
         /// <summary>Raised after a successful attack. Parameter: the target GameObject.</summary>
         public event Action<GameObject> OnAttackPerformed;
+        /// <summary>Raised on each individual damage hit. Parameters: target, damage, cumulative hit count.</summary>
+        public event Action<GameObject, float, int> OnDamageDealtWithHitCounter;
+        public int TotalHitCounter { get; private set; } = 0;
 
         // ─── IAttackable ──────────────────────────────────────────────────────────
 
@@ -50,6 +53,8 @@ namespace CheckmateRPG.Components
         private float _actionSpeed = 1f;
         private float _cooldownRemaining;
         private bool  _isDead;
+        private int   _attackCount = 1;
+        private float _attackDamageRatio = 1f;
         private StatusEffectComponent _statusEffects;
         private TeamComponent _teamComponent;
         private ChessPieceType _pieceType = ChessPieceType.Pawn;
@@ -73,6 +78,9 @@ namespace CheckmateRPG.Components
             _pieceType       = data.PieceType;
             _attackAPCost    = Mathf.Max(0f, data.AttackCostAP);
             _actionSpeed     = Mathf.Max(0.1f, data.ActionSpeed);
+            _attackCount     = Mathf.Max(1, data.AttackCount);
+            _attackDamageRatio = Mathf.Max(0f, data.AttackDamageRatio);
+            TotalHitCounter  = 0;
             _cooldownRemaining = 0f;
             _isDead          = false;
             BasicAttackRuntimeState.SetIdentity(string.Empty, 1);
@@ -142,25 +150,44 @@ namespace CheckmateRPG.Components
                 return;
             }
 
-            float damage = _attackDamage;
+            var modComp = GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+            int actualAttackCount = modComp != null && modComp.GetAttackCountOverride() > 0 ? modComp.GetAttackCountOverride() : _attackCount;
+            float actualDamageRatio = modComp != null && modComp.GetAttackDamageRatioOverride() >= 0f ? modComp.GetAttackDamageRatioOverride() : _attackDamageRatio;
+            float damage = _attackDamage * actualDamageRatio;
             if (_statusEffects != null)
                 damage *= _statusEffects.AttackMultiplier;
+            if (modComp != null)
+                damage *= modComp.GetAttackDamageMultiplier();
 
-            if (target.TryGetComponent(out HealthComponent health))
-                health.ApplyDamage(damage, DamageType.Physical);
-            else
-                damageable.TakeDamage(damage);
+            for (int i = 0; i < actualAttackCount; i++)
+            {
+                if (target == null) break;
+                if (target.TryGetComponent(out HealthComponent hc) && hc.IsDead && i > 0) break;
 
-            float targetHp = health != null ? health.CurrentHealth : -1f;
+                if (target.TryGetComponent(out HealthComponent health))
+                    health.ApplyDamage(damage, DamageType.Physical);
+                else
+                    damageable.TakeDamage(damage);
+
+                TotalHitCounter++;
+                OnDamageDealtWithHitCounter?.Invoke(target, damage, TotalHitCounter);
+            }
+
+            float targetHp = target.TryGetComponent(out HealthComponent targetHealth) ? targetHealth.CurrentHealth : -1f;
             string attackerTeam = ResolveTeamTag(gameObject);
             string targetTeam = ResolveTeamTag(target);
             string targetHpText = targetHp >= 0f ? targetHp.ToString("0.0") : "N/A";
             Debug.Log(
                 $"[CombatComponent][AttackSuccess] {attackerTeam}:{gameObject.name} -> {targetTeam}:{target.name}, " +
-                $"Damage={damage:0.0}, TargetHP={targetHpText}");
+                $"Damage={damage:0.0} x {actualAttackCount} hits, TargetHP={targetHpText}");
 
             float actionSpeed = _actionSpeed * (_statusEffects != null ? _statusEffects.ActionSpeedMultiplier : 1f);
-            _cooldownRemaining = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
+            float baseCooldown = _attackCooldown / Mathf.Max(0.1f, actionSpeed);
+
+            if (modComp != null)
+                baseCooldown *= modComp.GetAttackCooldownMultiplier();
+
+            _cooldownRemaining = baseCooldown;
             UpdateAbilityRuntimeState();
 
             OnAttackPerformed?.Invoke(target);
@@ -169,6 +196,11 @@ namespace CheckmateRPG.Components
         }
 
         // ─── Public Helpers ───────────────────────────────────────────────────────
+
+        public void ReduceCooldown(float seconds)
+        {
+            _cooldownRemaining = Mathf.Max(0f, _cooldownRemaining - seconds);
+        }
 
         /// <summary>
         /// Called by HealthComponent.OnDeath to stop the unit from attacking after death.
@@ -223,6 +255,11 @@ namespace CheckmateRPG.Components
 
         private float GetAttackAPCost()
         {
+            if (TryGetComponent(out SubclassComponent subclass) && subclass.IsDefender())
+            {
+                return 0f;
+            }
+
             float multiplier = _statusEffects != null ? _statusEffects.ActionCostMultiplier : 1f;
             return Mathf.Max(0f, _attackAPCost * multiplier);
         }
@@ -242,18 +279,8 @@ namespace CheckmateRPG.Components
 
         private bool TrySpendAP(float cost)
         {
-            if (cost <= 0f)
-                return true;
-
-            if (APManager.Instance == null)
-            {
-                Debug.LogWarning("[CombatComponent] APManager not found. Attack cancelled.");
-                return false;
-            }
-
-            if (!APManager.Instance.TrySpend(new ActionPointCost(cost, APActionReason.Attack), out _))
-                return false;
-
+            // AP is already deducted by ActionCostReservation when the scheduler commits the action.
+            // AITeamCommander also manages its own AP before scheduling.
             return true;
         }
 

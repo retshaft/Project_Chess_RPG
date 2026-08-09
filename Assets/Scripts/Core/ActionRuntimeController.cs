@@ -34,7 +34,7 @@ namespace CheckmateRPG.Core
         private static readonly ActionDefinition MoveActionDefinition =
             new(InterruptPriority.Soft, InterruptWindow.CastingInterruptible, true, true);
         private static readonly ActionDefinition AttackActionDefinition =
-            new(InterruptPriority.Normal, InterruptWindow.CastingInterruptible, true, true);
+            new(InterruptPriority.Normal, InterruptWindow.Any, true, true);
 
         [SerializeField] private int _simulationSeed = DefaultSimulationSeed;
         [SerializeField] private bool _enableReplayRecording = true;
@@ -60,6 +60,42 @@ namespace CheckmateRPG.Core
         private AbilityExecutionPipeline _abilityPipeline;
         private IActionCostPolicy _actionCostPolicy;
         private ActionCostReservation _actionCostReservation;
+        public void ApplyEffectToUnit(Guid targetId, string effectId, Guid sourceId, int durationTicks, int stackCount, float magnitude)
+        {
+            if (_effectSystem != null)
+            {
+                var state = new EffectRuntimeState(
+                    effectId: effectId,
+                    sourceId: sourceId,
+                    targetId: targetId,
+                    remainingTick: durationTicks,
+                    stackCount: stackCount,
+                    tickInterval: 1,
+                    nextTickIn: 1,
+                    magnitude: magnitude,
+                    timingPhase: EffectTimingPhase.OnTickEnd,
+                    actionSpeedLevel: ActionSpeedTier.Normal,
+                    isReaction: false,
+                    appliedTick: _scheduler != null ? _scheduler.CurrentTick : 0,
+                    stackPolicy: EffectStackPolicy.Refresh,
+                    maxStackCap: stackCount,
+                    isHidden: false);
+                _effectSystem.ApplyOrRefreshEffect(state);
+            }
+        }
+
+        public void ReduceCooldown(Guid unitId, string abilityId, float seconds)
+        {
+            if (TryGetUnitBrain(unitId, out UnitBrain brain) && brain != null)
+            {
+                var combat = brain.GetComponent<CombatComponent>();
+                if (combat != null)
+                {
+                    combat.ReduceCooldown(seconds);
+                }
+            }
+        }
+
         private RuntimeBattleContext _battleContext;
         private ResolutionPhasePipeline _resolutionPipeline;
         private PositionReservationSystem _positionReservationSystem;
@@ -76,6 +112,7 @@ namespace CheckmateRPG.Core
         private RuntimeValidationSystem _runtimeValidationSystem;
         private ValidationExecutionStage _validationExecutionStage;
         private SnapshotRecorder _snapshotRecorder;
+        private TerrainInteractionProcessor _terrainInteractionProcessor;
         private ValidationResult _lastValidationResult = ValidationResult.Valid();
         private bool _validationHalted;
         private int _lastResolveMutationQueueCount;
@@ -105,6 +142,15 @@ namespace CheckmateRPG.Core
         /// Read-only view of the simulation runtime state. Safe to read from debug overlays.
         /// </summary>
         public IReadOnlySimulationRuntime SimulationRuntime => _simulationRuntime;
+        public ReactionSystem ReactionSystem => _reactionSystem;
+
+        /// <summary>
+        /// Attempts to get the UnitBrain associated with the specified unitId.
+        /// </summary>
+        public bool TryGetUnitBrain(Guid unitId, out UnitBrain brain)
+        {
+            return _unitsById.TryGetValue(unitId, out brain);
+        }
 
         /// <summary>
         /// Current position reservation snapshot. Updated each tick during spatial arbitration.
@@ -145,6 +191,7 @@ namespace CheckmateRPG.Core
             _abilityPipeline = new AbilityExecutionPipeline();
             _actionCostPolicy = new DefaultActionCostPolicy();
             _actionCostReservation = new ActionCostReservation();
+            
             _battleContext = new RuntimeBattleContext(this);
             _positionReservationSystem = new PositionReservationSystem(SpatialResolutionPolicy.PriorityWin);
             _predictionPipeline = new PredictionPipeline(
@@ -194,6 +241,14 @@ namespace CheckmateRPG.Core
                 () => _simulationRuntime,
                 () => _runtimeValidationSystem);
             _reactionSystem.Attach();
+
+            _terrainInteractionProcessor = new TerrainInteractionProcessor(
+                _eventBus,
+                _mutationCommitService,
+                () => _simulationRuntime,
+                id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null);
+            _terrainInteractionProcessor.Attach();
+
             _resolutionPipeline = new ResolutionPhasePipeline(
                 resolveAction: (action, _) =>
                 {
@@ -237,14 +292,41 @@ namespace CheckmateRPG.Core
 
             if (_tickScheduler != null)
                 _tickScheduler.OnTick -= HandleRuntimeTick;
+            
             _eventTraceRecorder?.Detach();
             _timelineRecorder?.Detach();
-            _reactionSystem?.Detach();
+            
+            if (_reactionSystem != null)
+            {
+                _reactionSystem.Detach();
+                _reactionSystem = null;
+            }
+
+            if (_terrainInteractionProcessor != null)
+            {
+                _terrainInteractionProcessor.Dispose();
+                _terrainInteractionProcessor = null;
+            }
+
             _eventBus.Unsubscribe<ActionQueuedEvent>(HandleActionQueued);
             _eventBus.Unsubscribe<ActionCompletedEvent>(HandleActionCompleted);
             _eventBus.Unsubscribe<ActionInterruptedEvent>(HandleActionInterrupted);
             _eventBus.Unsubscribe<ActionStateChangedEvent>(HandleActionStateChanged);
             Instance = null;
+        }
+
+        public bool CommitMutation(IRuntimeMutation mutation)
+        {
+            if (mutation == null || _mutationCommitService == null)
+                return false;
+
+            var queue = new MutationQueue();
+            queue.Enqueue(mutation, ActionSpeedTier.Normal, int.MaxValue);
+
+            MutationCommitResult commitResult = _mutationCommitService.Commit(queue);
+            RecordMutationCommitJournal(commitResult);
+            EnqueueResolvedEvents(commitResult.StagedEvents);
+            return commitResult.AppliedMutations.Count > 0;
         }
 
         public bool ApplyEffectRuntime(EffectRuntimeState effectState)
@@ -304,34 +386,54 @@ namespace CheckmateRPG.Core
         public bool TryEnqueueMove(UnitBrain actor, Vector2Int destination)
         {
             if (!CanQueueAction(actor))
-                return false;
-            if (actor.Movement == null || !actor.Movement.CanReachCell(destination))
-                return false;
-
-            MoveActionCommand command = (MoveActionCommand)CreateMoveCommand(actor, destination);
-            if (BattleDiagnostics.ShouldLogMovement(actor))
             {
-                Debug.Log(
-                    $"[MovementDebug][RuntimeQueue] Tick={_scheduler.CurrentTick}, Actor={actor.ActorId:N}, " +
-                    $"From={command.From}, Requested={destination}, ScheduledTo={command.To}, ActionId={command.ActionId:N}");
+                Debug.LogWarning($"[TryEnqueueMove] CanQueueAction failed for {actor.name}");
+                return false;
+            }
+            if (actor.Movement == null)
+            {
+                Debug.LogWarning($"[TryEnqueueMove] Movement component is null for {actor.name}");
+                return false;
+            }
+            if (!actor.Movement.CanReachCell(destination))
+            {
+                Debug.LogWarning($"[TryEnqueueMove] CanReachCell failed for {actor.name} to {destination}");
+                return false;
             }
 
-            return TryReserveAndQueueAction(
+            MoveActionCommand command = (MoveActionCommand)CreateMoveCommand(actor, destination);
+
+            bool reserved = TryReserveAndQueueAction(
                 actor,
                 command,
                 null,
                 null,
                 $"MoveInput Actor={actor.ActorId:N} Destination=({destination.x},{destination.y})");
+
+            if (!reserved)
+            {
+                Debug.LogWarning($"[TryEnqueueMove] TryReserveAndQueueAction failed for {actor.name} to {destination}");
+            }
+            return reserved;
         }
 
         public bool TryEnqueueAttack(UnitBrain actor, GameObject target)
         {
             if (!CanQueueAction(actor))
+            {
+                Debug.LogWarning($"[TryEnqueueAttack] CanQueueAction failed for actor {actor.name}");
                 return false;
+            }
             if (target == null || actor.Combat == null || !actor.Combat.CanAttack)
+            {
+                Debug.LogWarning($"[TryEnqueueAttack] Target/Combat check failed. Target: {target}, Combat: {actor.Combat}, CanAttack: {actor.Combat?.CanAttack}");
                 return false;
+            }
             if (!TryGetActorId(target, out Guid targetId))
+            {
+                Debug.LogWarning($"[TryEnqueueAttack] TryGetActorId failed for target {target.name}");
                 return false;
+            }
 
             IActionCommand command = CreateAttackCommand(actor, targetId);
             return TryReserveAndQueueAction(
@@ -415,12 +517,29 @@ namespace CheckmateRPG.Core
             return CreateAttackCommand(actor, targetId);
         }
 
+        public IActionCommand BuildAbilityPredictionCommand(UnitBrain actor, AbilityDefinition definition, IReadOnlyList<Guid> targetIds)
+        {
+            if (!CanQueueAction(actor) || definition == null)
+                return null;
+
+            int level = actor.UnitData != null ? actor.UnitData.GetSkillLevel(definition.name) : 1;
+            var levelData = definition.GetLevelData(level);
+
+            return new AbilityActionCommand(
+                actor.ActorId,
+                definition.name,
+                targetIds ?? Array.Empty<Guid>(),
+                _scheduler.CurrentTick + 1,
+                levelData.CastSpeed,
+                spCost: Mathf.Max(0, levelData.SPCost));
+        }
+
         public void RegisterAbilityDefinition(AbilityDefinition definition)
         {
             if (definition == null || string.IsNullOrWhiteSpace(definition.name))
                 return;
             _abilityDefinitions[definition.name] = definition;
-            RebuildEffectProfileRegistry();
+            RebuildEffectProfiles();
         }
 
         public void UnregisterAbilityDefinition(AbilityDefinition definition)
@@ -428,7 +547,7 @@ namespace CheckmateRPG.Core
             if (definition == null || string.IsNullOrWhiteSpace(definition.name))
                 return;
             _abilityDefinitions.Remove(definition.name);
-            RebuildEffectProfileRegistry();
+            RebuildEffectProfiles();
         }
 
         public void SyncRuntimeState(UnitBrain unit)
@@ -527,8 +646,9 @@ namespace CheckmateRPG.Core
                 isCritical: false,
                 startTick,
                 ToSpeedTier(actor.UnitData != null ? actor.UnitData.ActionSpeed : DefaultActionSpeed),
-                DefaultRecoveryTicks,
+                recoveryDurationTicks: DefaultRecoveryTicks,
                 definition: AttackActionDefinition,
+                concurrencyPolicy: ActionConcurrencyPolicy.Replace,
                 spGain: spGain);
         }
 
@@ -559,6 +679,7 @@ namespace CheckmateRPG.Core
             _timelineRecorder?.RecordTick(_scheduler.CurrentTick);
             ResetMutationQueueDebugSnapshot();
             IReadOnlyList<IGameEvent> autoRegenEvents = ExecuteSpAutoRegen();
+            _terrainInteractionProcessor?.AdvanceTick(_scheduler.CurrentTick);
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             RecordResolveOrderJournal(ready);
@@ -619,6 +740,13 @@ namespace CheckmateRPG.Core
                 [StatusEffectType.Poison.ToString()] = 0.02f
             }));
             effectSystem.RegisterProcessor(new HotEffectProcessor(new Dictionary<string, float>()));
+            
+            // M9 Processors
+            effectSystem.RegisterProcessor(new CheckmateRPG.Core.Effects.Processors.StatusEffectProcessor());
+            effectSystem.RegisterProcessor(new CheckmateRPG.Core.Effects.Processors.ElementalAuraProcessor(() => _simulationRuntime, mutation => {
+                if (Instance != null) Instance.CommitMutation(mutation);
+            }));
+            
             return effectSystem;
         }
 
@@ -1007,6 +1135,14 @@ namespace CheckmateRPG.Core
 
         private void HandleActionCompleted(ActionCompletedEvent actionCompletedEvent)
         {
+            if (actionCompletedEvent == null) return;
+            
+            if (_unitsById.TryGetValue(actionCompletedEvent.Payload.ActorId, out UnitBrain brain))
+            {
+                var modComp = brain.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                modComp?.ConsumeOnAction();
+            }
+
             ActionLifecyclePayload payload = actionCompletedEvent.Payload;
             if (_simulationRuntime == null || !_simulationRuntime.TryGetMutableUnit(payload.ActorId, out UnitRuntimeState state))
                 return;
@@ -1070,7 +1206,7 @@ namespace CheckmateRPG.Core
                 payload.InterruptedAction.ToString("N")));
         }
 
-        private bool TryReserveAndQueueAction(
+        public bool TryReserveAndQueueAction(
             UnitBrain actor,
             IActionCommand action,
             AbilityDefinition abilityDefinition,
@@ -1085,6 +1221,7 @@ namespace CheckmateRPG.Core
                 new ActionCostContext(actor, abilityDefinition, abilityRuntimeState));
             if (!_actionCostReservation.CanAfford(actor.ActorId, cost, GetCurrentSp))
             {
+                Debug.LogWarning($"[TryReserveAndQueueAction] CanAfford failed. Cost={cost.APCost} AP, {cost.SPCost} SP");
                 RecordActionRequestJournal(action, BuildActionRequestDetail(
                     outcome: "Rejected",
                     reason: "InsufficientCost",
@@ -1092,9 +1229,11 @@ namespace CheckmateRPG.Core
                 return false;
             }
 
-            ActionCostReservationHooks hooks = BuildReservationHooks(abilityDefinition, abilityRuntimeState);
+            int level = actor.UnitData != null ? actor.UnitData.GetSkillLevel(abilityDefinition?.AbilityId ?? "") : 1;
+            ActionCostReservationHooks hooks = BuildReservationHooks(abilityDefinition, abilityRuntimeState, level);
             if (!_actionCostReservation.ReserveCost(action.ActionId, actor.ActorId, cost, hooks))
             {
+                Debug.LogWarning($"[TryReserveAndQueueAction] ReserveCost failed.");
                 RecordActionRequestJournal(action, BuildActionRequestDetail(
                     outcome: "Rejected",
                     reason: "ReservationFailed",
@@ -1115,6 +1254,7 @@ namespace CheckmateRPG.Core
                         currentLock: admissionResult.CurrentLock.ToString()));
                 if (admissionResult.Status == ActionAdmissionStatus.Rejected)
                 {
+                    Debug.LogWarning($"[TryReserveAndQueueAction] ScheduleAction rejected: {admissionResult.Reason}");
                     _actionCostReservation.Rollback(action.ActionId);
                     return false;
                 }
@@ -1137,10 +1277,13 @@ namespace CheckmateRPG.Core
 
         private static ActionCostReservationHooks BuildReservationHooks(
             AbilityDefinition definition,
-            AbilityRuntimeState runtimeState)
+            AbilityRuntimeState runtimeState,
+            int level)
         {
             if (definition == null || runtimeState == null)
                 return ActionCostReservationHooks.Empty;
+
+            var levelData = definition.GetLevelData(level);
 
             return new ActionCostReservationHooks(
                 // Ability cooldown/action-state reservation must not overlap with an already pending ability action.
@@ -1151,7 +1294,7 @@ namespace CheckmateRPG.Core
                     runtimeState.CommitQueuedAction(
                         actionId,
                         currentTick,
-                        definition.Cooldown,
+                        levelData.Cooldown,
                         OwnershipOwners.ActionScheduler,
                         OwnershipOwners.TickScheduler);
                 },
@@ -1536,35 +1679,14 @@ namespace CheckmateRPG.Core
             return _effectProfilesById.TryGetValue(effectId, out profile);
         }
 
-        private void RebuildEffectProfileRegistry()
+        private void RebuildEffectProfiles()
         {
             _effectProfilesById.Clear();
             _effectIdsByStatus.Clear();
 
-            var abilityIds = new List<string>(_abilityDefinitions.Keys);
-            abilityIds.Sort(StringComparer.Ordinal);
-
-            for (int i = 0; i < abilityIds.Count; i++)
-            {
-                AbilityDefinition definition = _abilityDefinitions[abilityIds[i]];
-                if (definition == null || definition.EffectList == null)
-                    continue;
-
-                for (int effectIndex = 0; effectIndex < definition.EffectList.Count; effectIndex++)
-                {
-                    AbilityEffectDefinition effect = definition.EffectList[effectIndex];
-                    if (effect == null || string.IsNullOrWhiteSpace(effect.EffectId))
-                        continue;
-
-                    if (!_effectProfilesById.ContainsKey(effect.EffectId))
-                        _effectProfilesById[effect.EffectId] = RegisteredEffectProfile.Create(effect);
-
-                    if (!effect.AppliesStatusEffect || _effectIdsByStatus.ContainsKey(effect.StatusEffect))
-                        continue;
-
-                    _effectIdsByStatus[effect.StatusEffect] = effect.EffectId;
-                }
-            }
+            // 모듈형 시스템으로 변경되었으므로, 중앙 집중식 하드코딩 사전 빌딩은 더 이상 사용하지 않습니다.
+            // 대신 각 이펙트 모듈이 실행 시점에 필요한 데이터를 자체적으로 생성(CreateMutations)하거나,
+            // ScriptableObject 기반으로 직접 로드하여 처리합니다.
         }
 
         private readonly record struct RegisteredEffectProfile(
@@ -1581,23 +1703,7 @@ namespace CheckmateRPG.Core
             EffectStackPolicy StackPolicy,
             int MaxStackCap)
         {
-            public static RegisteredEffectProfile Create(AbilityEffectDefinition effect)
-            {
-                int tickInterval = Mathf.Max(1, effect.TickInterval);
-                return new RegisteredEffectProfile(
-                    effect.EffectId,
-                    effect.AppliesStatusEffect,
-                    effect.StatusEffect,
-                    effect.IsPhysicalCC,
-                    effect.IsHidden,
-                    Mathf.Max(1, effect.DurationTicks),
-                    tickInterval,
-                    Mathf.Clamp(effect.InitialTickIn, 1, tickInterval),
-                    Mathf.Max(1, effect.StackCount),
-                    Mathf.Max(0f, effect.Magnitude),
-                    effect.StackPolicy,
-                    effect.MaxStackCap);
-            }
+            // 더 이상 AbilityEffectDefinition에서 생성하지 않음.
         }
 
         private AbilityRuntimeState GetOrCreateAbilityRuntimeState(Guid actorId, string abilityId)
@@ -1792,6 +1898,97 @@ namespace CheckmateRPG.Core
                         IReadOnlyList<IReadOnlyUnitRuntimeState> occupants = _controller._simulationRuntime.GetUnitsAtPosition(sampleCell);
                         return occupants != null && occupants.Count > 0;
                     });
+            }
+            public int GetAttackCount(Guid unitId)
+            {
+                if (_controller._unitsById.TryGetValue(unitId, out UnitBrain brain) && brain != null)
+                {
+                    var modComp = brain.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                    int overrideCount = modComp != null ? modComp.GetAttackCountOverride() : -1;
+                    if (overrideCount > 0) return overrideCount;
+
+                    if (brain.UnitData != null)
+                        return Mathf.Max(1, brain.UnitData.AttackCount);
+                }
+                return 1;
+            }
+
+            public float GetAttackDamageRatio(Guid unitId)
+            {
+                if (_controller._unitsById.TryGetValue(unitId, out UnitBrain brain) && brain != null)
+                {
+                    var modComp = brain.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                    float overrideRatio = modComp != null ? modComp.GetAttackDamageRatioOverride() : -1f;
+                    if (overrideRatio >= 0f) return overrideRatio;
+
+                    if (brain.UnitData != null)
+                        return Mathf.Max(0f, brain.UnitData.AttackDamageRatio);
+                }
+                return 1f;
+            }
+
+            public float GetDefPenetrationRatio(Guid attackerId, Guid targetId)
+            {
+                if (_controller._unitsById.TryGetValue(attackerId, out UnitBrain attackerBrain) && attackerBrain != null)
+                {
+                    float modPen = 0f;
+                    var modComp = attackerBrain.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                    if (modComp != null)
+                    {
+                        modPen = modComp.GetDefPenetration();
+                    }
+                    return modPen;
+                }
+                return 0f;
+            }
+            public float GetAttackDamageMultiplier(Guid unitId)
+            {
+                if (_controller._unitsById.TryGetValue(unitId, out UnitBrain brain) && brain != null)
+                {
+                    var modComp = brain.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                    if (modComp != null)
+                        return modComp.GetAttackDamageMultiplier();
+                }
+                return 1f;
+            }
+
+            public void NotifyAttackStart(Guid attackerId, Guid targetId)
+            {
+                if (_controller._unitsById.TryGetValue(attackerId, out UnitBrain brain) && brain != null)
+                {
+                    var passiveComp = brain.GetComponent<CheckmateRPG.Core.Passives.UnitPassiveComponent>();
+                    passiveComp?.NotifyAttackStart(targetId);
+                }
+            }
+
+            public void NotifyAttackPerformed(Guid unitId)
+            {
+                if (_controller._unitsById.TryGetValue(unitId, out UnitBrain brain) && brain != null)
+                {
+                    var modComp = brain.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                    modComp?.ConsumeOnAttack();
+                }
+            }
+
+            public int GetOnHitEffectCount(Guid unitId, CheckmateRPG.Core.StatusEffectType type)
+            {
+                int count = 0;
+                if (_controller._unitsById.TryGetValue(unitId, out UnitBrain brain) && brain != null)
+                {
+                    var modComp = brain.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                    if (modComp != null)
+                    {
+                        var modType = type == CheckmateRPG.Core.StatusEffectType.Bleed ? 
+                            CheckmateRPG.Core.StatModifiers.StatModifierType.OnHitApplyBleed : 
+                            (type == CheckmateRPG.Core.StatusEffectType.Burn ? CheckmateRPG.Core.StatModifiers.StatModifierType.OnHitApplyBurn : (CheckmateRPG.Core.StatModifiers.StatModifierType)(-1));
+                        
+                        if ((int)modType != -1)
+                        {
+                            modComp.HasOnHitEffect(modType, out count);
+                        }
+                    }
+                }
+                return count;
             }
         }
 

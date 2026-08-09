@@ -53,7 +53,7 @@ namespace CheckmateRPG.Testing
                 return;
 
             _eventBus.Subscribe<DamageAppliedEvent>(HandleDamageApplied);
-            _eventBus.Subscribe<MoveCompletedEvent>(HandleMoveCompleted);
+            _eventBus.Subscribe<CheckmateRPG.Core.Events.ActionEvents.MoveCompletedEvent>(HandleMoveCompleted);
             _eventBus.Subscribe<EffectTickEvent>(HandleEffectTick);
             RefreshUnitCache();
 
@@ -71,7 +71,7 @@ namespace CheckmateRPG.Testing
                 return;
 
             _eventBus.Unsubscribe<DamageAppliedEvent>(HandleDamageApplied);
-            _eventBus.Unsubscribe<MoveCompletedEvent>(HandleMoveCompleted);
+            _eventBus.Unsubscribe<CheckmateRPG.Core.Events.ActionEvents.MoveCompletedEvent>(HandleMoveCompleted);
             _eventBus.Unsubscribe<EffectTickEvent>(HandleEffectTick);
 
             for (int i = 0; i < _dynamicSubscriptions.Count; i++)
@@ -106,7 +106,7 @@ namespace CheckmateRPG.Testing
                 ShowFloatingTextForTarget(gameEvent.Payload.TargetId, $"-{Mathf.Abs(deltaHp)}", Color.red);
         }
 
-        private void HandleMoveCompleted(MoveCompletedEvent gameEvent)
+        private void HandleMoveCompleted(CheckmateRPG.Core.Events.ActionEvents.MoveCompletedEvent gameEvent)
         {
             if (!IsResolvePhase(gameEvent))
                 return;

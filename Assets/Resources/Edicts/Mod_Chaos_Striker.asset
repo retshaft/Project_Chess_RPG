@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94fd4a21358a6524aaab3e803f7a62b4, type: 3}
+  m_Name: Mod_Chaos_Striker
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.EdictData
+  EdictName: Sovereign Striker
+  Kind: 0
+  Polarity: 2
+  SyncCost: 6
+  Bonuses:
+  - Stat: 1
+    FlatBonus: 30
+    PercentBonus: 0.15
+  HasActiveSkill: 0
+  ActiveSkillName: "\uD0B9 \uC2F1\uD06C\uB85C \uD574\uBC29"
+  Cooldown: 35
+  Duration: 10
+  InstantAPBonus: 30
+  ApplySquadStatusEffect: 1
+  SquadStatusEffect: 21
+  UseOverdriveLighting: 1

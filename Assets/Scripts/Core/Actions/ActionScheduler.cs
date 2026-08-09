@@ -105,17 +105,24 @@ namespace CheckmateRPG.Core.Actions
                     Transition(action, CurrentTick >= action.RecoveryEndTick ? ActionState.Completed : ActionState.Recovery);
             }
 
-            // Recovery → Completed
-            for (int i = 0; i < snapshot.Length; i++)
+            try
             {
-                BaseActionCommand action = snapshot[i];
-                if (action.State == ActionState.Recovery && CurrentTick >= action.RecoveryEndTick)
-                    Transition(action, ActionState.Completed);
-            }
+                // Recovery → Completed
+                for (int i = 0; i < snapshot.Length; i++)
+                {
+                    BaseActionCommand action = snapshot[i];
+                    if (action.State == ActionState.Recovery && CurrentTick >= action.RecoveryEndTick)
+                        Transition(action, ActionState.Completed);
+                }
 
-            ProcessPendingInterrupts();
-            PruneInactiveActions();
-            TryAdmitDeferredActions();
+                ProcessPendingInterrupts();
+                PruneInactiveActions();
+                TryAdmitDeferredActions();
+            }
+            catch (System.Exception ex)
+            {
+                UnityEngine.Debug.LogError($"[ActionScheduler] AdvanceTick Exception: {ex.Message}\n{ex.StackTrace}");
+            }
         }
 
         public void InterruptAction(Guid actionId)
@@ -385,7 +392,7 @@ namespace CheckmateRPG.Core.Actions
             return false;
         }
 
-        private bool TryGetActiveLock(Guid actorId, out UnitActionLockState lockState)
+        public bool TryGetActiveLock(Guid actorId, out UnitActionLockState lockState)
         {
             if (!_lockStateByActor.TryGetValue(actorId, out lockState) || lockState == null)
                 return false;

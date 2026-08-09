@@ -1,0 +1,325 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7084689673845775966
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 560296176146452741}
+  - component: {fileID: 4105215938373306122}
+  - component: {fileID: 8531419029347317655}
+  - component: {fileID: 2235213106334743943}
+  - component: {fileID: 2007580022995036679}
+  - component: {fileID: 5146313267675656393}
+  - component: {fileID: 8597825803434728444}
+  - component: {fileID: 5375116282339305445}
+  - component: {fileID: 4612402950578489868}
+  - component: {fileID: 5610556095406623451}
+  - component: {fileID: 2822598527497157924}
+  - component: {fileID: 5183228850082698905}
+  - component: {fileID: 2773302522434641157}
+  - component: {fileID: 7749972351247840700}
+  m_Layer: 0
+  m_Name: Enemy_BlackKnight
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &560296176146452741
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &4105215938373306122
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!136 &8531419029347317655
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!23 &2235213106334743943
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &2007580022995036679
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9d8e3f8cb464a64b8e3d43570689627, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.HealthComponent
+--- !u!114 &5146313267675656393
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7c0f3f89adb55b41822002e00b854a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.MovementComponent
+  _knockbackSpeed: 8
+  _splatDamagePercent: 0.1
+  _boundarySplatDamagePercent: 0.1
+  _yOffset: 0.75
+--- !u!114 &8597825803434728444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7d76478168aa1d4d8ffcfcc68168512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.CombatComponent
+--- !u!114 &5375116282339305445
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39924472768559f4d8d8dd4f60bc1628, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.StatusEffectComponent
+  _elementalAuraDuration: 6
+  _staggerDuration: 4
+  _woundDuration: 6
+  _grabVulnerabilityDuration: 4
+  _burnDuration: 6
+  _igniteDuration: 6
+  _overloadDuration: 6
+  _superconductDuration: 6
+  _paralysisDuration: 4
+  _chillDuration: 6
+  _freezeDuration: 2
+  _necrosisDuration: 6
+  _poisonDuration: 6
+  _virusDuration: 4
+  _bossFreezeDebuffDuration: 4
+  _stunDuration: 3
+  _rootDuration: 3
+  _silenceDuration: 4
+  _disarmDuration: 4
+  _tauntDuration: 4
+  _stealthDuration: 5
+  _bleedDamagePercentPerStack: 0.02
+  _burnDamagePercentPerTick: 0.02
+  _igniteDamagePercentPerTick: 0.03
+  _poisonDamagePercentPerTick: 0.02
+  _reactionMagicDamagePercent: 0.1
+  _shatterBonusMultiplier: 0.5
+  _grabCriticalBonus: 0.4
+  _dotTickInterval: 1
+  _explosionKnockbackForce: 2
+  _bleedStacksToWound: 3
+  _shockSpDrainPercent: 0.2
+--- !u!114 &4612402950578489868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 233a3869d20e3834b83812d38643b9d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.UnitVisualController
+--- !u!114 &5610556095406623451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6948fddc2510ed4f914984cbf00b8dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Units.UnitBrain
+  _unitData: {fileID: 0}
+  _startCell: {x: 0, y: 0}
+  _currentTarget: {fileID: 0}
+  _runtimeActorId: 
+  _promotionDelay: 3
+  _maxScenariosPerTick: 24
+--- !u!114 &2822598527497157924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7c0f3f89adb55b41822002e00b854a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.MovementComponent
+  _knockbackSpeed: 8
+  _splatDamagePercent: 0.1
+  _boundarySplatDamagePercent: 0.1
+  _yOffset: 0.75
+--- !u!114 &5183228850082698905
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7d76478168aa1d4d8ffcfcc68168512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.CombatComponent
+--- !u!114 &2773302522434641157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39924472768559f4d8d8dd4f60bc1628, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.StatusEffectComponent
+  _elementalAuraDuration: 6
+  _staggerDuration: 4
+  _woundDuration: 6
+  _grabVulnerabilityDuration: 4
+  _burnDuration: 6
+  _igniteDuration: 6
+  _overloadDuration: 6
+  _superconductDuration: 6
+  _paralysisDuration: 4
+  _chillDuration: 6
+  _freezeDuration: 2
+  _necrosisDuration: 6
+  _poisonDuration: 6
+  _virusDuration: 4
+  _bossFreezeDebuffDuration: 4
+  _stunDuration: 3
+  _rootDuration: 3
+  _silenceDuration: 4
+  _disarmDuration: 4
+  _tauntDuration: 4
+  _stealthDuration: 5
+  _bleedDamagePercentPerStack: 0.02
+  _burnDamagePercentPerTick: 0.02
+  _igniteDamagePercentPerTick: 0.03
+  _poisonDamagePercentPerTick: 0.02
+  _reactionMagicDamagePercent: 0.1
+  _shatterBonusMultiplier: 0.5
+  _grabCriticalBonus: 0.4
+  _dotTickInterval: 1
+  _explosionKnockbackForce: 2
+  _bleedStacksToWound: 3
+  _shockSpDrainPercent: 0.2
+--- !u!114 &7749972351247840700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7084689673845775966}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b2ba53e75547b84bacacada81e25a3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Components.TeamComponent
+  _isEnemy: 1

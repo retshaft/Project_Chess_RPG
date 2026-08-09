@@ -19,13 +19,13 @@ namespace CheckmateRPG.Grid
         public const int GridHeight = 8;
         public const float SwampMoveCostMultiplier = 2f;
         public const float SpikeDamagePercentPerSecond = 0.03f;
-        public const float SanctuaryHealPercentPerSecond = 0.02f;
+        public const float SanctuaryHealPercentPerTick = 0.015f;
         public const float SanctuaryDefenseBonus = 0.15f;
 
         // ─── Serialized Fields ────────────────────────────────────────────────────
 
         [Tooltip("World-space size of one grid tile (assumes square tiles).")]
-        [SerializeField] private float _tileSize = 1f;
+        [SerializeField] private float _tileSize = 2f;
 
         [Tooltip("World-space position of the bottom-left corner of tile (0,0).")]
         [SerializeField] private Vector3 _originWorldPosition = Vector3.zero;
@@ -237,77 +237,20 @@ namespace CheckmateRPG.Grid
             // Terrain gameplay effects are resolved by the deterministic effect runtime.
         }
 
-        private void UpdateSanctuaryDefense(GameObject unit, TileType tileType)
-        {
-            if (unit == null)
-                return;
 
-            if (!unit.TryGetComponent(out HealthComponent health))
-                return;
-
-            bool applySanctuary = tileType == TileType.Sanctuary && IsSanctuaryAlly(unit);
-            health.SetDefenseBonus(applySanctuary ? SanctuaryDefenseBonus : 0f);
-        }
-
-        private void ApplySpikeDamage(GameObject unit)
-        {
-            if (unit == null)
-                return;
-
-            if (!unit.TryGetComponent(out HealthComponent health))
-                return;
-
-            if (health.IsDead)
-                return;
-
-            float damage = health.MaxHealth * SpikeDamagePercentPerSecond;
-            if (damage > 0f)
-                health.ApplyTrueDamage(damage);
-        }
-
-        private void ApplySanctuaryRegen(GameObject unit)
-        {
-            if (unit == null)
-                return;
-
-            if (!unit.TryGetComponent(out HealthComponent health) || health.IsDead)
-                return;
-
-            float heal = health.MaxHealth * SanctuaryHealPercentPerSecond;
-            if (heal > 0f)
-                health.Heal(heal);
-        }
-
-        private void ApplyTileEffectTick()
-        {
-            for (int x = 0; x < GridWidth; x++)
-            {
-                for (int y = 0; y < GridHeight; y++)
-                {
-                    GameObject occupant = _occupancy[x, y];
-                    if (occupant == null)
-                        continue;
-
-                    TileType tileType = _tileMap[x, y];
-                    UpdateSanctuaryDefense(occupant, tileType);
-                    switch (tileType)
-                    {
-                        case TileType.Spikes:
-                            ApplySpikeDamage(occupant);
-                            break;
-                        case TileType.Sanctuary:
-                            if (IsSanctuaryAlly(occupant))
-                                ApplySanctuaryRegen(occupant);
-                            break;
-                    }
-                }
-            }
-        }
 
         public TileType GetTileType(Vector2Int cell)
         {
             if (!IsValidCell(cell))
                 return TileType.Normal;
+
+#if UNITY_EDITOR
+            if (_tileMap == null)
+            {
+                _tileMap = new TileType[GridWidth, GridHeight];
+                InitialiseTileMap();
+            }
+#endif
 
             return _tileMap[cell.x, cell.y];
         }
@@ -327,20 +270,10 @@ namespace CheckmateRPG.Grid
                 for (int y = 0; y < GridHeight; y++)
                     _tileMap[x, y] = TileType.Normal;
             }
-
             SetTileType(new Vector2Int(1, 0), TileType.Sanctuary);
             SetTileType(new Vector2Int(3, 0), TileType.Sanctuary);
             SetTileType(new Vector2Int(5, 0), TileType.Sanctuary);
 
-            SetTileType(new Vector2Int(2, 3), TileType.Swamp);
-            SetTileType(new Vector2Int(3, 3), TileType.Swamp);
-            SetTileType(new Vector2Int(4, 3), TileType.Swamp);
-            SetTileType(new Vector2Int(5, 3), TileType.Swamp);
-
-            SetTileType(new Vector2Int(2, 4), TileType.Spikes);
-            SetTileType(new Vector2Int(3, 4), TileType.Spikes);
-            SetTileType(new Vector2Int(4, 4), TileType.Spikes);
-            SetTileType(new Vector2Int(5, 4), TileType.Spikes);
         }
 
         private bool IsSanctuaryAlly(GameObject unit)

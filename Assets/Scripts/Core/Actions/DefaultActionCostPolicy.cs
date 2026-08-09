@@ -19,6 +19,14 @@ namespace CheckmateRPG.Core.Actions
                 return new ActionCostBreakdown(0f, 0, 0, APActionReason.System);
 
             float multiplier = Mathf.Max(0f, context.Actor.StatusEffects != null ? context.Actor.StatusEffects.ActionCostMultiplier : 1f);
+            
+            if (context.Actor.TryGetComponent(out CheckmateRPG.Components.TeamComponent team) && team.IsEnemy)
+            {
+                multiplier = 0f; // Enemies do not consume the Player's AP Manager AP
+            }
+
+            int level = context.Actor.UnitData != null ? context.Actor.UnitData.GetSkillLevel(context.AbilityDefinition?.AbilityId ?? "") : 1;
+            var levelData = context.AbilityDefinition?.GetLevelData(level);
 
             return action switch
             {
@@ -33,9 +41,9 @@ namespace CheckmateRPG.Core.Actions
                     0,
                     APActionReason.Attack),
                 AbilityActionCommand ability => new ActionCostBreakdown(
-                    Mathf.Max(0f, GetAbilityApCost(context.Actor, ability, context.AbilityDefinition) * multiplier),
-                    Mathf.Max(0, ability.SPCost > 0 ? ability.SPCost : (context.AbilityDefinition != null ? context.AbilityDefinition.SPCost : 0)),
-                    Mathf.Max(0, context.AbilityDefinition != null ? context.AbilityDefinition.Cooldown : 0),
+                    Mathf.Max(0f, GetAbilityApCost(context.Actor, ability, context.AbilityDefinition, levelData) * multiplier),
+                    Mathf.Max(0, ability.SPCost > 0 ? ability.SPCost : (levelData != null ? levelData.SPCost : 0)),
+                    Mathf.Max(0, levelData != null ? levelData.Cooldown : 0),
                     APActionReason.Skill),
                 _ => new ActionCostBreakdown(0f, 0, 0, APActionReason.System)
             };
@@ -44,20 +52,56 @@ namespace CheckmateRPG.Core.Actions
         private static float GetMoveApCost(CheckmateRPG.Units.UnitBrain actor, MoveActionCommand move)
         {
             float baseCost = actor.UnitData != null ? actor.UnitData.MoveCostAP : 0f;
+            
+            // Apply resonance discount
+            float discount = CheckmateRPG.Progression.ResonanceSystem.GetAPDiscount(actor);
+            baseCost = Mathf.Max(0f, baseCost - discount);
+            
             float tileMultiplier = MovementMutationProcessor.ResolveSwampApMultiplier(move.From, move.To);
             return Mathf.Max(0f, baseCost * tileMultiplier);
         }
 
         private static float GetAttackApCost(CheckmateRPG.Units.UnitBrain actor)
         {
-            return actor.UnitData != null ? Mathf.Max(0f, actor.UnitData.AttackCostAP) : 0f;
+            float baseCost = actor.UnitData != null ? Mathf.Max(0f, actor.UnitData.AttackCostAP) : 0f;
+
+            // Apply resonance discount
+            float discount = CheckmateRPG.Progression.ResonanceSystem.GetAPDiscount(actor);
+            baseCost = Mathf.Max(0f, baseCost - discount);
+
+            if (actor != null)
+            {
+                var modComp = actor.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                if (modComp != null)
+                {
+                    baseCost += modComp.GetAPCostFlat();
+                    baseCost *= modComp.GetAPCostMultiplier();
+                }
+            }
+
+            return Mathf.Max(0f, baseCost);
         }
 
-        private static float GetAbilityApCost(CheckmateRPG.Units.UnitBrain actor, AbilityActionCommand action, AbilityDefinition definition)
+        private static float GetAbilityApCost(CheckmateRPG.Units.UnitBrain actor, AbilityActionCommand action, AbilityDefinition definition, AbilityLevelData levelData)
         {
-            float baseCost = definition != null ? Mathf.Max(0f, definition.Cost) : 0f;
+            float baseCost = levelData != null ? Mathf.Max(0f, levelData.Cost) : 0f;
+
+            // Apply resonance discount
+            float discount = CheckmateRPG.Progression.ResonanceSystem.GetAPDiscount(actor);
+            baseCost = Mathf.Max(0f, baseCost - discount);
+
+            if (actor != null)
+            {
+                var modComp = actor.GetComponent<CheckmateRPG.Core.StatModifiers.UnitStatModifierComponent>();
+                if (modComp != null)
+                {
+                    baseCost += modComp.GetAPCostFlat();
+                    baseCost *= modComp.GetAPCostMultiplier();
+                }
+            }
+
             if (baseCost <= 0f || actor == null || action == null || !IsJumpAbility(action))
-                return baseCost;
+                return Mathf.Max(0f, baseCost);
 
             if (action.TargetCells == null || action.TargetCells.Count == 0)
                 return baseCost;

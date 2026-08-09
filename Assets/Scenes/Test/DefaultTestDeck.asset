@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cbbc005131059849884401581b797f0, type: 3}
+  m_Name: DefaultTestDeck
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.PlayerDeckData
+  MaxCostCap: 20
+  Roster:
+  - {fileID: 11400000, guid: 7cdbc8702f767774891526c672703975, type: 2}
+  - {fileID: 11400000, guid: 1817c4acf68bd41448a9aa32ded104fa, type: 2}
+  - {fileID: 11400000, guid: f51d07e61ea14bc46ad16543e105b31f, type: 2}
+  - {fileID: 11400000, guid: d2b3c4d5e6f708192a3b4c5d6e7f8091, type: 2}
+  - {fileID: 11400000, guid: c1a1b2c3d4e5f60718293a4b5c6d7e8f, type: 2}
+  - {fileID: 11400000, guid: c1a1b2c3d4e5f60718293a4b5c6d7e8f, type: 2}
+  - {fileID: 11400000, guid: c1a1b2c3d4e5f60718293a4b5c6d7e8f, type: 2}
+  - {fileID: 11400000, guid: 43dea94ca3eb40542a0f215918ba7088, type: 2}

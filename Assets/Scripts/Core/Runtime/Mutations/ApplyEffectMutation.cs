@@ -19,5 +19,6 @@ namespace CheckmateRPG.Core.Runtime.Mutations
         ActionSpeedTier ActionSpeedLevel = ActionSpeedTier.Normal,
         bool IsReaction = false,
         MutationContext Context = default,
-        bool IsHidden = false) : IRuntimeMutation;
+        bool IsHidden = false,
+        System.Collections.Generic.IReadOnlyList<CheckmateRPG.Core.StatModifiers.StatModifierOverride> StatOverrides = null) : IRuntimeMutation;
 }

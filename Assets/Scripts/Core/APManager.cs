@@ -19,7 +19,10 @@ namespace CheckmateRPG.Core
 
         [Header("AP Settings")]
         [Tooltip("Maximum action points available.")]
-        [SerializeField] private float _maxAP = 20f;
+        [SerializeField] private float _maxAP = 100f;
+
+        [Tooltip("Initial action points when battle starts.")]
+        [SerializeField] private float _initialAP = 0f;
 
         [Tooltip("AP regenerated per second.")]
         [SerializeField] private float _regenPerSecond = 4f;
@@ -33,6 +36,7 @@ namespace CheckmateRPG.Core
         public float MaxAP => _maxAP;
         public bool RegenEnabled => !_regenPaused;
         public APRegenPauseReason RegenPauseReason => _regenPauseReason;
+        public float RegenMultiplier { get; set; } = 1f;
 
         public event Action<float, float, float, APChangeReason> OnAPChanged;
         public event Action<float, float, float, APActionReason> OnInsufficientAP;
@@ -53,10 +57,10 @@ namespace CheckmateRPG.Core
 
             Instance = this;
             _maxAP = Mathf.Max(0f, _maxAP);
-            CurrentAP = _maxAP;
+            CurrentAP = Mathf.Clamp(_initialAP, 0f, _maxAP);
 
-            if (_createDebugUI)
-                EnsureDebugUI();
+            // if (_createDebugUI)
+            //     EnsureDebugUI();
 
             RaiseAPChanged(0f, APChangeReason.Initialization);
         }
@@ -148,6 +152,13 @@ namespace CheckmateRPG.Core
             _regenPauseReason = paused ? reason : APRegenPauseReason.None;
         }
 
+        public void ResetToInitialAP()
+        {
+            float previous = CurrentAP;
+            CurrentAP = Mathf.Clamp(_initialAP, 0f, _maxAP);
+            RaiseAPChanged(CurrentAP - previous, APChangeReason.Initialization);
+        }
+
         // ─── Internal Logic ───────────────────────────────────────────────────────
 
         private void Regenerate(float deltaTime)
@@ -155,7 +166,8 @@ namespace CheckmateRPG.Core
             if (_regenPaused || _regenPerSecond <= 0f || _maxAP <= 0f || CurrentAP >= _maxAP || deltaTime <= 0f)
                 return;
 
-            AddAP(_regenPerSecond * deltaTime, APSource.Regen);
+            float activeRegen = _regenPerSecond * Mathf.Max(0f, RegenMultiplier);
+            AddAP(activeRegen * deltaTime, APSource.Regen);
         }
 
         private void RaiseAPChanged(float delta, APChangeReason reason)

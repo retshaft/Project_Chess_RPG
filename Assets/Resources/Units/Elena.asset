@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
+  m_Name: Elena
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
+  AIProfile: {fileID: 0}
+  UnitName: "\uC5D8\uB808\uB098"
+  Icon: {fileID: 0}
+  Prefab: {fileID: 0}
+  PieceType: 2
+  MovePattern: 4
+  BaseRole: "\uB300\uC8FC\uAD50"
+  Subclass: 33
+  ResonanceRole: 0
+  MaxHealth: 520
+  Defense: 15
+  Resistance: 0.05
+  Style: 1
+  AttackCount: 1
+  AttackDamageRatio: 1.3
+  AttackDamage: 240
+  AttackCooldown: 1
+  AttackRange: 7
+  BasicAttackDamageType: 0
+  KillValue: 10
+  ChargeType: 0
+  MaxSP: 100
+  InitSP: 60
+  BasicAttackAbilityData: {fileID: 0}
+  BasicAttackAbility: {fileID: 0}
+  DeploymentCost: 2
+  MoveCostAP: 24
+  AttackCostAP: 24
+  ActionSpeed: 1
+  MoveRange: 7
+  SpeedLevel: 3
+  MoveSpeed: 1.5
+  ActionDelay: 1.5
+  Weight: 2
+  IsBoss: 0
+  InitialSkillLevels: []
+  Abilities:
+  - {fileID: 11400000, guid: 02a4ecd2339336540a085a08384232ba, type: 2}
+  - {fileID: 11400000, guid: 8f30550ccda81ef45af4a78a5b3639d0, type: 2}
+  - {fileID: 11400000, guid: e212076f75f52d44f8ce40ee33403cc9, type: 2}
+  SelectableActiveSkills:
+  - {fileID: 11400000, guid: 02a4ecd2339336540a085a08384232ba, type: 2}
+  - {fileID: 11400000, guid: 8f30550ccda81ef45af4a78a5b3639d0, type: 2}
+  - {fileID: 11400000, guid: e212076f75f52d44f8ce40ee33403cc9, type: 2}
+  SelectedSkillIndex: 2

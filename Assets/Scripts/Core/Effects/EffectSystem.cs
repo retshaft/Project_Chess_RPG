@@ -220,13 +220,13 @@ namespace CheckmateRPG.Core.Effects
 
                 if (tileType == TileType.Sanctuary && IsSanctuaryAlly(unit.UnitId))
                 {
-                    ApplyTerrainEffect(unit.UnitId, TerrainEffectIds.SanctuaryHot, schedulerTick);
+                    ApplyTerrainEffect(unit.UnitId, TerrainEffectIds.SanctuaryHot, schedulerTick, 20);
                     ApplyTerrainEffect(unit.UnitId, TerrainEffectIds.SanctuaryDefense, schedulerTick);
                 }
             }
         }
 
-        private void ApplyTerrainEffect(Guid unitId, string effectId, int schedulerTick)
+        private void ApplyTerrainEffect(Guid unitId, string effectId, int schedulerTick, int tickInterval = 1)
         {
             var state = new EffectRuntimeState(
                 effectId: effectId,
@@ -234,8 +234,8 @@ namespace CheckmateRPG.Core.Effects
                 targetId: unitId,
                 remainingTick: TerrainEffectDurationTicks,
                 stackCount: 1,
-                tickInterval: 1,
-                nextTickIn: 1,
+                tickInterval: tickInterval,
+                nextTickIn: tickInterval,
                 magnitude: 1f,
                 timingPhase: EffectTimingPhase.OnTickEnd,
                 actionSpeedLevel: ActionSpeedTier.Normal,
@@ -354,7 +354,7 @@ namespace CheckmateRPG.Core.Effects
                         requested.StackCount,
                         requested.RemainingTick,
                         requested.TickInterval,
-                        requested.NextTickIn,
+                        active.NextTickIn,
                         requested.Magnitude,
                         requested.MaxStackCap,
                         requested.MaxApplicationsPerTick,
@@ -367,7 +367,7 @@ namespace CheckmateRPG.Core.Effects
                         0,
                         requested.RemainingTick,
                         requested.TickInterval,
-                        requested.NextTickIn,
+                        active.NextTickIn,
                         requested.Magnitude,
                         requested.MaxStackCap,
                         requested.MaxApplicationsPerTick,

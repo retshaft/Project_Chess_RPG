@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3627a1b9c1c2426478fa89392812cba5, type: 3}
+  m_Name: Stage_1_3_TacticianFortress
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
+  StageID: STG 1-3
+  StageName: "\uC804\uB7B5\uAC00\uC758 \uCC38\uD638\uC804"
+  Objective: 1
+  RecommendedLevel: 5
+  Description: "\uCE58\uC720\uC640 \uC6D0\uAC70\uB9AC \uB9C8\uBC95 \uC7A5\uACA9\uC744
+    \uC900\uBE44\uD558\uB294 \uC801 \uC804\uC220 \uB300\uC5F4\uACFC\uC758 \uC218\uC2F8\uC6C0\uC785\uB2C8\uB2E4."
+  TacticalBriefing: "\uC801 \uBE44\uC20D\uACFC \uB8E9\uC774 \uC804\uB7B5\uAC00(Tactician)
+    \uBC0F \uC218\uBE44\uD615(Defensive) \uC131\uD5A5\uC73C\uB85C \uD611\uB825\uD569\uB2C8\uB2E4.
+    AP\uAC00 70% \uC774\uD558\uC77C \uB54C \uAC15\uB825\uD55C \uC2A4\uD0AC\uC744
+    \uC704\uD574 \uC800\uCD95\uD558\uBBC0\uB85C AP \uD15C\uD3EC\uB97C \uBE7C\uC557\uC73C\uC138\uC694."
+  InitialEnemyAP: 30
+  EnemyAPRegen: 5
+  MaxEnemyAP: 120
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 2, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 4, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 3, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  RewardTP: 120
+  ClearRewards: []

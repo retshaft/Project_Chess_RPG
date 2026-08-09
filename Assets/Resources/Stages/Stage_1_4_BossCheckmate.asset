@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3627a1b9c1c2426478fa89392812cba5, type: 3}
+  m_Name: Stage_1_4_BossCheckmate
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
+  StageID: BOSS 1-4
+  StageName: "\uCCB4\uC2A4\uB9C8\uC2A4\uD130\uC758 \uC2EC\uD310"
+  Objective: 1
+  RecommendedLevel: 10
+  Description: "\uD504\uB799\uD0C8 \uC874 \uC2EC\uCE35\uBD80\uC758 \uC808\uB300 \uC9C0\uD718\uAD00\uACFC\uC758
+    \uACB0\uC804\uC785\uB2C8\uB2E4."
+  TacticalBriefing: "\uBCF4\uC2A4 \uD038\uACFC \uD0B9\uC785\uB2C8\uB2E4. \uACF5\uBA85
+    3\uB2E8\uACC4(AP \uD560\uC778 \uBC0F TP \uBCF4\uAC15)\uC640 4\uB300 \uC808\uB300
+    \uC870\uAC74 \uD2B8\uB9AC\uAC70(\uCCB4\uD06C\uBA54\uC774\uD2B8/\uC704\uD611\uD68C\uD53C/\uB3C4\uBC1C/\uB099\uC0AC)\uAC00
+    \uADF9\uB3C4\uB85C \uBC1C\uD604\uB429\uB2C8\uB2E4!"
+  InitialEnemyAP: 60
+  EnemyAPRegen: 8
+  MaxEnemyAP: 150
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 3b58a12857f6c954396225a8748bacef, type: 2}
+    GridPosition: {x: 3, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 1, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 5, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 3, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  RewardTP: 200
+  ClearRewards: []

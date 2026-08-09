@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: defe974c0d2393f4cbe43fe320bdf6d5, type: 3}
+  m_Name: Tree_Vesta
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.NotationTreeData
+  TargetUnitId: Vesta
+  NotationTitle: Caro-Kann Defense
+  BaseNotationTP: 10
+  RootNode: {fileID: 11400000, guid: c9b40014e97818249b3a491ef09aaabf, type: 2}
+  Nodes:
+  - {fileID: 11400000, guid: c9b40014e97818249b3a491ef09aaabf, type: 2}
+  - {fileID: 11400000, guid: ea3f6f8224648ea4a9a9b07938d50d4a, type: 2}
+  - {fileID: 11400000, guid: 33d97b501dce7764bacc6987cef7c557, type: 2}
+  - {fileID: 11400000, guid: 81d4cb4107749194bbd081f1709568c6, type: 2}

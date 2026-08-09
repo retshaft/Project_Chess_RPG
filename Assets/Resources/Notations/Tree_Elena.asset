@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: defe974c0d2393f4cbe43fe320bdf6d5, type: 3}
+  m_Name: Tree_Elena
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.NotationTreeData
+  TargetUnitId: Elena
+  NotationTitle: Sicilian Defense
+  BaseNotationTP: 10
+  RootNode: {fileID: 11400000, guid: d58e4251df3027f4cafd84bd5070967f, type: 2}
+  Nodes:
+  - {fileID: 11400000, guid: d58e4251df3027f4cafd84bd5070967f, type: 2}
+  - {fileID: 11400000, guid: 716c8e1696f21fb40a9a1bfb5fc07baf, type: 2}
+  - {fileID: 11400000, guid: d3e13f62b4be03a4ca28ef4bd029d556, type: 2}
+  - {fileID: 11400000, guid: 409dd2c973ff5cf4b9364bf6cb829f39, type: 2}

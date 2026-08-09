@@ -12,14 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
   m_Name: PawnUnitData
   m_EditorClassIdentifier: 
+  AIProfile: {fileID: 11400000, guid: dd4b4152cc5330c4781c80232144c927, type: 2}
   UnitName: Pawn
   Prefab: {fileID: 0}
-  PieceType: 2
-  MovePattern: 4
-  BaseRole: "\uB300\uC8FC\uAD50"
+  PieceType: 0
+  MovePattern: 0
+  BaseRole: "\uCC99\uD6C4\uB300"
   MaxHealth: 700
   Defense: 25
   Resistance: 0.2
+  Style: 0
   AttackDamage: 200
   AttackCooldown: 1
   AttackRange: 1
@@ -28,12 +30,13 @@ MonoBehaviour:
   MaxSP: 50
   InitSP: 4
   BasicAttackAbilityData: {fileID: 0}
-  MoveCostAP: 4
-  AttackCostAP: 6
+  DeploymentCost: 1
+  MoveCostAP: 8
+  AttackCostAP: 8
   ActionSpeed: 1
   MoveRange: 2
-  SpeedLevel: 1
-  MoveSpeed: 0.8
-  ActionDelay: 2.5
+  SpeedLevel: 6
+  MoveSpeed: 3
+  ActionDelay: 0.5
   Weight: 1
   IsBoss: 0

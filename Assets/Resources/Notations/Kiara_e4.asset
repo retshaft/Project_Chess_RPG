@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99151c6bd4dc35b4e93bc2ad41a3d3c1, type: 3}
+  m_Name: Kiara_e4
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.NotationNodeData
+  NodeId: Kiara_e4
+  NotationCoord: e4
+  NodeType: 0
+  Description: "\uC624\uD504\uB2DD \uC804\uC220: \uACF5\uACA9\uB825 +10%"
+  TPCost: 2
+  Prerequisites: []
+  Bonuses:
+  - Stat: 1
+    FlatBonus: 10
+    PercentBonus: 0

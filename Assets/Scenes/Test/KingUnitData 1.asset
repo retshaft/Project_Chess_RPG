@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
   m_Name: KingUnitData 1
   m_EditorClassIdentifier: 
+  AIProfile: {fileID: 11400000, guid: dd4b4152cc5330c4781c80232144c927, type: 2}
   UnitName: King
   Prefab: {fileID: 0}
   PieceType: 5
@@ -20,6 +21,7 @@ MonoBehaviour:
   MaxHealth: 900
   Defense: 55
   Resistance: 0.3
+  Style: 0
   AttackDamage: 190
   AttackCooldown: 1.2
   AttackRange: 1
@@ -28,8 +30,9 @@ MonoBehaviour:
   MaxSP: 60
   InitSP: 4
   BasicAttackAbilityData: {fileID: 0}
-  MoveCostAP: 4
-  AttackCostAP: 6
+  DeploymentCost: 3
+  MoveCostAP: 24
+  AttackCostAP: 24
   ActionSpeed: 1
   MoveRange: 3
   SpeedLevel: 1

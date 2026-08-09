@@ -118,8 +118,11 @@ namespace CheckmateRPG.Core
             if (request.RuntimeState.PendingActionId.HasValue)
                 return false;
 
+            int level = request.Actor.UnitData != null ? request.Actor.UnitData.GetSkillLevel(request.Definition.name) : 1;
+            var levelData = request.Definition.GetLevelData(level);
+
             return ValidateTargets(
-                request.Definition.TargetingRule,
+                levelData.TargetingRule,
                 request.Actor.ActorId,
                 request.TargetIds,
                 request.UnitsById);
@@ -136,8 +139,11 @@ namespace CheckmateRPG.Core
                 return false;
             }
 
+            int level = request.Actor.UnitData != null ? request.Actor.UnitData.GetSkillLevel(request.Definition.name) : 1;
+            var levelData = request.Definition.GetLevelData(level);
+
             return ValidateTargets(
-                request.Definition.TargetingRule,
+                levelData.TargetingRule,
                 request.Actor.ActorId,
                 request.Action.TargetIds,
                 request.UnitsById);
@@ -145,75 +151,46 @@ namespace CheckmateRPG.Core
 
         private static bool ActionQueue(AbilityQueueRequest request, out AbilityActionCommand action)
         {
+            int level = request.Actor.UnitData != null ? request.Actor.UnitData.GetSkillLevel(request.Definition.name) : 1;
+            var levelData = request.Definition.GetLevelData(level);
+
             action = new AbilityActionCommand(
                 request.Actor.ActorId,
                 request.Definition.name,
                 request.TargetIds ?? Array.Empty<Guid>(),
                 request.CurrentTick + 1,
-                request.Definition.CastSpeed,
+                levelData.CastSpeed,
                 definition: AbilityActionDefinition,
-                spCost: Mathf.Max(0, request.Definition.SPCost));
+                spCost: Mathf.Max(0, levelData.SPCost));
 
             return request.QueueAction(action);
         }
 
         private static AbilityResolveResult Resolve(AbilityResolveRequest request)
         {
-            List<AbilityEffectIntent> intents = new();
-            IReadOnlyList<Guid> targetIds = request.Action.TargetIds ?? Array.Empty<Guid>();
-            IReadOnlyList<AbilityEffectDefinition> effectList = (IReadOnlyList<AbilityEffectDefinition>)request.Definition.EffectList ?? Array.Empty<AbilityEffectDefinition>();
-
-            for (int i = 0; i < effectList.Count; i++)
-            {
-                AbilityEffectDefinition effect = effectList[i];
-                if (effect == null || string.IsNullOrWhiteSpace(effect.EffectId))
-                    continue;
-
-                if (effect.ApplyToCaster)
-                {
-                    intents.Add(ToIntent(effect, request.Actor.ActorId, request.Actor.ActorId));
-                    continue;
-                }
-
-                for (int t = 0; t < targetIds.Count; t++)
-                {
-                    Guid targetId = targetIds[t];
-                    if (targetId == Guid.Empty)
-                        continue;
-                    intents.Add(ToIntent(effect, request.Actor.ActorId, targetId));
-                }
-            }
-
-            return new AbilityResolveResult(true, intents);
+            // Resolve 단계에서는 시전자/타겟 검증 등을 수행합니다. (현재는 간소화)
+            return new AbilityResolveResult(true, new List<AbilityEffectIntent>());
         }
 
         private static IReadOnlyList<IRuntimeMutation> EffectApply(AbilityResolveRequest request, AbilityResolveResult resolveResult)
         {
-            if (!resolveResult.Succeeded || resolveResult.EffectIntents.Count == 0)
-                return Array.Empty<IRuntimeMutation>();
+            var mutations = new List<IRuntimeMutation>();
 
-            var mutations = new List<IRuntimeMutation>(resolveResult.EffectIntents.Count);
-            for (int i = 0; i < resolveResult.EffectIntents.Count; i++)
+            if (resolveResult.Succeeded)
             {
-                AbilityEffectIntent intent = resolveResult.EffectIntents[i];
-                mutations.Add(new ApplyEffectMutation(
-                    SeededRandomProvider.Shared.NextGuid(),
-                    intent.EffectId,
-                    intent.SourceActorId,
-                    intent.TargetActorId,
-                    intent.DurationTicks,
-                    intent.TickInterval,
-                    intent.InitialTickIn,
-                    intent.StackCount,
-                    intent.Magnitude,
-                    intent.StackPolicy,
-                    intent.MaxStackCap,
-                    IsHidden: intent.IsHidden,
-                    Context: new MutationContext(
-                        request.Action.ResolveTick,
-                        request.Action.ActionId,
-                        intent.TargetActorId,
-                        nameof(ApplyEffectMutation))));
+                int level = request.Actor.UnitData != null ? request.Actor.UnitData.GetSkillLevel(request.Definition.name) : 1;
+                var levelData = request.Definition.GetLevelData(level);
+
+                if (levelData.Effects != null)
+                {
+                    foreach (var effect in levelData.Effects)
+                    {
+                        if (effect != null)
+                        {
+                            mutations.AddRange(effect.CreateMutations(request));
+                        }
+                    }
+                }
             }
 
             return mutations;
@@ -500,23 +477,6 @@ namespace CheckmateRPG.Core
             }
 
             return true;
-        }
-
-        private static AbilityEffectIntent ToIntent(AbilityEffectDefinition effect, Guid sourceId, Guid targetId)
-        {
-            int interval = Mathf.Max(1, effect.TickInterval);
-            return new AbilityEffectIntent(
-                effect.EffectId,
-                sourceId,
-                targetId,
-                Mathf.Max(1, effect.DurationTicks),
-                interval,
-                Mathf.Clamp(effect.InitialTickIn, 1, interval),
-                Mathf.Max(1, effect.StackCount),
-                Mathf.Max(0f, effect.Magnitude),
-                effect.StackPolicy,
-                effect.MaxStackCap,
-                effect.IsHidden);
         }
     }
 }

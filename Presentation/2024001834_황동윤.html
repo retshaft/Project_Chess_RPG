@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>Project: Checkmate RPG - 졸업작품 프레젠테이션</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <!-- Reveal.js Core -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/blood.min.css" id="theme">
+
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- PDF Export Script -->
+    <script>
+        if (window.location.search.match(/print-pdf/gi)) {
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/css/print/pdf.min.css';
+            document.getElementsByTagName('head')[0].appendChild(link);
+        }
+    </script>
+
+    <style>
+        /* 안정성을 최우선으로 한 Layout CSS */
+        .reveal { font-family: 'Pretendard', sans-serif; color: #E2E8F0; font-size: 26px; }
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 { font-family: 'Pretendard', sans-serif; text-transform: none; letter-spacing: -0.02em; color: #FFFFFF; }
+        .reveal h1 { font-weight: 800; text-shadow: 0 6px 30px rgba(0,0,0,0.5); font-size: 2.8em; }
+        .reveal h2 { font-weight: 700; color: #F5C842; border-bottom: 3px solid #334155; padding-bottom: 15px; margin-bottom: 30px; text-align: left; font-size: 1.8em;}
+        .reveal h3 { font-weight: 600; color: #38BDF8; margin-top: 20px; font-size: 1.4em; }
+        .reveal section { text-align: left; }
+        .reveal section.center-slide { text-align: center; }
+
+        .reveal p, .reveal li { font-size: 1em; line-height: 1.6; color: #CBD5E1; margin-bottom: 12px; }
+        .reveal strong { color: #FDE047; }
+        .accent { color: #38BDF8; font-weight: bold; }
+        .accent-red { color: #EF4444; font-weight: bold; }
+        .accent-green { color: #22C55E; font-weight: bold; }
+        .accent-violet { color: #A78BFA; font-weight: bold; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; margin-bottom: 20px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        
+        .card { background: rgba(15, 23, 42, 0.7); border: 2px solid #334155; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .card h4 { margin-top: 0; color: #FDE047; font-size: 1.2em; border-bottom: 2px solid #334155; padding-bottom: 10px; margin-bottom: 15px; }
+        .card.cyan h4 { color: #38BDF8; }
+        .card.violet h4 { color: #A78BFA; }
+        .card.red h4 { color: #EF4444; }
+        .card.green h4 { color: #22C55E; }
+        
+        .tag { display: inline-block; background: #1E293B; color: #38BDF8; padding: 6px 20px; border-radius: 30px; font-size: 0.65em; font-weight: 700; border: 2px solid #38BDF8; margin-bottom: 25px; letter-spacing: 0.05em;}
+
+        .reveal pre { box-shadow: 0 10px 30px rgba(0,0,0,0.6); border-radius: 10px; width: 100%; margin: 15px 0;}
+        .reveal pre code { font-family: 'Fira Code', monospace; font-size: 0.85em; padding: 20px; max-height: 550px; line-height: 1.4; border-radius: 10px;}
+
+        /* Safe Image Rules - No flexbox tricks, no absolute positioning */
+        .reveal img { 
+            border-radius: 10px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5); 
+            margin: 0 auto; 
+            display: block;
+            object-fit: contain;
+        }
+        .img-caption { font-size: 0.75em !important; text-align: center; color: #94A3B8 !important; margin-top: 10px !important; margin-bottom: 0 !important; font-weight: 600;}
+
+        /* Extensibility Badge for "준비된 구조" 어필 */
+        .ext-badge {
+            background: linear-gradient(135deg, #1E40AF, #312E81);
+            border-left: 4px solid #FDE047;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .ext-badge strong { color: #FDE047; font-size: 1.1em; display:block; margin-bottom: 5px; }
+
+        .progress-row { display: flex; align-items: center; margin-bottom: 15px; }
+        .progress-label { width: 30%; font-size: 0.85em; font-weight: bold; }
+        .progress-track { width: 60%; background: #1E293B; height: 18px; border-radius: 10px; overflow: hidden; margin: 0 20px; }
+        .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-in-out;}
+        .progress-pct { width: 10%; font-size: 0.85em; text-align: right; font-family: 'Fira Code', monospace;}
+        
+        .milestone-row { display: flex; align-items: flex-start; margin-bottom: 25px; border-left: 4px solid #38BDF8; padding-left: 20px;}
+        .milestone-badge { background: #38BDF8; color: #0F172A; padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 0.75em; margin-right: 20px; min-width: 50px; text-align: center; margin-top: 5px;}
+        .milestone-content { flex: 1; }
+        .milestone-content h4 { margin: 0 0 8px 0; font-size: 1.1em; color: #F1F5F9;}
+        .milestone-content p { margin: 0; font-size: 0.85em; color: #94A3B8;}
+
+        .reveal table { width: 100%; font-size: 0.9em; border-collapse: collapse; margin-top: 15px; }
+        .reveal th { background: #1E293B; color: #38BDF8; font-weight: 700; text-align: left; border-bottom: 2px solid #334155; padding: 12px; }
+        .reveal td { border-bottom: 1px solid #1E293B; padding: 12px; color: #CBD5E1; }
+        
+        .arch-layer { padding: 15px; border-radius: 10px; border: 2px solid; margin-bottom: 15px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); background: rgba(15,23,42,0.6);}
+        .arch-layer h4 { margin: 0 0 10px 0; font-size: 1.1em; }
+        .arch-layer p { margin: 0; font-size: 0.85em; font-family: 'Fira Code', monospace; color: #94A3B8;}
+
+        @media print {
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <!-- PDF Export Button (Hidden in Print) -->
+    <div style="position: fixed; top: 20px; right: 20px; z-index: 9999;" class="no-print">
+        <button onclick="window.location.search = '?print-pdf';" style="padding: 12px 24px; background: #EF4444; color: white; border: 2px solid #B91C1C; border-radius: 8px; font-family: 'Pretendard', sans-serif; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+            🖨️ PDF 추출 모드 켜기
+        </button>
+    </div>
+
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Slide 1: Cover -->
+            <section class="center-slide" data-background-color="#0B0F19">
+                <br>
+                <div style="text-align: left; padding-left: 5%;">
+                    <h3 style="color: #64748B; font-weight: 400; margin-bottom: 15px; font-size: 1.2em;">졸업작품 | Unity 6000.3.10f1 | 2026</h3>
+                    <h1 style="margin-bottom: 10px; color: #F1F5F9;">Project: <span style="color: #38BDF8;">Checkmate RPG</span></h1>
+                    <h2 style="border: none; color: #F5C842; font-weight: 300; padding: 0; margin-bottom: 40px;">체스판 위의 실시간 전술전</h2>
+                    
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 50px;">
+                        <span class="tag" style="margin: 0;">AP 경제 시스템</span>
+                        <span class="tag" style="margin: 0;">체스 이동 규칙</span>
+                        <span class="tag" style="margin: 0;">넉백 / Splat 물리</span>
+                        <span class="tag" style="margin: 0;">원소 반응 레이어</span>
+                        <span class="tag" style="margin: 0; border-color:#22C55E; color:#22C55E; background: rgba(34,197,94,0.1);">확장형 백엔드 아키텍처</span>
+                    </div>
+
+                    <div class="grid-4" style="width: 80%;">
+                        <div class="card" style="text-align: center; padding: 15px;"><h2 style="border:none; margin:0 0 5px 0; color:#F5C842; text-align:center;">8×8</h2><p style="margin:0;">전술 보드</p></div>
+                        <div class="card" style="text-align: center; padding: 15px;"><h2 style="border:none; margin:0 0 5px 0; color:#F5C842; text-align:center;">6종</h2><p style="margin:0;">체스 직군</p></div>
+                        <div class="card" style="text-align: center; padding: 15px;"><h2 style="border:none; margin:0 0 5px 0; color:#F5C842; text-align:center;">3개</h2><p style="margin:0;">팩션 진영</p></div>
+                        <div class="card" style="text-align: center; padding: 15px;"><h2 style="border:none; margin:0 0 5px 0; color:#F5C842; text-align:center;">13+</h2><p style="margin:0;">원소 반응</p></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 2: Table of Contents -->
+            <section>
+                <h2 style="font-size:1.5em; margin-bottom: 15px;">목 차</h2>
+                <div class="grid-2" style="gap: 20px;">
+                    <div class="card" style="padding: 15px;">
+                        <h4 style="font-size: 1.1em; margin-bottom:10px;">PART 1 — 기획서 (Game Design)</h4>
+                        <ul style="list-style-type: none; padding-left: 0; margin-top: 10px; font-size: 0.8em; line-height:1.5;">
+                            <li><span class="accent" style="display:inline-block; width:30px;">01.</span> 프로젝트 개요 및 방향성</li>
+                            <li><span class="accent" style="display:inline-block; width:30px;">02.</span> 세계관 & 진영 매트릭스</li>
+                            <li><span class="accent" style="display:inline-block; width:30px;">03.</span> AP 경제 시스템 설계</li>
+                            <li><span class="accent" style="display:inline-block; width:30px;">04.</span> 체스 이동 규칙 & 직군 명세</li>
+                            <li><span class="accent" style="display:inline-block; width:30px;">05.</span> 기믹 결합 (넉백/원소/CC)</li>
+                        </ul>
+                    </div>
+                    <div class="card cyan" style="padding: 15px;">
+                        <h4 style="font-size: 1.1em; margin-bottom:10px;">PART 2 — <span style="color:#22C55E;">확장형 시스템 구현</span></h4>
+                        <ul style="list-style-type: none; padding-left: 0; margin-top: 10px; font-size: 0.8em; line-height:1.5; column-count: 2; column-gap: 20px;">
+                            <li><span class="accent-cyan">06.</span> 기술 스택 아키텍처</li>
+                            <li><span class="accent-red">07.</span> Grid 공간 최적화</li>
+                            <li><span class="accent-red">08.</span> AP Manager 모듈화</li>
+                            <li><span class="accent-red">09.</span> 행동 FSM & Interrupt</li>
+                            <li><span class="accent-cyan">10.</span> 이동 패턴 인터페이스</li>
+                            <li><span class="accent-cyan">11.</span> Reaction System</li>
+                            <li><span class="accent-cyan">12.</span> ActionBid AI 입찰</li>
+                            <li><span class="accent-cyan">13.</span> 결정론적 Replay 엔진</li>
+                            <li><span class="accent-violet">14.</span> <strong>[NEW] Object Pool 최적화</strong></li>
+                            <li><span class="accent-violet">15.</span> <strong>[NEW] A* 기반 타일 탐색</strong></li>
+                            <li><span class="accent-violet">16.</span> <strong>[NEW] 데미지 파이프라인</strong></li>
+                            <li><span class="accent-violet">17.</span> <strong>[NEW] SO 데이터 레지스트리</strong></li>
+                            <li><span class="accent-violet">18.</span> <strong>[NEW] MVP UI 바인딩</strong></li>
+                            <li><span class="accent-cyan">19.</span> 씬 렌더링 & 셰이더</li>
+                            <li><span class="accent-cyan">20.</span> 3D 모델링 현황</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 3: Overview -->
+            <section>
+                <div class="tag">PART 1 · 기획서</div>
+                <h2>프로젝트 개요 및 방향성</h2>
+                <div class="grid-2">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div class="card">
+                            <h4>기본 정보</h4>
+                            <table>
+                                <tr><th>장르</th><td>실시간 전술 체스 RPG</td></tr>
+                                <tr><th>엔진</th><td>Unity 6000.3.10f1</td></tr>
+                                <tr><th>렌더링</th><td>Universal Render Pipeline (URP)</td></tr>
+                            </table>
+                        </div>
+                        <div class="card red">
+                            <h4>기존 전략 게임과의 차별점</h4>
+                            <ul>
+                                <li><span class="accent-red">❌ 기존:</span> 코스트 대기 지루함 / 스탯 찍어누르기</li>
+                                <li><span class="accent-green">✅ 개선:</span> 전원 사전 배치 / 실시간 <strong class="accent">AP 관리</strong></li>
+                                <li><span class="accent-green">✅ 차별:</span> 체스 규칙 기반 이동 + 물리/원소 콤보</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card cyan">
+                        <h4 style="font-size: 1.3em;">핵심 기획 방향</h4>
+                        <p style="font-size: 1.1em; color: #F1F5F9; line-height: 1.6;">
+                            <strong>명일방주(Arknights)식 시스템 뎁스에 정통 체스(Chess)의 공간 전술을 결합.</strong>
+                        </p>
+                        <hr style="border-color: #334155; margin: 15px 0;">
+                        <ul style="line-height: 1.6;">
+                            <li style="margin-bottom: 15px;"><strong>전원 배치 시작:</strong> 시작과 동시에 64개 타일 통제.</li>
+                            <li style="margin-bottom: 15px;"><strong>AP 자원 긴장감:</strong> 저비용 유닛으로 AP를 벌고 퀸으로 돌파.</li>
+                            <li style="margin-bottom: 15px;"><strong>물리 기반 위치전:</strong> 적을 밀쳐내어 Splat 고정 피해 유도.</li>
+                            <li><strong>원소 복합성:</strong> 물리에 원소를 덧씌워 폭발/마비/초전도 연쇄 창출.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Slide 4: World & Play -->
+            <section>
+                <div class="tag">PART 1 · 코어 컨셉 & 진영</div>
+                <h2>세계관 및 코어 플레이</h2>
+                <div class="grid-3">
+                    <div class="card cyan">
+                        <h4 style="font-size: 1.2em;">👑 싱크로나이저 (King)</h4>
+                        <p>플레이어는 전장의 킹(King). AP는 마스터의 '전술 연산력'이며, 킹 사망 시 부대원 링크 붕괴로 게임 오버.</p>
+                        <p style="margin-top:20px; font-weight:bold; color:#A78BFA;">3대 진영 특성:</p>
+                        <ul style="font-size:0.9em;">
+                            <li>발할라 (물리 넉백)</li>
+                            <li>에테르 (원소 빙결)</li>
+                            <li>네온 (암살 기동)</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h4 style="font-size: 1.2em;">01. 전원 배치 시작</h4>
+                        <p style="color:#94A3B8; font-size:0.85em; margin-top:-10px;">All-Deployed Start</p>
+                        <p style="margin-top: 15px;">전투 시작 시 어떠한 소환도 없이 전원이 보드에 배치된 채로 교전 돌입. 코스트 대기 없는 즉각적인 쾌도난마식 지휘.</p>
+                    </div>
+                    <div class="card violet">
+                        <h4 style="font-size: 1.2em;">02. 행동력 (AP) 경제</h4>
+                        <p style="color:#94A3B8; font-size:0.85em; margin-top:-10px;">AP Economy</p>
+                        <p style="margin-top: 15px;">모든 이동/공격에 중앙 글로벌 AP 풀을 소모. 자연회복과 처치 환불로 저비용 폰과 고비용 퀸 간의 자원 관리 압박 제공.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 5: Chess Rules -->
+            <section>
+                <div class="tag">PART 1 · 체스 룰 / AP 설계</div>
+                <h2>체스 이동 패턴 및 비용 구조</h2>
+                <div class="grid-3">
+                    <div class="card"><h4 style="font-size: 1.2em;">♟ 폰 (8 AP)</h4><p>• 전방 1칸 이동<br>• 대각 전방 공격<br>• 8열 도달 시 프로모션</p></div>
+                    <div class="card cyan"><h4 style="font-size: 1.2em;">♞ 나이트 (24 AP)</h4><p>• L자 점프 이동<br>• 지형 장애물 통과<br>• 후방 암살 특화</p></div>
+                    <div class="card violet"><h4 style="font-size: 1.2em;">♝ 비숍 (24 AP)</h4><p>• 대각선 슬라이딩<br>• 중장거리 마법/저격</p></div>
+                    <div class="card red"><h4 style="font-size: 1.2em;">♜ 룩 (36 AP)</h4><p>• 가로/세로 슬라이딩<br>• 무거운 체급, 넉백<br>• 최강의 탱커 라인</p></div>
+                    <div class="card" style="border-color: #F97316;"><h4 style="color:#F97316; font-size: 1.2em;">♛ 퀸 (48 AP)</h4><p>• 8방향 슬라이딩<br>• 세계관 최강의 파괴력<br>• 극심한 AP 소모</p></div>
+                    <div class="card green"><h4 style="font-size: 1.2em;">♚ 킹 (24 AP)</h4><p>• 주변 1칸 8방향<br>• 죽으면 즉시 패배<br>• 플레이어 아바타</p></div>
+                </div>
+            </section>
+
+            <!-- Slide 6: Mechanics -->
+            <section>
+                <div class="tag">PART 1 · 기믹 결합</div>
+                <h2>물리 / 지형 / 원소 / CC 메커니즘</h2>
+                <div class="grid-2">
+                    <div class="card red">
+                        <h4 style="font-size:1.2em;">넉백 & Splat (물리 2.0)</h4>
+                        <p>밀어낸 거리만큼 날아가 타 기물이나 벽에 부딪히면 <strong>Max HP 10%의 True Damage</strong> 발생. 가벼운 유닛을 룩(Rook)으로 밀어쳐서 치명타를 입히는 당구식 플레이 유도.</p>
+                    </div>
+                    <div class="card green">
+                        <h4 style="font-size:1.2em;">타일 지형 디버프</h4>
+                        <p><strong>늪지대:</strong> 이동 비용 2배<br><strong>가시밭:</strong> 매초 방어 무시 HP 3% 타격<br><strong>성역:</strong> 방어 15% 버프 및 체력 회복</p>
+                    </div>
+                    <div class="card cyan">
+                        <h4 style="font-size:1.2em;">13종 원소 콤보</h4>
+                        <p>화염+얼음 = 폭발 (십자 넉백)<br>번개+얼음 = 초전도 (방깎 40%)<br>얼음+얼음 = 빙결 (완전 제어)</p>
+                    </div>
+                    <div class="card violet">
+                        <h4 style="font-size:1.2em;">CC & AI 성향 시스템</h4>
+                        <p><strong>Hard CC:</strong> 기절 (모든 행동 취소, 지속 중 해당 유닛의 SP 회복 중단)<br><strong>AI 점수:</strong> King 처치각(+1000) 우선, 광전사/전략가/수비형 3분할 틱 알고리즘.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+                 PART 2: 시스템 백엔드 (스크립트 및 확장성)
+            ========================================== -->
+
+            <!-- Slide 7: PART 2 Divider -->
+            <section class="center-slide" data-background-color="#070912">
+                <br><br>
+                <h1 style="font-size: 6em; color: #1E293B; margin-bottom: 20px;">PART 2</h1>
+                <h2 style="font-size: 3em; border: none; margin: 0; padding: 0;">개발 구현 현황</h2>
+                <p style="color: #22C55E; font-family: 'Fira Code', monospace; font-size: 1.3em; margin-top: 20px;">Deep Dive: System Script & Extensible Architecture</p>
+                <p style="color: #64748B; font-style: italic; margin-top: 40px; font-size: 1.1em;">"단순 하드코딩이 아닌, 확장에 열려있는(Open-Closed) 탄탄한 1인 개발 백엔드 구조 구현에 집중했습니다."</p>
+            </section>
+
+            <!-- Slide 8: Tech Stack -->
+            <section>
+                <div class="tag">PART 2 · 기술 스택</div>
+                <h2>기술 스택 & 아키텍처 다이어그램</h4>
+                <div class="grid-2">
+                    <div class="card cyan">
+                        <h4 style="font-size: 1.3em; margin-bottom: 20px;">Technology Stack</h4>
+                        <ul style="line-height: 1.8;">
+                            <li><strong class="accent-cyan" style="display:inline-block; width: 100px;">Engine:</strong> Unity 6000.3.10f1 (LTS)</li>
+                            <li><strong class="accent-cyan" style="display:inline-block; width: 100px;">Render:</strong> Universal Render Pipeline</li>
+                            <li><strong class="accent-cyan" style="display:inline-block; width: 100px;">Data:</strong> ScriptableObject</li>
+                            <li><strong class="accent-cyan" style="display:inline-block; width: 100px;">Pattern:</strong> Component-based / EventBus</li>
+                            <li><strong class="accent-cyan" style="display:inline-block; width: 100px;">Core:</strong> Deterministic Tick Scheduler</li>
+                        </ul>
+                        <div class="ext-badge">
+                            <strong>🛠 구조적 장점: 계층 분리 (Decoupling)</strong>
+                            AI 레이어와 물리 렌더링 레이어가 독립적으로 동작하여, 코드 스파게티를 방지하고 유지보수성을 극대화했습니다.
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <div class="arch-layer" style="border-color: #FDE047;">
+                            <h4 style="color:#FDE047;">플레이어 입력 & AI 레이어</h4>
+                            <p>UnitBrain (ActionBid) / AITeamCommander</p>
+                        </div>
+                        <div class="arch-layer" style="border-color: #38BDF8;">
+                            <h4 style="color:#38BDF8;">행동 실행 레이어 (Action Runtime)</h4>
+                            <p>ActionScheduler / InterruptArbitration / APManager</p>
+                        </div>
+                        <div class="arch-layer" style="border-color: #22C55E;">
+                            <h4 style="color:#22C55E;">보드 상태 & 효과 레이어</h4>
+                            <p>GridManager / ReactionSystem / StatusEffect</p>
+                        </div>
+                        <div class="arch-layer" style="border-color: #94A3B8; margin-bottom:0;">
+                            <h4 style="color:#94A3B8;">결정론적 동기화 레이어</h4>
+                            <p>SimulationSnapshot / SeededRandomProvider</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 9: Grid System Script -->
+            <section>
+                <div class="tag">PART 2 · 코어 스크립트 #1</div>
+                <h2>Grid 공간 최적화 (1D Array & Bitwise)</h2>
+                <div class="grid-2">
+                    <div class="card violet">
+                        <h4 style="font-size: 1.2em;">2차원 배열 대신 비트마스크 채택</h4>
+                        <p style="font-size: 0.9em; margin-bottom: 10px;">퀸(Queen)이나 룩(Rook)의 광역 슬라이딩 연산 시 발생하는 병목을 막기 위해 64개 타일을 <strong>1차원 배열로 압축 관리</strong>합니다.</p>
+<pre><code class="language-csharp">public class GridManager {
+  private TileData[] _tiles = new TileData[64];
+  
+  // y * 8 + x 를 비트 시프트로 연산 (인라인 처리)
+  [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  public int ToIndex(int x, int y) => (y << 3) | x; 
+  
+  public bool TryGetOccupant(int x, int y, out Unit unit) {
+      int idx = ToIndex(x, y);
+      if(idx < 0 || idx > 63) { unit = null; return false; }
+      unit = _tiles[idx].Occupant;
+      return unit != null;
+  }
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: #38BDF8; font-size: 1.2em;">무한한 확장을 견디는 기반 기술</h4>
+                        <p style="font-size: 0.9em; line-height: 1.6; color: #CBD5E1;">
+                            모든 AI가 매 틱마다 보드 상태를 시뮬레이션(Look-ahead) 하므로, 보드 접근 비용이 O(1)에 가깝게 빨라야만 렉 없이 수백 개의 유닛 연산을 소화할 수 있습니다.
+                        </p>
+                        <div class="ext-badge">
+                            <strong>🚀 데이터 주도 설계 (Scalability)</strong>
+                            추후 보드 크기가 16x16 등으로 확장되더라도, 비트 시프트 상수(<< 4) 하나만 교체하면 즉각 호환되는 완벽한 수학적 모듈입니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 10: AP Manager -->
+            <section>
+                <div class="tag">PART 2 · 코어 스크립트 #2</div>
+                <h2>모듈형 AP 관리자 및 이벤트 버스</h2>
+                <div class="grid-2">
+                    <div class="card">
+<pre style="margin: 0;"><code class="language-csharp">public class APManager : MonoBehaviour {
+  private float _currentAP, _maxAP = 100f;
+  private const float REGEN_RATE = 4f;
+
+  void Update() {
+    _currentAP = Mathf.Min(_currentAP + REGEN_RATE * Time.deltaTime, _maxAP);
+  }
+
+  public bool TrySpend(float cost) {
+    if (_currentAP < cost) {
+      // 직접 UI 객체를 참조하지 않고 이벤트 발송
+      EventBus.Publish(new InsufficientAPEvent()); 
+      return false;
+    }
+    _currentAP -= cost;
+    return true;
+  }
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: #FDE047; font-size: 1.2em;">결합도(Coupling)를 낮춘 구조</h4>
+                        <p style="font-size: 0.95em; line-height: 1.6;">AP가 부족할 때 UI 스크립트를 <code>GetComponent</code>로 찾아 에러 메시지를 띄우는 나쁜 관행을 배제했습니다. 제네릭 <code>EventBus&lt;T&gt;</code>를 사용하여 종속성을 끊었습니다.</p>
+                        <div class="ext-badge">
+                            <strong>🧩 새로운 모듈 부착의 용이성</strong>
+                            나중에 "AP 부족 시 특수 대사 출력 기능" 등을 추가하려 할 때, APManager 코드를 단 한 줄도 수정할 필요 없이, EventBus 구독기만 새로 달면 됩니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 11: State Machine & Interrupt -->
+            <section>
+                <div class="tag">PART 2 · 코어 스크립트 #3</div>
+                <h2>상태 머신(FSM) 및 Interrupt 제어</h2>
+                <div class="grid-2">
+                    <div class="card red">
+                        <h4 style="font-size: 1.2em;">ActionScheduler 상태 제어</h4>
+<pre style="margin-top: 10px;"><code class="language-csharp">public enum ActionState { Pending, Preparing, Executing, Recovery }
+
+public void TickAction(ActionContext ctx) {
+    switch (ctx.State) {
+        case ActionState.Preparing:
+            if (CheckInterrupts(ctx.Owner)) {
+                CancelAction(ctx); // 기절 피격 시 즉시 취소
+                return;
+            }
+            if (ctx.Timer >= ctx.Skill.CastTime) {
+                ctx.State = ActionState.Executing;
+                FireSkillPayload(ctx);
+            }
+            break;
+    }
+}</code></pre>
+                    </div>
+                    <div class="card cyan">
+                        <h4 style="font-size: 1.2em;">인터럽트 중재 규약 (Arbitration)</h4>
+                        <ul style="font-size: 0.9em; line-height: 1.6; margin-top: 10px;">
+                            <li><strong style="color:#EF4444;">Hard (기절/사망):</strong> 상태 무조건 취소. AP 환불 불가.</li>
+                            <li><strong style="color:#FDE047;">Soft (넉백/둔화):</strong> 행동 지연(Delay). 취소되지 않음.</li>
+                        </ul>
+                        <div class="ext-badge">
+                            <strong>🛡 개방-폐쇄 원칙 (OCP) 충족</strong>
+                            개별 유닛 스크립트들이 임의로 `Cancel()`을 부르지 못하도록 강제했습니다. 앞으로 수십 종의 CC기가 기획되더라도, 중앙 중재기(Arbitrator) 1곳의 로직만 관리하면 완벽히 연동됩니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 12: Movement Pattern -->
+            <section>
+                <div class="tag">PART 2 · 코어 스크립트 #4</div>
+                <h2>체스 이동 인터페이스 (IMovePattern)</h2>
+                <div class="grid-2">
+                    <div class="card cyan">
+                        <h4 style="font-size: 1.2em;">전략 패턴 (Strategy Pattern) 적용</h4>
+<pre><code class="language-csharp">public static IMovePattern Create(PieceClass piece) {
+  return piece switch {
+    PieceClass.Pawn   => new PawnMovePattern(),
+    PieceClass.Knight => new KnightMovePattern(),
+    PieceClass.Bishop => new SlidingMovePattern(Diagonal),
+    PieceClass.Rook   => new SlidingMovePattern(Orthogonal),
+    PieceClass.Queen  => new SlidingMovePattern(All),
+    PieceClass.King   => new KingMovePattern(),
+    _ => throw new NotImplementedException()
+  };
+}</code></pre>
+                        <div class="ext-badge" style="margin-top: 10px;">
+                            <strong>📐 신규 직군 추가 대응력</strong>
+                            상속의 늪에 빠지지 않고 이동 규칙을 `IMovePattern` 인터페이스로 뺐습니다. 새로운 직군(예: 팰러딘) 아이디어가 떠올라도 기존 구조를 건드릴 필요 없이 인터페이스 구현체만 추가하면 즉각 연동됩니다.
+                        </div>
+                    </div>
+                    <div class="card" style="text-align:center; padding: 20px;">
+                        <img src="Images/Marking_Movable_Tiles_When_Click02_Bishop.png" style="max-height: 380px; width: auto;" alt="Bishop Movement">
+                        <p class="img-caption">▲ 비숍(Bishop) 클릭 시 대각선 이동 경로 스캐닝 결과</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 13: Reaction System -->
+            <section>
+                <div class="tag">PART 2 · 코어 스크립트 #5</div>
+                <h2>확장 가능한 StatusEffect 파이프라인</h2>
+                <div class="grid-2">
+                    <div class="card violet">
+                        <h4 style="font-size: 1.2em;">데이터 주도(Data-Driven) 반응 처리</h4>
+<pre style="margin-bottom:0;"><code class="language-csharp">public void ApplyElement(Unit t, ElementType incoming) {
+  var reaction = ReactionTable.Lookup(t.CurrentElement, incoming);
+  
+  if (reaction != null) {
+    if (reaction.ImmediateDamage > 0)
+      DealMagicDamage(t, reaction.ImmediateDamage);
+      
+    if (reaction.StatusEffect != null)
+      StatusEffectSystem.Apply(t, reaction.StatusEffect);
+      
+    t.CurrentElement = ElementType.None; // 반응 소모
+  } else {
+    t.CurrentElement = incoming; // 태그 부착
+  }
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="font-size: 1.2em;">방대한 기획 요구사항 통제</h4>
+                        <p style="font-size: 0.9em; line-height: 1.6;">현재 14가지가 넘는 원소 콤보와 상태이상이 존재합니다. 이를 하드코딩된 `if-else`로 짜지 않고 `ReactionTable` (딕셔너리)을 이용한 룩업(Lookup) 방식으로 구현했습니다.</p>
+                        <div class="ext-badge">
+                            <strong>📊 데이터 주도(Data-Driven) 생산성</strong>
+                            새로운 속성(예: '빛' 속성)을 추가할 때 핵심 코드 로직을 수정할 필요 없이, 유니티 에디터 상에서 매핑 테이블 데이터만 연결해주면 즉각 반영되어 1인 개발의 콘텐츠 생산성이 극대화됩니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 14: ActionBid AI -->
+            <section>
+                <div class="tag">PART 2 · 코어 스크립트 #6</div>
+                <h2>AI 경쟁 입찰 시스템 (ActionBid)</h2>
+                <div class="grid-2">
+                    <div class="card green">
+                        <h4 style="font-size: 1.2em;">구조체 입찰 서류 (ActionBid)</h4>
+<pre><code class="language-csharp">public struct ActionBid : IComparable&lt;ActionBid&gt; {
+  public UnitBrain Bidder;
+  public ActionType Type; // MOVE, SKILL
+  public float Score;     // Look-ahead 예측 점수
+  public float APCost;
+
+  // 우선순위 큐 정렬을 위한 기본 인터페이스 구현
+  public int CompareTo(ActionBid other) 
+    => other.Score.CompareTo(this.Score); 
+}</code></pre>
+                        <p style="font-size: 0.85em; margin-top:10px;">모든 적 AI는 <code>PredictionPipeline</code>을 돌려 "이 행동을 하면 점수가 몇점인지" 스스로 채점해 보고서를 제출합니다.</p>
+                    </div>
+                    <div class="card">
+                        <h4 style="font-size: 1.2em;">AITeamCommander 집행</h4>
+                        <p style="font-size: 0.9em;">사령관 코어는 수집된 수백 개의 행동 보고서를 점수 순으로 정렬(Sort)한 뒤, 진영에 남은 AP 한도 내에서 위에서부터 순서대로 승인 결재를 내립니다.</p>
+                        <div class="ext-badge" style="margin-top: 20px;">
+                            <strong>🤖 유연한 AI 확장성</strong>
+                            개별 유닛의 판단 로직(점수 계산법)과 팀 단위 자원 관리 로직을 분리시켰기 때문에, 보스 전용 특별 AI 등을 추가할 때 팀 커맨더를 고칠 필요가 없습니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 15: Replay/Determinism Script -->
+            <section>
+                <div class="tag">PART 2 · 코어 스크립트 #7</div>
+                <h2>네트워크 동기화 & Replay 엔진</h2>
+                <div class="grid-2">
+                    <div class="card" style="border-color: #FDE047;">
+                        <h4 style="color: #FDE047; font-size: 1.2em;">상태 스냅샷 직렬화 (Serialization)</h4>
+                        <p style="font-size: 0.85em; margin-bottom: 10px;">매 틱마다 보드 전체의 런타임 상태를 저장하여 리플레이 및 역추적(Rollback)을 가능하게 하는 구현체입니다.</p>
+<pre style="margin-bottom:0;"><code class="language-csharp">[Serializable]
+public struct SimulationSnapshot {
+    public int TickFrame;       // 현재 틱
+    public uint Checksum;       // 무결성 검증 해시
+    public float GlobalAP;
+    public UnitDataSnapshot[] Units;
+}</code></pre>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div class="card cyan" style="flex: 1;">
+                            <h5 style="color: #38BDF8; margin: 0 0 10px 0; font-size: 1.1em;">SeededRandomProvider</h5>
+                            <p style="font-size: 0.85em; margin: 0;"><code>UnityEngine.Random</code>은 부동소수점 오차가 나므로, 통제된 시드(Seed)를 써서 언제 어디서든 동일한 전황을 재현합니다.</p>
+                        </div>
+                        <div class="card green" style="flex: 1;">
+                            <h5 style="color: #22C55E; margin: 0 0 10px 0; font-size: 1.1em;">Divergence Test (발산 추적)</h5>
+                            <p style="font-size: 0.85em; margin: 0;">원격 멀티플레이어로의 확장을 염두에 두고, 리플레이 재생 중 원본과 단 1의 해시 오차라도 발생하면 즉시 Desync 경고를 띄웁니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NEW SLIDES BATCH START -->
+            
+            <!-- Slide 16: Object Pool -->
+            <section>
+                <div class="tag">PART 2 · 최적화 스크립트 #8</div>
+                <h2>Object Pool 최적화 (GC Spike 방어)</h2>
+                <div class="grid-2">
+                    <div class="card red">
+                        <h4 style="font-size: 1.2em;">프리팹 재사용 풀 (PoolManager)</h4>
+<pre><code class="language-csharp">public class PoolManager : Singleton&lt;PoolManager&gt; {
+  private Dictionary&lt;string, Queue&lt;GameObject&gt;&gt; pool;
+
+  public GameObject Spawn(string key, Vector3 position) {
+      if(pool[key].Count > 0) {
+          var obj = pool[key].Dequeue();
+          obj.SetActive(true);
+          obj.transform.position = position;
+          return obj;
+      }
+      return Instantiate(Resources.Load(key)) as GameObject;
+  }
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: #EF4444; font-size: 1.2em;">Garbage Collector 프레임 드랍 억제</h4>
+                        <p style="font-size: 0.9em; line-height: 1.6;">원소 마법, 타격 데미지 텍스트 팝업, 폭발 이펙트 등 초당 수십 개가 생성되고 파괴되는 오브젝트들을 <code>Instantiate/Destroy</code> 하지 않습니다.</p>
+                        <div class="ext-badge">
+                            <strong>⚡ 모바일 환경 대응력</strong>
+                            메모리 할당을 최초 로딩 시점에 몰아넣어 전투 중 GC(Garbage Collector) 멈춤 현상(Spike)을 완벽히 차단했습니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 17: A* Pathfinding -->
+            <section>
+                <div class="tag">PART 2 · AI 코어 스크립트 #9</div>
+                <h2>A* 기반 지형 가중치 탐색 알고리즘</h2>
+                <div class="grid-2">
+                    <div class="card cyan">
+                        <h4 style="font-size: 1.2em;">비용(Cost) 연산 기반 타일 탐색</h4>
+<pre><code class="language-csharp">public List&lt;Tile&gt; FindPath(Tile start, Tile target) {
+  // G(이동비용) + H(휴리스틱 맨해튼 거리) 연산
+  var openSet = new PriorityQueue&lt;Node&gt;();
+  
+  foreach (var neighbor in currentNode.GetNeighbors()) {
+      int tentativeGCost = currentNode.GCost 
+                         + neighbor.TerrainWeight; // 늪지대는 2배 코스트
+                         
+      if (tentativeGCost < neighbor.GCost) {
+          neighbor.UpdatePath(currentNode, tentativeGCost);
+      }
+  }
+  return RetracePath(start, target);
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: #38BDF8; font-size: 1.2em;">환경 변수가 적용된 지능적 AI</h4>
+                        <p style="font-size: 0.9em; line-height: 1.6;">단순히 직선으로 돌격하는 것이 아니라, 늪지대(코스트 2배)나 불길이 있는 타일을 우회하는 최적의 경로를 A* (A-Star) 알고리즘으로 동적 계산합니다.</p>
+                        <div class="ext-badge">
+                            <strong>🧠 성능과 지능의 균형</strong>
+                            PriorityQueue(우선순위 큐)를 직접 구현하여 수십 마리의 AI가 동시에 경로를 탐색해도 프레임 딜레이가 없도록 최적화했습니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 18: Damage Pipeline -->
+            <section>
+                <div class="tag">PART 2 · 전투 코어 스크립트 #10</div>
+                <h2>물리 / 마법 하이브리드 데미지 파이프라인</h2>
+                <div class="grid-2">
+                    <div class="card" style="border-color: #FDE047;">
+                        <h4 style="color: #FDE047; font-size: 1.2em;">Damage Calculator 제어</h4>
+<pre><code class="language-csharp">public float CalculateFinal(Unit target, DamageType type) {
+    float finalDmg = BaseDamage;
+    
+    if (type == DamageType.Physical) {
+        // 물리: 직관적인 감산 (최소 데미지 보장)
+        float effectiveArmor = target.Armor * (1 - Penetration);
+        finalDmg = Mathf.Max(1f, finalDmg - effectiveArmor);
+    } 
+    else if (type == DamageType.Magical) {
+        // 마법: 저항력(%) 비례 퍼센트 경감
+        float resistPct = target.MagicResist * (1 - Penetration);
+        finalDmg *= (1f - (resistPct / 100f));
+    }
+    
+    return finalDmg * GetElementalMultiplier(target);
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: #FDE047; font-size: 1.2em;">다원화된 데미지 방어 체계</h4>
+                        <p style="font-size: 0.9em; line-height: 1.6;"><strong>물리 피해</strong>는 `피해량 - 방어력`의 직관적인 뺄셈 연산으로 체급 차이를 부각시키고, <strong>마법/원소 피해</strong>는 저항력(%) 퍼센트 경감 구조를 채택하여 밸런싱의 다양성을 확보했습니다.</p>
+                        <div class="ext-badge">
+                            <strong>⚖ 수학적 밸런스 기반</strong>
+                            피해 유형(물리/마법)에 따라 계산 공식을 완전히 분리하여 기물 간의 상성을 명확히 하고, 다채로운 전술이 통용되는 연산 파이프라인을 구축했습니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 19: ScriptableObject Registry -->
+            <section>
+                <div class="tag">PART 2 · 데이터 구조 #11</div>
+                <h2>ScriptableObject 데이터 레지스트리</h2>
+                <div class="grid-2">
+                    <div class="card violet">
+                        <h4 style="font-size: 1.2em;">UnitData (ScriptableObject)</h4>
+<pre><code class="language-csharp">[CreateAssetMenu(menuName = "Checkmate/UnitData")]
+public class UnitData : ScriptableObject {
+    public string UnitName;
+    public PieceClass Role;
+    public FactionType Faction;
+    
+    [Header("Base Stats")]
+    public float MaxHP;
+    public float BaseArmor;
+    
+    [Header("Skills")]
+    public SkillData PassiveSkill;
+    public SkillData ActiveSkill;
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: #A78BFA; font-size: 1.2em;">코드와 데이터의 완전 분리</h4>
+                        <p style="font-size: 0.9em; line-height: 1.6;">기물들의 능력치를 스크립트 안에 하드코딩하지 않고, 유니티의 <code>ScriptableObject</code> 에셋으로 분리하여 중앙 데이터베이스처럼 관리합니다.</p>
+                        <div class="ext-badge">
+                            <strong>📦 에셋 번들 확장성</strong>
+                            출시 이후 새로운 유닛을 추가하는 패치를 할 때, 코드 컴파일 없이 데이터 에셋 파일만 교체(Hot-update)하여 적용할 수 있습니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 20: MVP UI Binding -->
+            <section>
+                <div class="tag">PART 2 · UI 아키텍처 #12</div>
+                <h2>MVP 패턴 기반 동적 UI 바인딩</h2>
+                <div class="grid-2">
+                    <div class="card cyan">
+                        <h4 style="font-size: 1.2em;">Update() 루프의 배제</h4>
+<pre><code class="language-csharp">public class HealthBarView : MonoBehaviour {
+  [SerializeField] private Image fillImage;
+  private UnitModel _model;
+
+  public void Bind(UnitModel model) {
+      _model = model;
+      // 이벤트 구독 (옵저버 패턴)
+      _model.OnHealthChanged += UpdateFillAmount;
+  }
+
+  private void UpdateFillAmount(float current, float max) {
+      // DOTween 등 애니메이션 엔진과 연동하여 스무딩
+      fillImage.DOFillAmount(current / max, 0.3f);
+  }
+}</code></pre>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: #38BDF8; font-size: 1.2em;">이벤트 주도(Event-Driven) UI 갱신</h4>
+                        <p style="font-size: 0.9em; line-height: 1.6;">매 프레임마다 체력을 감시하는 <code>Update()</code> 함수를 완전히 제거했습니다. 체력이나 AP가 변동될 때만 이벤트를 발송하여 UI가 반응합니다.</p>
+                        <div class="ext-badge">
+                            <strong>🎯 Model-View-Presenter</strong>
+                            UI 로직과 게임 로직을 완벽하게 분리하여, UI 디자이너가 프리팹을 갈아끼워도 메인 시스템 로직은 전혀 타격을 받지 않습니다.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NEW SLIDES BATCH END -->
+
+            <!-- Slide 21: UI and Board Rendering -->
+            <section>
+                <div class="tag">PART 2 · 씬 렌더링</div>
+                <h2>인게임 화면 & 동적 수면 셰이더</h2>
+                <div class="grid-2">
+                    <div class="card" style="text-align: center; justify-content: center; min-height: 400px;">
+                        <img src="Images/Initialize_Phase_Place_Units.png" style="max-height: 280px; width: auto;" alt="Place Units">
+                        <p class="img-caption">▲ 전원 배치 화면: 하단 덱 UI, AP 게이지 바 연동</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div class="card" style="text-align: center; flex: 1; padding: 15px;">
+                            <img src="Images/Chessboard_Tiles_Ruins_Water.png" style="max-height: 150px; width: auto;" alt="Water Ruins">
+                            <p class="img-caption">▲ 폐허 타일 프리팹 (URP 렌더링)</p>
+                        </div>
+                        <div class="card" style="text-align: center; flex: 1; padding: 15px;">
+                            <img src="Images/Water_Shader_Graph.png" style="max-height: 150px; width: auto;" alt="Shader Graph">
+                            <p class="img-caption">▲ URP Shader Graph 수면 굴절·거품 커스텀</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 22: 3D Props -->
+            <section>
+                <div class="tag">PART 2 · 자체 제작 에셋</div>
+                <h2>Blender 모델링 파이프라인</h2>
+                <p style="margin-bottom: 20px;">전술적 식별성을 높이기 위한 프랍 중심의 디자인. 자체 모델링 에셋 제작 현황입니다.</p>
+                <div class="grid-4">
+                    <div class="card" style="text-align: center; padding: 15px;">
+                        <img src="Images/CharacterBase_LowPoly_unfinished.png" style="max-height: 200px; width: auto;">
+                        <h4 style="font-size: 1em; margin-top: 15px; border: none; color: #fff;">캐릭터 베이스</h4>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 15px;">
+                        <img src="Images/Prop01_Flag.png" style="max-height: 200px; width: auto;">
+                        <h4 style="font-size: 1em; margin-top: 15px; border: none; color: #fff;">군사 깃발</h4>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 15px;">
+                        <img src="Images/Prop02_Turret.png" style="max-height: 200px; width: auto;">
+                        <h4 style="font-size: 1em; margin-top: 15px; border: none; color: #fff;">자동 포탑</h4>
+                    </div>
+                    <div class="card" style="text-align: center; padding: 15px;">
+                        <img src="Images/Prop03_Barricade.png" style="max-height: 200px; width: auto;">
+                        <h4 style="font-size: 1em; margin-top: 15px; border: none; color: #fff;">바리케이드</h4>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 23: Milestones -->
+            <section>
+                <div class="tag">PART 2 · 향후 로드맵</div>
+                <h2>시스템 개발 마일스톤 (Milestones)</h2>
+                <div class="card" style="padding: 30px;">
+                    <div class="progress-row">
+                        <div class="progress-label" style="color: #22C55E;">AP 경제 & 체스 이동 로직</div>
+                        <div class="progress-track"><div class="progress-fill" style="width: 95%; background: #22C55E; box-shadow: 0 0 10px #22C55E;"></div></div>
+                        <div class="progress-pct" style="color: #22C55E;">95%</div>
+                    </div>
+                    <div class="progress-row">
+                        <div class="progress-label" style="color: #22C55E;">결정론적 Replay 프레임워크</div>
+                        <div class="progress-track"><div class="progress-fill" style="width: 85%; background: #22C55E; box-shadow: 0 0 10px #22C55E;"></div></div>
+                        <div class="progress-pct" style="color: #22C55E;">85%</div>
+                    </div>
+                    <div class="progress-row">
+                        <div class="progress-label" style="color: #FDE047;">Action Runtime (인터럽트)</div>
+                        <div class="progress-track"><div class="progress-fill" style="width: 70%; background: #FDE047; box-shadow: 0 0 10px #FDE047;"></div></div>
+                        <div class="progress-pct" style="color: #FDE047;">70%</div>
+                    </div>
+                    <div class="progress-row">
+                        <div class="progress-label" style="color: #FDE047;">넉백/Splat 물리 & 원소 반응</div>
+                        <div class="progress-track"><div class="progress-fill" style="width: 60%; background: #FDE047; box-shadow: 0 0 10px #FDE047;"></div></div>
+                        <div class="progress-pct" style="color: #FDE047;">60%</div>
+                    </div>
+                    <div class="progress-row">
+                        <div class="progress-label" style="color: #EF4444;">최종 캐릭터 아트 / 애니메이션</div>
+                        <div class="progress-track"><div class="progress-fill" style="width: 15%; background: #EF4444; box-shadow: 0 0 10px #EF4444;"></div></div>
+                        <div class="progress-pct" style="color: #EF4444;">15%</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 24: Closing -->
+            <section class="center-slide">
+                <div class="flex-center">
+                    <h1 style="color: #FDE047; font-size: 5em; margin-bottom: 25px;">♚</h1>
+                    <h2 style="font-size: 2.8em; border: none; margin-bottom: 10px; text-align: center;">감사합니다</h2>
+                    <h3 style="color: #94A3B8; font-weight: 400; font-size: 1.3em; margin-top: 0;">Project: Checkmate RPG</h3>
+                    
+                    <p style="margin-top: 50px; font-size: 1.1em; color: #CBD5E1; line-height: 1.8;">
+                        체스 이동 규칙 × 실시간 AP 경제 × 물리/원소 반응<br>
+                        <span style="font-size: 0.85em; color: #22C55E;">[무한한 확장이 가능한 객체지향 넷코드 백엔드 적용]</span>
+                    </p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/highlight/highlight.min.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: false,
+            transition: 'fade',
+            plugins: [ RevealHighlight ],
+            width: 1920,
+            height: 1080,
+            margin: 0.08,
+            minScale: 0.2,
+            maxScale: 2.0
+        });
+    </script>
+</body>
+</html>

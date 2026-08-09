@@ -71,7 +71,7 @@ namespace CheckmateRPG.Core.Effects.Processors
                 if (!IsSanctuaryAlly(unit) || !IsOnTile(mutationContext.TargetUnit.Position, TileType.Sanctuary))
                     return EffectProcessorResult.Empty;
 
-                float heal = mutationContext.TargetUnit.MaxHp * GridSystem.SanctuaryHealPercentPerSecond * stacks * magnitude;
+                float heal = mutationContext.TargetUnit.MaxHp * GridSystem.SanctuaryHealPercentPerTick * stacks * magnitude;
                 int amount = Mathf.RoundToInt(heal);
                 IRuntimeMutation mutation = mutationFactory.CreateHeal(mutationContext, amount);
                 return mutation != null

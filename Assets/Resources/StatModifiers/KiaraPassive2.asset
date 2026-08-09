@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de2444d30e9a0154c83cd789f995859a, type: 3}
+  m_Name: KiaraPassive2
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Core.Passives.PassiveDefinitionSO
+  PassiveId: KiaraPassive2_DefPen
+  Levels:
+  - Trigger: 0
+    ConditionExpression: TargetIsBleeding
+    Effects:
+    - rid: 6562805713371660362
+  references:
+    version: 2
+    RefIds:
+    - rid: 6562805713371660362
+      type: {class: ApplyBuffPassiveEffect, ns: CheckmateRPG.Core.Passives, asm: Assembly-CSharp}
+      data:
+        StatModifierProfileId: KiaraPassive_DefPen
+        ValueOverrides: []

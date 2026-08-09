@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 235d7c66da93f3f4a938032341fae2a4, type: 3}
+  m_Name: KiaraActive1
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Core.AbilityDefinition
+  AbilityId: KiaraActive1
+  SkillName: Skill Name
+  Description: Skill Description
+  SkillIcon: {fileID: 0}
+  DefaultChargeType: 0
+  Levels:
+  - Cost: 4
+    SPCost: 0
+    InitSP: 0
+    Cooldown: 15
+    ChargeType: 0
+    CastSpeed: 2
+    TargetingRule: 1
+    Effects:
+    - rid: 6562805713371660356
+  references:
+    version: 2
+    RefIds:
+    - rid: 6562805713371660356
+      type: {class: ApplyBuffAbilityEffect, ns: CheckmateRPG.Core.Abilities, asm: Assembly-CSharp}
+      data:
+        StatModifierProfileId: KiaraActive1_Buff
+        ValueOverrides: []
+        ApplyToCaster: 1

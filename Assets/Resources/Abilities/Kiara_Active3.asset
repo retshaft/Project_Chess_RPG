@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 235d7c66da93f3f4a938032341fae2a4, type: 3}
+  m_Name: Kiara_Active3
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Core.AbilityDefinition
+  AbilityId: Kiara_Active3
+  SkillName: "\uD669\uC6B0\uC758 \uADF9\uAC80 - \uCE74\uC624\uD2F1 \uC624\uBC84\uB4DC\uB77C\uC774\uBE0C"
+  Description: "\uACF5\uACA9 \uBC94\uC704 \uB0B4 \uC804\uC6D0 \uBB3C\uB9AC \uAD11\uC5ED
+    \uD53C\uD574 \uD6C4, 24\uCD08\uAC04 \uD589\uB3D9 \uAC04\uACA9 60% \uB2E8\uCD95,
+    AP \uBC18\uAC10, \uB2E8\uD0C0 \uC804\uD658 \uBC0F \uB9E4 \uD0C0\uACA9 \uCD9C\uD608
+    \uBD80\uC5EC."
+  SkillIcon: {fileID: 0}
+  DefaultChargeType: 0
+  Levels:
+  - Cost: 0
+    SPCost: 120
+    InitSP: 70
+    Cooldown: 5
+    ChargeType: 0
+    CastSpeed: 2
+    TargetingRule: 2
+    Effects: []
+  references:
+    version: 2
+    RefIds: []

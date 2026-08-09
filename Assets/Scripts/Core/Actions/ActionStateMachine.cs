@@ -54,9 +54,11 @@ namespace CheckmateRPG.Core.Actions
             {
                 ActionState.Queued => true,
                 ActionState.Casting => window == InterruptWindow.CastingInterruptible ||
-                                       window == InterruptWindow.ResolveLocked,
+                                       window == InterruptWindow.ResolveLocked ||
+                                       window == InterruptWindow.Any,
                 ActionState.Resolving => false,
-                ActionState.Recovery => window == InterruptWindow.RecoveryInterruptible,
+                ActionState.Recovery => window == InterruptWindow.RecoveryInterruptible ||
+                                        window == InterruptWindow.Any,
                 _ => false
             };
         }

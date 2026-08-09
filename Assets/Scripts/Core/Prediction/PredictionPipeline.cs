@@ -115,7 +115,7 @@ namespace CheckmateRPG.Core.Prediction
                 context.ClonedRuntime,
                 _isCellValid,
                 _attackRangeLookup,
-                _criticalDamageMultiplier);
+                criticalDamageMultiplier: _criticalDamageMultiplier);
 
             var resolutionContext = new ActionResolutionContext(tick, sorted);
             RunPreResolve(sorted, spatialSnapshot, battleContext, resolutionContext, context);

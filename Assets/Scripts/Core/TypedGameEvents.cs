@@ -51,11 +51,12 @@ namespace CheckmateRPG.Core
             };
     }
 
-    public readonly record struct MoveStartedPayload(int UnitId, int FromX, int FromY, int ToX, int ToY);
-    public readonly record struct MoveCompletedPayload(int UnitId, int FromX, int FromY, int ToX, int ToY);
-    public readonly record struct AttackResolvedPayload(int AttackerUnitId, int TargetUnitId, int DamageAmount, bool IsCritical);
-    public readonly record struct UnitDamagedPayload(int UnitId, int Amount, int RemainingHealth, int SourceUnitId, bool IsCritical);
-    public readonly record struct AbilityResolvedPayload(int CasterUnitId, string AbilityId, int PrimaryTargetUnitId, bool WasSuccessful);
-    public readonly record struct EffectAppliedPayload(int UnitId, string EffectId, int DurationTicks, int SourceUnitId);
-    public readonly record struct UnitKilledPayload(int UnitId, int KillerUnitId);
+    public readonly record struct MoveStartedPayload(Guid UnitId, int FromX, int FromY, int ToX, int ToY);
+    public readonly record struct KingDiedPayload(bool IsPlayerKing);
+
+    public sealed record MoveStartedEvent(MoveStartedPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<MoveStartedPayload>(Payload, EventCategory.Domain, Source, Target);
+
+    public sealed record KingDiedEvent(KingDiedPayload Payload, string Source = "", string Target = "")
+        : BaseGameEvent<KingDiedPayload>(Payload, EventCategory.Domain, Source, Target);
 }

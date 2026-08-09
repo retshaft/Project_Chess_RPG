@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
+  m_Name: BishopUnitData
+  m_EditorClassIdentifier: 
+  AIProfile: {fileID: 11400000, guid: dd4b4152cc5330c4781c80232144c927, type: 2}
+  UnitName: Bishop
+  Prefab: {fileID: 0}
+  PieceType: 2
+  MovePattern: 4
+  BaseRole: "\uB300\uC8FC\uAD50"
+  MaxHealth: 600
+  Defense: 15
+  Resistance: 0.5
+  Style: 1
+  AttackDamage: 250
+  AttackCooldown: 1
+  AttackRange: 3
+  BasicAttackDamageType: 2
+  KillValue: 12
+  MaxSP: 50
+  InitSP: 4
+  BasicAttackAbilityData: {fileID: 0}
+  DeploymentCost: 3
+  MoveCostAP: 24
+  AttackCostAP: 24
+  ActionSpeed: 1
+  MoveRange: 8
+  SpeedLevel: 4
+  MoveSpeed: 2
+  ActionDelay: 1.1
+  Weight: 1
+  IsBoss: 0

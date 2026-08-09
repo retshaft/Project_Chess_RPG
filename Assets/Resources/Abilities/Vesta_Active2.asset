@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 235d7c66da93f3f4a938032341fae2a4, type: 3}
+  m_Name: Vesta_Active2
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Core.AbilityDefinition
+  AbilityId: Vesta_Active2
+  SkillName: "\uC575\uCEE4 \uD3EC\uACA9 \uD0DC\uC138 (2\uC2A4\uD0AC)"
+  Description: "18\uCD08\uAC04 \uC774\uB3D9 \uBD88\uB2A5 \uC0C1\uD0DC\uAC00 \uB418\uB294
+    \uB300\uC2E0 \uB9E4 \uD3EC\uACA9\uC774 \uC2ED\uC790(+) \uAD11\uC5ED \uD3ED\uBC1C
+    \uD0C0\uACA9\uC73C\uB85C \uBCC0\uACBD\uB418\uBA70 \uACF5\uACA9\uB825 50% \uC99D\uAC00."
+  SkillIcon: {fileID: 0}
+  DefaultChargeType: 0
+  Levels:
+  - Cost: 0
+    SPCost: 80
+    InitSP: 50
+    Cooldown: 5
+    ChargeType: 0
+    CastSpeed: 2
+    TargetingRule: 2
+    Effects: []
+  references:
+    version: 2
+    RefIds: []

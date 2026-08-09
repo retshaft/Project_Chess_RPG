@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
+  m_Name: Vesta
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
+  AIProfile: {fileID: 0}
+  UnitName: "\uBCA0\uC2A4\uD0C0"
+  Icon: {fileID: 0}
+  Prefab: {fileID: 0}
+  PieceType: 3
+  MovePattern: 3
+  BaseRole: "\uD3EC\uD2B8\uB9AC\uC2A4"
+  Subclass: 45
+  ResonanceRole: 1
+  MaxHealth: 1100
+  Defense: 55
+  Resistance: 0.1
+  Style: 1
+  AttackCount: 1
+  AttackDamageRatio: 1
+  AttackDamage: 210
+  AttackCooldown: 1
+  AttackRange: 7
+  BasicAttackDamageType: 0
+  KillValue: 10
+  ChargeType: 0
+  MaxSP: 110
+  InitSP: 65
+  BasicAttackAbilityData: {fileID: 0}
+  BasicAttackAbility: {fileID: 0}
+  DeploymentCost: 2
+  MoveCostAP: 36
+  AttackCostAP: 36
+  ActionSpeed: 1
+  MoveRange: 7
+  SpeedLevel: 2
+  MoveSpeed: 1.1
+  ActionDelay: 2
+  Weight: 3
+  IsBoss: 0
+  InitialSkillLevels: []
+  Abilities:
+  - {fileID: 11400000, guid: a5572525d82e59f4ba430f74d392bc5c, type: 2}
+  - {fileID: 11400000, guid: 80e30eeac13e23c47869e6030328a01b, type: 2}
+  - {fileID: 11400000, guid: fe8fcf133b10f1341acfa2094f5b9fbb, type: 2}
+  SelectableActiveSkills:
+  - {fileID: 11400000, guid: a5572525d82e59f4ba430f74d392bc5c, type: 2}
+  - {fileID: 11400000, guid: 80e30eeac13e23c47869e6030328a01b, type: 2}
+  - {fileID: 11400000, guid: fe8fcf133b10f1341acfa2094f5b9fbb, type: 2}
+  SelectedSkillIndex: 2

@@ -5,6 +5,7 @@
 // or an AI decision system.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using CheckmateRPG.Components;
@@ -25,6 +26,7 @@ namespace CheckmateRPG.Units
     [RequireComponent(typeof(MovementComponent))]
     [RequireComponent(typeof(CombatComponent))]
     [RequireComponent(typeof(StatusEffectComponent))]
+    [RequireComponent(typeof(UnitVisualController))]
     public class UnitBrain : MonoBehaviour
     {
         // ─── Serialized Fields ────────────────────────────────────────────────────
@@ -38,6 +40,10 @@ namespace CheckmateRPG.Units
         [Tooltip("Optional target for the decision loop to pursue.")]
         [SerializeField] private GameObject _currentTarget;
         [SerializeField] private string _runtimeActorId;
+
+        [Header("Promotion")]
+        [Tooltip("프로모션 대기 시간 (초)")]
+        [SerializeField] private float _promotionDelay = 3.0f;
 
         // ─── Component References ─────────────────────────────────────────────────
 
@@ -53,8 +59,14 @@ namespace CheckmateRPG.Units
         /// <summary>Read-only access to this unit's status effect state.</summary>
         public StatusEffectComponent StatusEffects { get; private set; }
 
+        /// <summary>Read-only access to this unit's subclass logic.</summary>
+        public SubclassComponent SubclassComponent { get; private set; }
+
+        /// <summary>Read-only access to this unit's SP logic.</summary>
+        public SPComponent SPComponent { get; private set; }
+
         /// <summary>Read-only access to the assigned unit data.</summary>
-        public UnitData UnitData => _unitData;
+        public UnitData UnitData { get => _unitData; set => _unitData = value; }
         public Guid ActorId { get; private set; }
 
         /// <summary>Read-only view of this unit's simulation runtime state.</summary>
@@ -67,6 +79,9 @@ namespace CheckmateRPG.Units
 
         /// <summary>True once the unit has been killed.</summary>
         public bool IsDead => Health != null && Health.IsDead;
+
+        /// <summary>True if the unit is waiting to be promoted.</summary>
+        public bool IsPromoting { get; private set; }
 
         /// <summary>Current decision made by the unit's brain.</summary>
         public UnitDecision CurrentDecision { get; private set; } = UnitDecision.Idle;
@@ -124,6 +139,8 @@ namespace CheckmateRPG.Units
             Movement = GetComponent<MovementComponent>();
             Combat   = GetComponent<CombatComponent>();
             StatusEffects = GetComponent<StatusEffectComponent>();
+            SubclassComponent = GetComponent<SubclassComponent>();
+            SPComponent = GetComponent<SPComponent>();
             _team = GetComponent<TeamComponent>();
 
             if (!Guid.TryParseExact(_runtimeActorId, "N", out Guid actorId))
@@ -149,6 +166,8 @@ namespace CheckmateRPG.Units
             Movement.Initialise(_unitData, _startCell);
             Combat.Initialise(_unitData);
             StatusEffects.Initialise(_unitData);
+            if (SubclassComponent != null) SubclassComponent.Initialise(_unitData);
+            if (SPComponent != null) SPComponent.Initialise(_unitData);
 
             // Wire death notification to combat so attacks stop after death
             Health.OnDeath += HandleDeath;
@@ -183,6 +202,25 @@ namespace CheckmateRPG.Units
         }
 
         /// <summary>
+        /// Update the unit data at runtime (e.g. for promotion) and re-initialise components.
+        /// </summary>
+        public void ChangeUnitData(UnitData newData)
+        {
+            if (newData == null) return;
+            
+            _unitData = newData;
+            
+            if (Health != null) Health.Initialise(_unitData);
+            if (Movement != null) Movement.Initialise(_unitData, Movement.GridPosition);
+            if (Combat != null) Combat.Initialise(_unitData);
+            if (StatusEffects != null) StatusEffects.Initialise(_unitData);
+            if (SubclassComponent != null) SubclassComponent.Initialise(_unitData);
+            if (SPComponent != null) SPComponent.Initialise(_unitData);
+            
+            Debug.Log($"[UnitBrain] {gameObject.name} changed data to {_unitData.UnitName}.");
+        }
+
+        /// <summary>
         /// Queue a move action command for scheduler-driven resolution.
         /// </summary>
         public bool QueueMoveAction(Vector2Int targetCell)
@@ -192,6 +230,9 @@ namespace CheckmateRPG.Units
                 Debug.LogWarning($"[UnitBrain] {gameObject.name} is dead and cannot move.");
                 return false;
             }
+
+            if (Movement != null && Movement.IsMoving)
+                return false;
 
             if (_runtimeController == null)
                 _runtimeController = ActionRuntimeController.EnsureExists();
@@ -210,10 +251,31 @@ namespace CheckmateRPG.Units
                 return false;
             }
 
+            if (Movement != null && Movement.IsMoving)
+            {
+                Debug.LogWarning($"[UnitBrain] {gameObject.name} cannot attack because it is moving.");
+                return false;
+            }
+
             if (_runtimeController == null)
                 _runtimeController = ActionRuntimeController.EnsureExists();
 
-            return _runtimeController.TryEnqueueAttack(this, target);
+            if (UnitData != null && UnitData.BasicAttackAbility != null)
+            {
+                var targetBrain = target.GetComponent<UnitBrain>();
+                if (targetBrain != null)
+                {
+                    bool success = _runtimeController.TryEnqueueAbility(this, UnitData.BasicAttackAbility, new[] { targetBrain.ActorId });
+                    if (!success)
+                        Debug.LogWarning($"[UnitBrain] {gameObject.name} _runtimeController.TryEnqueueAbility returned false for target {target.name}");
+                    return success;
+                }
+            }
+
+            bool legacySuccess = _runtimeController.TryEnqueueAttack(this, target);
+            if (!legacySuccess)
+                Debug.LogWarning($"[UnitBrain] {gameObject.name} _runtimeController.TryEnqueueAttack returned false for target {target.name}");
+            return legacySuccess;
         }
 
         /// <summary>
@@ -232,7 +294,7 @@ namespace CheckmateRPG.Units
             _currentTarget = null;
         }
 
-        public ActionBid GetBestActionBid()
+        public ActionBid GetBestActionBid(float currentTeamAP, float maxTeamAP)
         {
             if (!_isInitialised || IsDead || _unitData == null || Movement == null)
                 return default;
@@ -246,95 +308,7 @@ namespace CheckmateRPG.Units
             if (grid == null)
                 return default;
 
-            bool canAttack = Combat != null && Combat.CanAttack;
-            Vector2Int origin = Movement.GridPosition;
-            float bestScore = float.MinValue;
-            bool bestIsAttack = false;
-            Guid bestAttackTargetId = Guid.Empty;
-            Vector2Int bestMoveDestination = default;
-            float bestRequiredAp = 0f;
-
-            UnitBrain bestTarget = null;
-            Vector2Int bestTargetCell = default;
-            float bestTargetValue = 0f;
-
-            for (int x = 0; x < GridSystem.GridWidth; x++)
-            {
-                for (int y = 0; y < GridSystem.GridHeight; y++)
-                {
-                    GameObject occupant = grid.GetOccupant(x, y);
-                    if (!TryGetTargetBrain(occupant, out UnitBrain targetBrain))
-                        continue;
-
-                    Vector2Int targetCell = targetBrain.Movement.GridPosition;
-                    float targetValue = 0f;
-                    if (targetBrain.UnitData != null && targetBrain.UnitData.PieceType == ChessPieceType.King)
-                        targetValue = BidKingKillValue;
-                    else if (targetBrain.UnitData != null)
-                        targetValue = Mathf.Max(0f, targetBrain.UnitData.KillValue);
-
-                    if (targetValue > bestTargetValue)
-                    {
-                        bestTargetValue = targetValue;
-                        bestTarget = targetBrain;
-                        bestTargetCell = targetCell;
-                    }
-
-                    if (!canAttack || !IsAttackRange(origin, targetCell))
-                        continue;
-
-                    float attackScore = targetValue;
-                    if (CanEliminateTarget(targetBrain))
-                        attackScore += BidLethalBonus;
-
-                    if (attackScore > bestScore)
-                    {
-                        bestScore = attackScore;
-                        bestIsAttack = true;
-                        bestAttackTargetId = targetBrain.ActorId;
-                        bestRequiredAp = Mathf.Max(0f, _unitData.AttackCostAP);
-                    }
-                }
-            }
-
-            float moveBaseCost = Mathf.Max(0f, _unitData.MoveCostAP);
-            for (int x = 0; x < GridSystem.GridWidth; x++)
-            {
-                for (int y = 0; y < GridSystem.GridHeight; y++)
-                {
-                    Vector2Int candidate = new Vector2Int(x, y);
-                    if (!Movement.CanReachCell(candidate))
-                        continue;
-
-                    float moveScore = BidIdleMoveScore;
-                    if (bestTarget != null)
-                    {
-                        int distance = ManhattanDistance(candidate, bestTargetCell);
-                        moveScore = bestTargetValue - distance * BidMoveDistancePenalty;
-                    }
-
-                    if (moveScore <= bestScore)
-                        continue;
-
-                    float moveCost = moveBaseCost * grid.GetMoveCostMultiplier(candidate);
-                    bestScore = moveScore;
-                    bestIsAttack = false;
-                    bestMoveDestination = candidate;
-                    bestRequiredAp = moveCost;
-                }
-            }
-
-            if (bestScore == float.MinValue)
-                return default;
-
-            IActionCommand bestCommand = bestIsAttack
-                ? _runtimeController.BuildAttackPredictionCommand(this, bestAttackTargetId)
-                : _runtimeController.BuildMovePredictionCommand(this, bestMoveDestination);
-
-            if (bestCommand == null)
-                return default;
-
-            return new ActionBid(this, bestCommand, bestRequiredAp, bestScore);
+            return TacticalAIEvaluator.EvaluateBestAction(this, currentTeamAP, maxTeamAP);
         }
 
         // ─── Event Handlers ───────────────────────────────────────────────────────
@@ -344,7 +318,111 @@ namespace CheckmateRPG.Units
             Debug.Log($"[UnitBrain] {gameObject.name} has died.");
             Combat.OnOwnerDied();
 
-            // Future: trigger death animation, notify game manager, drop loot, etc.
+            StartCoroutine(DeathDelayRoutine());
+        }
+
+        private IEnumerator DeathDelayRoutine()
+        {
+            // Future: Trigger death animation state here
+            yield return new WaitForSeconds(2.0f);
+            
+            gameObject.SetActive(false);
+        }
+
+        // ─── Promotion Logic ──────────────────────────────────────────────────────
+
+        public void StartPromotion()
+        {
+            if (IsPromoting || IsDead) return;
+            StartCoroutine(PromotionRoutine());
+        }
+
+        private IEnumerator PromotionRoutine()
+        {
+            IsPromoting = true;
+            Debug.Log($"[UnitBrain] {gameObject.name} entered Promotion Pending state.");
+
+            // 프로모션 대기 중 받는 대미지 70% 감소 버프 (기획서 명세)
+            if (Health != null)
+            {
+                Health.SetDamageTakenMultiplier(0.3f); 
+            }
+
+            // 대기 시간 (임시로 WaitForSeconds, 향후 Pause/틱 동기화 시 커스텀 Yield 고려)
+            yield return new WaitForSeconds(_promotionDelay);
+
+            if (IsDead)
+            {
+                IsPromoting = false;
+                yield break;
+            }
+
+            // 대기 종료, 버프 해제
+            if (Health != null)
+            {
+                Health.SetDamageTakenMultiplier(1.0f);
+            }
+
+            // 프로모션 타겟 지정 및 변환
+            ChessPieceType targetPiece = PromotionRegistry.GetPromotionTarget(_unitData.Subclass);
+            Debug.Log($"[UnitBrain] {gameObject.name} promoting to {targetPiece}!");
+
+            // TODO: 실제 시스템에서는 Resource/Addressables 등에서 완성된 승급 데이터를 로드해 와야 합니다.
+            // 여기서는 뼈대 구축을 위해 런타임에 임시 데이터로 승급을 모사합니다.
+            var promotedData = ScriptableObject.CreateInstance<UnitData>();
+            promotedData.UnitName = $"Promoted {_unitData.UnitName}";
+            promotedData.PieceType = targetPiece;
+            promotedData.Subclass = _unitData.Subclass; // 서브클래스 유지
+            promotedData.SyncDefaultChessMetadata();
+            
+            // 능력치 상승 뼈대 (예시)
+            promotedData.MaxHealth = _unitData.MaxHealth * 1.5f;
+            promotedData.AttackDamage = _unitData.AttackDamage * 1.5f;
+            promotedData.MoveRange = 8;
+            promotedData.ActionSpeed = _unitData.ActionSpeed;
+            promotedData.Weight = _unitData.Weight;
+            promotedData.UpdateMoveSpeed();
+
+            // 체력 비율 유지용 임시 저장
+            float hpPercent = 1f;
+            if (Health != null)
+            {
+                hpPercent = Health.CurrentHealth / Mathf.Max(1f, Health.MaxHealth);
+            }
+
+            // ChangeUnitData 호출로 컴포넌트들 재초기화
+            ChangeUnitData(promotedData);
+
+            // 체력 비율 복구 및 디버프/AP 처리
+            if (Health != null)
+            {
+                float damageToTake = Health.MaxHealth * (1f - hpPercent);
+                if (damageToTake > 0)
+                {
+                    Health.ApplyTrueDamage(damageToTake);
+                }
+            }
+
+            if (StatusEffects != null)
+            {
+                foreach (StatusEffectType type in System.Enum.GetValues(typeof(StatusEffectType)))
+                {
+                    StatusEffects.RemoveStatusEffect(type);
+                }
+            }
+
+            // 글로벌 AP 100% 회복 (아군일 경우에만)
+            bool isEnemy = false;
+            if (TryGetComponent(out TeamComponent team))
+                isEnemy = team.IsEnemy;
+
+            if (!isEnemy && APManager.Instance != null)
+            {
+                APManager.Instance.AddAP(APManager.Instance.MaxAP, APSource.Bonus);
+            }
+
+            IsPromoting = false;
+            Debug.Log($"[UnitBrain] {gameObject.name} promotion complete.");
         }
 
         // ─── Decision Logic ───────────────────────────────────────────────────────
@@ -401,9 +479,18 @@ namespace CheckmateRPG.Units
                     if (target.Brain == null || !IsAttackRange(Movement.GridPosition, target.Cell))
                         continue;
 
-                    IActionCommand attack = _runtimeController.BuildAttackPredictionCommand(this, target.Brain.ActorId);
-                    if (attack != null)
-                        candidates.Add(attack);
+                    if (UnitData != null && UnitData.BasicAttackAbility != null)
+                    {
+                        IActionCommand abilityAttack = _runtimeController.BuildAbilityPredictionCommand(this, UnitData.BasicAttackAbility, new[] { target.Brain.ActorId });
+                        if (abilityAttack != null)
+                            candidates.Add(abilityAttack);
+                    }
+                    else
+                    {
+                        IActionCommand attack = _runtimeController.BuildAttackPredictionCommand(this, target.Brain.ActorId);
+                        if (attack != null)
+                            candidates.Add(attack);
+                    }
                 }
             }
 
@@ -421,9 +508,30 @@ namespace CheckmateRPG.Units
             return candidates;
         }
 
-        private void AppendAbilityPredictionCandidates(List<IActionCommand> _candidates, int _maxScenariosPerTick)
+        private void AppendAbilityPredictionCandidates(List<IActionCommand> candidates, int maxScenariosPerTick)
         {
-            // TODO(Milestone 13-2): add usable ability/skill action candidates when ability targeting data is exposed.
+            if (UnitData == null || UnitData.Abilities == null || candidates.Count >= maxScenariosPerTick)
+                return;
+
+            List<TargetCandidate> targets = GetPotentialTargets();
+
+            for (int i = 0; i < UnitData.Abilities.Count; i++)
+            {
+                Core.AbilityDefinition ability = UnitData.Abilities[i];
+                if (ability == null || candidates.Count >= maxScenariosPerTick) continue;
+
+                // 스킬 범위/타겟 판단은 고도화가 필요하며 현재는 사거리 내 단일 타겟을 가정합니다.
+                for (int j = 0; j < targets.Count && candidates.Count < maxScenariosPerTick; j++)
+                {
+                    TargetCandidate target = targets[j];
+                    if (target.Brain == null || !IsAttackRange(Movement.GridPosition, target.Cell)) 
+                        continue;
+
+                    IActionCommand abilityCmd = _runtimeController.BuildAbilityPredictionCommand(this, ability, new[] { target.Brain.ActorId });
+                    if (abilityCmd != null)
+                        candidates.Add(abilityCmd);
+                }
+            }
         }
 
         private bool TryExecutePredictionDecision()
@@ -764,6 +872,16 @@ namespace CheckmateRPG.Units
             if (IsAttackRange(candidateCell, targetCell))
                 score += SetupKillBonus;
 
+            if (GridSystem.Instance != null)
+            {
+                // 특수 타일 기믹 회피 (예: AP 비용이 높거나 이동 속도를 깎는 타일 회피)
+                float costMultiplier = GridSystem.Instance.GetMoveCostMultiplier(candidateCell);
+                if (costMultiplier > 1f) score -= (costMultiplier - 1f) * 15f; // 늪지대 페널티
+                
+                float speedModifier = GridSystem.Instance.GetMoveSpeedModifier(candidateCell);
+                if (speedModifier < 0f) score -= 10f; // 둔화 타일 페널티
+            }
+
             if (_unitData.PieceType == ChessPieceType.King)
                 score -= CountThreatsAgainstCell(candidateCell) * ThreatPenalty;
 
@@ -858,7 +976,7 @@ namespace CheckmateRPG.Units
             return targetTeam.IsEnemy == _team.IsEnemy;
         }
 
-        private bool IsAttackRange(Vector2Int origin, Vector2Int targetCell)
+        public bool IsAttackRange(Vector2Int origin, Vector2Int targetCell)
         {
             ChessPieceType pieceType = _unitData != null ? _unitData.PieceType : ChessPieceType.Pawn;
             int attackRange = _unitData != null ? _unitData.AttackRange : 1;
@@ -866,8 +984,8 @@ namespace CheckmateRPG.Units
             return CombatPatternRules.IsAttackReachable(pieceType, isEnemy, origin, targetCell, attackRange);
         }
 
-        private static bool IsAttackRange(Vector2Int origin, Vector2Int targetCell, int attackRange, ChessPieceType pieceType = ChessPieceType.Pawn) =>
-            CombatPatternRules.IsAttackReachable(pieceType, isEnemy: false, origin, targetCell, attackRange);
+        public static bool IsAttackRange(Vector2Int origin, Vector2Int targetCell, int attackRange, ChessPieceType pieceType = ChessPieceType.Pawn, bool isEnemy = false) =>
+            CombatPatternRules.IsAttackReachable(pieceType, isEnemy, origin, targetCell, attackRange);
 
         private bool TryGetTargetCell(GameObject target, out Vector2Int targetCell)
         {

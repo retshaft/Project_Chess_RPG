@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
+  m_Name: Kiara
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
+  AIProfile: {fileID: 0}
+  UnitName: "\uD0A4\uC544\uB77C"
+  Icon: {fileID: 0}
+  Prefab: {fileID: 0}
+  PieceType: 1
+  MovePattern: 1
+  BaseRole: "\uB3CC\uACA9\uAE30\uC0AC"
+  Subclass: 17
+  ResonanceRole: 0
+  MaxHealth: 700
+  Defense: 32
+  Resistance: 0.05
+  Style: 0
+  AttackCount: 2
+  AttackDamageRatio: 0.65
+  AttackDamage: 155
+  AttackCooldown: 1
+  AttackRange: 1
+  BasicAttackDamageType: 0
+  KillValue: 10
+  ChargeType: 0
+  MaxSP: 120
+  InitSP: 70
+  BasicAttackAbilityData: {fileID: 0}
+  BasicAttackAbility: {fileID: 0}
+  DeploymentCost: 2
+  MoveCostAP: 24
+  AttackCostAP: 24
+  ActionSpeed: 1
+  MoveRange: 3
+  SpeedLevel: 5
+  MoveSpeed: 2.5
+  ActionDelay: 0.8
+  Weight: 2
+  IsBoss: 0
+  InitialSkillLevels: []
+  Abilities:
+  - {fileID: 11400000, guid: e7783e36b973fcb45b847f191a9be97e, type: 2}
+  - {fileID: 11400000, guid: 5b7e15b59f46e5845a5e7cb6e79c7caa, type: 2}
+  - {fileID: 11400000, guid: 2a7278bc19dfc0d468823ad2bd53f8a8, type: 2}
+  SelectableActiveSkills:
+  - {fileID: 11400000, guid: e7783e36b973fcb45b847f191a9be97e, type: 2}
+  - {fileID: 11400000, guid: 5b7e15b59f46e5845a5e7cb6e79c7caa, type: 2}
+  - {fileID: 11400000, guid: 2a7278bc19dfc0d468823ad2bd53f8a8, type: 2}
+  SelectedSkillIndex: 2

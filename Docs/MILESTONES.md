@@ -1,227 +1,161 @@
-# Milestones (Project: Checkmate RPG)
+# Checkmate RPG — 최신 개발 마일스톤
 
-> Repo: `retshaft/Project_Chess_RPG`
->
-> Target: Unity 6000.3.10f1 (see `ProjectSettings/ProjectVersion.txt`).
->
-> This document turns the **Master GDD (Part 1~4)** into an actionable milestone plan.
+> 기준일: 2026-08-09
+> 대상 Unity 버전: 6000.3.10f1
+> 정식 시연 경로: `Assets/Scenes/Test/OutgameScene.unity` → `Assets/Scenes/Test/BattleScene.unity`
 
----
+## 목적과 원칙
 
-## Scope + current status (quick)
+이 문서는 졸업작품 시연에 필요한 남은 작업만 관리하는 단일 기준 문서다. 과거 `BattleTest` 기준의 계획과 완료 체크는 더 이상 사용하지 않는다.
 
-### Confirmed in repo (prototype foundation)
-- 8x8 grid + occupancy tracking: `Assets/Scripts/Grid/GridSystem.cs`
-- Unit orchestration + simple AI loop: `Assets/Scripts/Units/UnitBrain.cs`
-- ScriptableObject-driven unit stats: `Assets/Scripts/Data/UnitData.cs`
-- Scenes: `Assets/Scenes/SampleScene.unity`, `Assets/Scenes/Test/TestScene.unity`
+우선순위는 다음 원칙을 따른다.
 
-### Major gaps vs GDD
-- AP economy (tick regen, action costs, refunds)
-- Chess class rules (Pawn/Knight/Bishop/Rook/Queen/King) + promotion
-- Tile layers/effects (Swamp/Spikes/Sanctuary)
-- Physics 2.0 (weight, knockback, grab, Splat)
-- Elemental reactions + CC matrix
-- Scoring/override AI
-- Tactical UI (overlays, prediction ghost)
-- Progression meta (Notation, Resonance, King Edicts)
+1. **실행 가능성** — Unity에서 열리고, 정식 씬에서 전투 한 판을 끝낼 수 있어야 한다.
+2. **전술 핵심성** — AP, 체스 이동, 행동 해석, 승패가 흔들리면 다른 기능보다 먼저 고친다.
+3. **시연 가독성** — 플레이어가 현재 상태와 행동 결과를 즉시 읽을 수 있어야 한다.
+4. **확장성은 검증 뒤에** — 새 콘텐츠·밸런스·추가 조합은 안정적인 세로 슬라이스 이후에 진행한다.
 
----
+## 현재 기준
 
-## Definition of Done (global)
-- **Playable**: a user can start a battle, issue actions, win/lose, and restart.
-- **Deterministic systems**: AP, movement rules, status effects are data-driven and testable.
-- **Debuggable**: key subsystems have logs/visual debug toggles.
+| 영역 | 코드 상태 | 완료 판단 |
+|---|---|---|
+| 행동 런타임 | 행동 예약·해석·뮤테이션·인터럽트·스냅샷·리플레이 구조 존재 | 실제 Play Mode 회귀 검증 필요 |
+| AP / 체스 이동 | AP 관리, 이동 패턴, 입력 및 오버레이 코드 존재 | 정식 BattleScene에서 전체 흐름 검증 필요 |
+| 전투 결과 | `BattleManager`, 결과 UI, 저장 연동 코드 존재 | 승리·패배·재시작·아웃게임 복귀 검증 필요 |
+| 물리 / 환경 | 넉백·잡기·충돌·타일 처리 기반 존재 | 성소 방어 버프, 이동 속도, 일부 상호작용 미완성 |
+| 상태 / 원소 | 효과 런타임과 주요 프로세서 존재 | 핵심 조합 확정, 수치 확정, 시각 피드백 검증 필요 |
+| AI | 후보 평가·예측·위험 회피 구조 존재 | 대표 인카운터에서 전술성이 보이는지 검증 필요 |
+| 아웃게임 | 덱, 저장, 스테이지, 기보·공명·칙령 UI 코드 존재 | 전투 진입/복귀와 저장 지속성 검증 필요 |
 
----
+## M0 — 기준선 정리와 실행 경로 고정
 
-## Milestone 0 — Project hygiene & playable test loop (1–3 days)
-**Goal:** Anyone can open the project, press Play in a test scene, and understand what works.
+**목표:** 현재 대규모 변경을 잃지 않고, 누구나 같은 씬과 같은 절차로 시연을 시작할 수 있게 한다.
 
-### Deliverables
-- A single “BattleTest” scene (or clearly documented existing test scene) with:
-  - GridSystem instance
-  - A few units spawned and registered in grid occupancy
-  - Basic camera + input instructions
-- Minimal developer documentation.
+### 작업
 
-### Tasks
-- [ ] Create/confirm a canonical test scene (recommend: `Assets/Scenes/Test/BattleTest.unity`).
-- [ ] Add an in-project readme (Unity `Readme.asset` or `Docs/`) explaining:
-  - Unity version
-  - How to run the test scene
-  - What is implemented / not implemented
+- [ ] 현재 작업 트리를 기능 단위로 백업 또는 커밋한다. 신규 씬·에셋·코어 스크립트가 누락되지 않게 확인한다.
+- [ ] Build Settings의 정식 씬 순서를 `Test/OutgameScene` → `Test/BattleScene`으로 유지·검증한다.
+- [ ] `BattleTest`를 참조하는 문서와 가이드를 정식 씬 기준으로 갱신한다.
+- [ ] 중복 이름의 `OutgameScene`을 정리하거나, 로딩 규칙과 정식 씬 위치를 명시한다.
+- [ ] Unity 콘솔에서 컴파일 오류, Missing Script, 누락 참조를 확인한다.
 
-### DoD
-- Fresh clone → open Unity → load test scene → Play works without missing references.
+### 완료 기준
 
----
+- 새 작업자가 Unity 6000.3.10f1에서 프로젝트를 열고 정식 OutgameScene부터 실행할 수 있다.
+- 문서, Build Settings, 코드의 씬 이름이 서로 모순되지 않는다.
+- 현재 변경분의 보존 위치가 명확하다.
 
-## Milestone 1 — AP Economy + command loop (1–2 weeks)
-**Goal:** The battle is driven by **AP economy** (GDD Part 1/3), not free actions.
+## M1 — 전투 세로 슬라이스 검증
 
-### Deliverables
-- AP manager (global) with tick-based regen.
-- Move/Attack consume AP and are blocked when insufficient.
-- Simple HUD shows AP value and error feedback.
+**목표:** 한 판의 전투가 시작부터 종료·복귀까지 끊기지 않도록 확정한다.
 
-### Tasks
-- [ ] Implement `APManager` (or `BattleResourceSystem`):
-  - Current AP / Max AP
-  - Natural regen: **+4 AP/sec** (configurable)
-  - Events: `OnAPChanged`, `OnInsufficientAP`
-- [ ] Extend `UnitData` to include AP costs (initial stub):
-  - `MoveAPCost`, `AttackAPCost` (later per-class/per-skill)
-- [ ] Wire AP checks into:
-  - `MovementComponent.MoveTo`
-  - `CombatComponent.Attack`
-- [ ] UX:
-  - Central AP gauge text bar (temporary UI ok)
-  - When action fails due to AP: message + AP flash
+### 작업
 
-### DoD
-- In test scene: AP regenerates; moving/attacking changes AP; AP 부족 시 행동 불가.
+- [ ] 덱 편성 후 `BattleScene` 진입, 유닛 스폰, 그리드 점유 등록을 검증한다.
+- [ ] 선택 → 이동 → 공격 → 스킬의 행동 접수와 AP 소모/회복/부족 피드백을 검증한다.
+- [ ] Pawn, Knight, Bishop, Rook, Queen, King의 이동·공격 판정과 막힌 경로 처리를 회귀 점검한다.
+- [ ] 킹 사망, 승패 결과, 재시작, 아웃게임 복귀를 각각 검증한다.
+- [ ] 리플레이 불일치 테스트와 핵심 시나리오를 Unity Test Runner에서 실행한다.
 
----
+### 완료 기준
 
-## Milestone 2 — Chess-like movement rules (classes) + battle setup (2–3 weeks)
-**Goal:** Units behave like chess classes (at least the “core set”), and battles start with all units deployed.
+- 정식 씬에서 한 판을 끝까지 플레이하고 재시작 또는 아웃게임으로 돌아갈 수 있다.
+- AP 부족, 잘못된 타깃, 점유 충돌, 사망 유닛 행동이 예측 가능하게 거부된다.
+- 콘솔에 치명 오류나 예외가 없다.
 
-### Deliverables
-- Movement rule framework (`IMovementRule` / `MovementPattern`).
-- Class tags in data (Pawn/Knight/Bishop/Rook/Queen/King).
-- Initial deployment system (“All-Deployed Start”).
+## M2 — 환경·물리 상호작용 완성
 
-### Tasks
-- [ ] Add to `UnitData`:
-  - `PieceClass` enum (Pawn/Knight/Bishop/Rook/Queen/King)
-  - Team/faction fields (`TeamId` or `IsPlayerTeam`)
-- [ ] Create movement rule calculators:
-  - Pawn (forward move + diagonal capture)
-  - Knight (L jump)
-  - Bishop (diagonal)
-  - Rook (orthogonal)
-  - Queen (bishop+rook)
-  - King (1-step)
-- [ ] Implement selection + valid-move querying:
-  - `GetValidMoves(unit)` returns cells respecting occupancy.
-- [ ] `BattleSpawner`:
-  - Spawns a preset roster at fixed cells
-  - Registers with `GridSystem.SetOccupant`
+**목표:** 위치전의 보상인 넉백·충돌·지형 상호작용을 시연 가능한 규칙으로 완성한다.
 
-### DoD
-- Each class’ movement is correct on 8x8.
-- Battle starts with both sides deployed.
+### 작업
 
----
+- [ ] 무게, 넉백, Grab, Splat의 수식과 행동 취소/인터럽트 규칙을 하나의 기준으로 확정한다.
+- [ ] Swamp의 이동 AP 비용, Spikes의 피해 주기·수치, Sanctuary의 회복·아군 방어 버프를 런타임과 UI에 일관되게 적용한다.
+- [ ] 이동 속도 보정과 성소 방어 버프처럼 현재 빈 구현 또는 TODO 상태인 항목을 완료한다.
+- [ ] 벽·기물 충돌, 보드 경계, 연쇄 충돌의 우선순위와 회귀 시나리오를 추가한다.
+- [ ] 대표 넉백/Splat 콤보 1개를 BattleScene에 배치한다.
 
-## Milestone 3 — Tile system (Swamp/Spikes/Sanctuary) + status framework (2–3 weeks)
-**Goal:** The board has meaningful tile layers and a reusable status-effect system.
+### 완료 기준
 
-### Deliverables
-- Tile data and tile effect processing.
-- Status effects framework with durations, stacking rules.
+- 플레이어가 넉백 결과와 지형 효과를 사전에 이해할 수 있다.
+- 환경 효과가 시뮬레이션·실제 유닛·UI에서 같은 결과를 낸다.
+- 대표 콤보가 반복 실행해도 동일하게 재현된다.
 
-### Tasks
-- [ ] Tile layer architecture:
-  - `TileData` (ScriptableObject): type, move cost multiplier, periodic effects
-  - Grid stores tile types for each cell
-  - Implement `GridSystem.GetMoveCostMultiplier` and `ApplyTileEffects`
-- [ ] Implement required tiles (GDD Part 2):
-  - Swamp: Move AP cost *2
-  - Spikes: periodic damage (align to GDD; current stub uses 5% current HP)
-  - Sanctuary: ally-only defense +15% and regen (values configurable)
-- [ ] Status core:
-  - Base `StatusEffect` (duration, refresh/stack policy)
-  - `StatusEffectComponent` processes ticks
+## M3 — 상태 이상·원소 전술 패키지
 
-### DoD
-- Moving onto/standing on tiles has visible mechanical effect.
-- Status effects can be applied/expire reliably.
+**목표:** 모든 조합을 넓게 만들기보다 시연 가치가 높은 2~3개 조합을 명확하게 완성한다.
 
----
+### 작업
 
-## Milestone 4 — Physics 2.0 (weight/knockback/grab/splat) + prediction ghost (3–4 weeks)
-**Goal:** The signature “position control” gameplay works and is readable.
+- [ ] 졸업작품 범위의 상태·원소 조합 2~3개를 확정한다. 권장: Chill/Freeze, Stagger/Grab, Bleed 또는 Superconduct.
+- [ ] 지속 시간, 중첩, 갱신, 제거, 행동 제한, 인터럽트 규칙을 데이터와 문서에 일치시킨다.
+- [ ] 고정 임시 수치(예: 동결 대상 추가 피해)를 기획 수식으로 교체한다.
+- [ ] 상태 아이콘/오버레이/플로팅 텍스트/타일 피드백으로 핵심 상태를 즉시 읽을 수 있게 한다.
+- [ ] 원소가 지형에 남기는 효과 등 미완성 연계를 시연 범위에 맞춰 구현하거나 명시적으로 제외한다.
 
-### Deliverables
-- Weight-based knockback.
-- Splat damage (soft ring-out) per GDD Part 2.
-- UI prediction ghost for knockback results.
+### 완료 기준
 
-### Tasks
-- [ ] Physics rules:
-  - Weight grade (0–4) influences knockback distance/resist
-  - Collision with unit/obstacle/border triggers Splat
-- [ ] Implement “soft ring-out”:
-  - Border treated as red-zone barrier
-  - Knocked into barrier → stop + splat damage
-- [ ] Prediction:
-  - While aiming knockback: show end cell and splat indicator
+- 플레이어가 주요 상태와 행동 불가 이유를 즉시 이해한다.
+- 상태·원소 반응은 AP, 위치, 넉백 또는 피해와 명확히 연결된다.
+- 정해진 조합은 재현 테스트로 검증된다.
 
-### DoD
-- A knockback skill can push units; barrier collision deals damage; player can preview outcome.
+## M4 — AI와 대표 인카운터
 
----
+**목표:** AI가 단순 추격이 아니라 체스 전술을 판단하는 것처럼 보이는 전투를 만든다.
 
-## Milestone 5 — Elemental synergy + CC matrix (3–5 weeks)
-**Goal:** Elemental reactions and CC keywords behave consistently.
+### 작업
 
-### Deliverables
-- Element tags and reaction resolver.
-- CC keywords implemented with shared rules.
+- [ ] 킹 위험 회피, 약한 적 우선, AP 보존, Setup Kill 후보의 우선순위를 조정한다.
+- [ ] 예측 결과와 실제 행동 결과의 차이를 디버그 오버레이·리플레이로 확인한다.
+- [ ] 랜덤성에 의존하지 않는 대표 적 배치와 AI 행동 패턴을 만든다.
+- [ ] 플레이어의 AP·지형·넉백 선택이 유의미하게 작동하는 전투 1개를 완성한다.
 
-### Tasks
-- [ ] Add to unit/attack data:
-  - Element type(s)
-  - Element application strength/duration
-- [ ] Implement reaction resolver (start small):
-  - Fire+Fire = Burn (Res -20%)
-  - Cold progression (Chill → Freeze)
-  - Lightning+Cold = Superconduct (Def -40%)
-- [ ] CC matrix (at least): Stun, Root, Silence, Disarm, Taunt, Stealth.
+### 완료 기준
 
-### DoD
-- Reactions trigger from element application and affect stats/behavior.
+- AI가 위험 회피·공격 우선·포지셔닝 중 최소 두 가지 전술 행동을 일관되게 보여 준다.
+- 대표 인카운터는 시연 때 반복 재현 가능하다.
 
----
+## M5 — 아웃게임 연결과 시연 UX
 
-## Milestone 6 — AI scoring + overrides (4–6 weeks)
-**Goal:** Enemy AI approximates “best move” behavior (GDD Part 4).
+**목표:** 전투 밖의 선택이 전투에 반영되고, 처음 보는 사람도 시연을 따라올 수 있게 한다.
 
-### Deliverables
-- Candidate action generation + scoring.
-- Override triggers: Checkmate, Danger, Setup Kill, Taunt.
+### 작업
 
-### Tasks
-- [ ] Refactor decision loop:
-  - Generate candidate moves/attacks/skills
-  - Score using weights (KillValue, AP weight, king safety)
-- [ ] Override layer that can bypass scoring.
-- [ ] Performance guardrails (tick budget, caching reachable cells).
+- [ ] 덱 빌딩, 스테이지 선택, 전투 진입, 승리 보상, 저장, 아웃게임 복귀를 한 흐름으로 검증한다.
+- [ ] 기보, 공명, 칙령 중 시연에서 사용할 최소 기능만 선택해 전투 수치에 반영한다.
+- [ ] AP 바, 이동 가능 타일, 타깃 정보, HP/SP, 상태, 예측 결과의 우선순위를 정리한다.
+- [ ] 짧은 시연 가이드와 알려진 제한사항을 작성한다.
 
-### DoD
-- AI does not just chase nearest; it makes tactical choices and respects overrides.
+### 완료 기준
 
----
+- 덱 또는 성장 선택 하나가 전투에서 확인 가능한 차이를 만든다.
+- 시연자가 별도 설명 없이도 기본 조작과 전투 목적을 파악할 수 있다.
 
-## Milestone 7 — Progression meta (Notation/Resonance/King Edicts) (timeboxed, later)
-**Goal:** Implement the meta systems once core combat is stable.
+## M6 — 안정화, 콘텐츠, 밸런싱
 
-### Deliverables
-- Notation puzzle prototype for 1 unit.
-- Resonance levels affecting AP costs.
-- King Edict deck UI prototype.
+**목표:** 제출 빌드를 안정화하고, 이미 검증된 시스템 위에서만 콘텐츠를 확장한다.
 
-### DoD
-- A player can progress a unit and see combat impact.
+### 작업
 
----
+- [ ] 핵심 회귀 테스트: 전투 시작/종료, AP, 이동, 점유, 넉백, 상태, 저장을 자동 또는 수동 체크리스트로 고정한다.
+- [ ] 로그 노이즈와 디버그 전용 UI를 정리한다.
+- [ ] 플레이 테스트를 통해 AP 비용, 피해, 넉백 거리, AI 가중치를 조정한다.
+- [ ] 새 캐릭터·스킬·스테이지는 대표 전투를 깨지 않는 범위에서만 추가한다.
 
-## Immediate next actions (recommended)
-1. Finalize **Milestone 1** design decisions:
-   - AP max value? AP regen constant or modifiers?
-   - Are actions real-time (cooldowns) or turn slices?
-2. Choose “vertical slice” class set for early prototype:
-   - Recommend: Pawn / Knight / King (minimum tactical variety)
+### 완료 기준
 
+- 제출용 Play Mode 또는 빌드에서 치명 오류 없이 대표 시연을 완료할 수 있다.
+- 문서의 구현 상태와 실제 결과가 일치한다.
+
+## 졸업작품 범위에서 제외
+
+- 모든 원소 반응·모든 CC·모든 직군의 완전 구현
+- 과금/BM과 장기 라이브 서비스 운영 기능
+- 대규모 캐릭터·스테이지·최종 아트 리소스 양산
+- 검증되지 않은 기능을 위한 추가 프레임워크 확장
+
+## 다음 작업
+
+1. **M0:** 현재 변경분 보존과 정식 씬/문서 정합성 확보
+2. **M1:** Outgame → Battle → Result → Outgame 전체 Play Mode 검증
+3. **M2:** Sanctuary·지형·넉백의 미완성 규칙을 확정하고 대표 콤보 구현

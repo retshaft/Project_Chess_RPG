@@ -28,9 +28,10 @@ namespace CheckmateRPG.Core.Effects
             EffectStackPolicy stackPolicy = EffectStackPolicy.Refresh,
             int maxStackCap = int.MaxValue,
             int maxApplicationsPerTick = 0,
-            bool isHidden = false)
+            bool isHidden = false,
+            System.Collections.Generic.IReadOnlyList<CheckmateRPG.Core.StatModifiers.StatModifierOverride> statOverrides = null)
         {
-            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction, appliedTick, stackPolicy, maxStackCap, maxApplicationsPerTick, isHidden);
+            Seed(effectId, sourceId, targetId, remainingTick, stackCount, tickInterval, nextTickIn, magnitude, timingPhase, actionSpeedLevel, isReaction, appliedTick, stackPolicy, maxStackCap, maxApplicationsPerTick, isHidden, statOverrides);
         }
 
         public EffectRuntimeState(EffectRuntimeState source)
@@ -54,7 +55,8 @@ namespace CheckmateRPG.Core.Effects
                 source.StackPolicy,
                 source.MaxStackCap,
                 source.MaxApplicationsPerTick,
-                source.IsHidden);
+                source.IsHidden,
+                source.StatOverrides);
 
             RemainingDuration = source.RemainingDuration;
             Lifecycle = source.Lifecycle;
@@ -76,6 +78,7 @@ namespace CheckmateRPG.Core.Effects
         public EffectStackPolicy StackPolicy { get; private set; } = EffectStackPolicy.Refresh;
         public int MaxStackCap { get; private set; } = int.MaxValue;
         public int MaxApplicationsPerTick { get; private set; } = EffectStackPolicyRules.DefaultMaxApplicationsPerTick;
+        public System.Collections.Generic.IReadOnlyList<CheckmateRPG.Core.StatModifiers.StatModifierOverride> StatOverrides { get; private set; }
 
         /// <inheritdoc/>
         public int RemainingDuration { get; private set; }
@@ -102,7 +105,8 @@ namespace CheckmateRPG.Core.Effects
             EffectStackPolicy stackPolicy = EffectStackPolicy.Refresh,
             int maxStackCap = int.MaxValue,
             int maxApplicationsPerTick = 0,
-            bool isHidden = false)
+            bool isHidden = false,
+            System.Collections.Generic.IReadOnlyList<CheckmateRPG.Core.StatModifiers.StatModifierOverride> statOverrides = null)
         {
             EffectId = effectId ?? string.Empty;
             SourceId = sourceId;
@@ -121,6 +125,7 @@ namespace CheckmateRPG.Core.Effects
             StackPolicy = stackPolicy;
             MaxApplicationsPerTick = EffectStackPolicyRules.ResolveMaxApplicationsPerTick(maxApplicationsPerTick);
             IsHidden = isHidden;
+            StatOverrides = statOverrides;
             Lifecycle = EffectLifecycle.Applied;
         }
 
