@@ -262,14 +262,23 @@ namespace CheckmateRPG.Data
         [Tooltip("이하 중 택 1 - 대원이 선택 및 장착 가능한 액티브 스킬 목록")]
         public List<Core.AbilityDefinition> SelectableActiveSkills = new();
 
-        [Tooltip("현재 선택/장착된 액티브 스킬 인덱스 (0, 1, 2)")]
+        [Tooltip("현재 선택/장착된 액티브 스킬 인덱스 (0, 1, 2) - 에디터 디버그용")]
         public int SelectedSkillIndex = 0;
 
         public Core.AbilityDefinition GetSelectedActiveSkill()
         {
             if (SelectableActiveSkills != null && SelectableActiveSkills.Count > 0)
             {
-                int idx = Mathf.Clamp(SelectedSkillIndex, 0, SelectableActiveSkills.Count - 1);
+                int idx = 0;
+                if (Application.isPlaying)
+                {
+                    idx = CheckmateRPG.Progression.UnitSkillRuntime.GetSelectedSkillIndex(name);
+                }
+                else
+                {
+                    idx = SelectedSkillIndex;
+                }
+                idx = Mathf.Clamp(idx, 0, SelectableActiveSkills.Count - 1);
                 return SelectableActiveSkills[idx];
             }
             if (Abilities != null && Abilities.Count > 0)

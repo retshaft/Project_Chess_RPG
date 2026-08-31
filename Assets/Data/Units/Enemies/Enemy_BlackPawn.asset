@@ -19,6 +19,8 @@ MonoBehaviour:
   PieceType: 0
   MovePattern: 0
   BaseRole: "\uCC99\uD6C4\uB300"
+  Subclass: 0
+  ResonanceRole: 0
   MaxHealth: 30
   Defense: 0
   Resistance: 0.1
@@ -30,6 +32,7 @@ MonoBehaviour:
   AttackRange: 1
   BasicAttackDamageType: 0
   KillValue: 10
+  ChargeType: 0
   MaxSP: 10
   InitSP: 4
   BasicAttackAbilityData: {fileID: 0}
@@ -46,3 +49,5 @@ MonoBehaviour:
   IsBoss: 0
   InitialSkillLevels: []
   Abilities: []
+  SelectableActiveSkills: []
+  SelectedSkillIndex: 0

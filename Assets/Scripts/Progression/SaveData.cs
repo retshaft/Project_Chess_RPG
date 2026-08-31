@@ -9,6 +9,7 @@ namespace CheckmateRPG.Progression
         public string UnitId;
         public int ResonanceStage = 1;
         public List<string> UnlockedNodeIds = new List<string>();
+        public int SelectedSkillIndex = 0;
     }
 
     [Serializable]

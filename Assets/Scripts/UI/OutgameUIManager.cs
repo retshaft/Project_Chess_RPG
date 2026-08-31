@@ -13,7 +13,10 @@ namespace CheckmateRPG.UI
         DeckBuilder,
         Roster,
         SynchroBoard,
-        Recruit
+        Recruit,
+        OperatorHub,
+        Archive,
+        KingSuitBay
     }
 
     public abstract class OutgameViewBase : MonoBehaviour

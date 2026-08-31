@@ -19,13 +19,13 @@
 
 ---
 
-## Running the canonical test scene
+## Running the formal test scene
 
-**Canonical scene:** `Assets/Scenes/Test/BattleTest.unity`
+**Canonical execution path:** `Assets/Scenes/Test/OutgameScene.unity` → `Assets/Scenes/Test/BattleScene.unity`
 
 1. In the **Project** window, navigate to `Assets/Scenes/Test/`.
-2. Double-click `BattleTest.unity` to open it.
-3. Press **▶ Play**.
+2. Double-click `OutgameScene.unity` to open it.
+3. Press **▶ Play**. (The game will transition to `BattleScene.unity` during play).
 
 ### What you should see
 
@@ -49,7 +49,8 @@ Assets/
 ├── Scenes/
 │   ├── SampleScene.unity        – Unity default scene (ignore for now)
 │   └── Test/
-│       ├── BattleTest.unity     ← CANONICAL test scene
+│       ├── OutgameScene.unity   ← Canonical START scene
+│       ├── BattleScene.unity    ← Canonical BATTLE scene
 │       └── TestScene.unity      – Legacy minimal scene (camera + light only)
 ├── Scripts/
 │   ├── Core/                    – Interfaces (IDamageable, IMovable, IAttackable, …)
@@ -112,7 +113,7 @@ See `Docs/MILESTONES.md` for the full breakdown and DoD per milestone.
 | Console shows "Missing Script" on the Bootstrapper | Verify `Assets/Scripts/Testing/BattleTestBootstrapper.cs.meta` is present in the repo; the GUID must match the scene reference (`7e3f9a1b2c4d5e6f0a1b2c3d4e5f6a7b`). |
 | Units spawn but stand still | Expected — the AI requires a valid target. Give them a few FixedUpdate ticks; units find the nearest enemy automatically. |
 | Pink / magenta materials on units | URP shader not applied. Click **Edit → Rendering → Render Pipeline → Upgrade Project Materials** to URP. |
-| Camera shows nothing | Ensure the scene is `BattleTest.unity`, not `TestScene.unity`. Press **F** in Scene view to frame all objects. |
+| Camera shows nothing | Ensure you start from `OutgameScene.unity` and transition to `BattleScene.unity`. Press **F** in Scene view to frame all objects. |
 
 ---
 

@@ -75,6 +75,11 @@ namespace CheckmateRPG.UI
                 btnObj.SetActive(true); // 비활성화된 프리팹 복제 시 보이도록 활성화
 
                 var btn = btnObj.GetComponent<Button>();
+                if (btn == null)
+                {
+                    Debug.LogError("[StageSelectUI] StageButtonPrefab is missing a Button component!");
+                    continue;
+                }
                 
                 var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
                 if (tmp != null)

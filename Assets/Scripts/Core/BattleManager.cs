@@ -182,6 +182,8 @@ namespace CheckmateRPG.Core
                 if (_deploymentPanel != null) _deploymentPanel.SetActive(true);
                 if (_commandPanel != null) _commandPanel.SetActive(false);
                 UpdateDeploymentCostText();
+                
+                TickScheduler.EnsureExists().IsPaused = true; // Pause AI and Actions during deployment
             }
             else
             {
@@ -243,6 +245,8 @@ namespace CheckmateRPG.Core
             _currentPhase = BattlePhase.Playing;
             Debug.Log("[BattleManager] Battle Started!");
             
+            TickScheduler.EnsureExists().IsPaused = false; // Resume AI and Actions
+
             if (_commandPanel != null) _commandPanel.SetActive(true);
             if (APManager.Instance != null) 
             {

@@ -20,12 +20,16 @@ namespace CheckmateRPG.UI
         [SerializeField] private Color _threatColor = new Color(1f, 0.1f, 0.1f, 0.4f);
         [SerializeField] private Color _threatBorderColor = new Color(1f, 0.1f, 0.1f, 1f);
         
+        [Header("Prediction Highlight")]
+        [SerializeField] private Color _predictColor = new Color(1f, 0.7f, 0f, 0.6f); // Accent_Gold
+
         [Header("Settings")]
         [SerializeField] private float _yOffset = 0.02f;
 
         private UnitBrain _selectedUnit;
         private List<GameObject> _moveHighlights = new List<GameObject>();
         private List<GameObject> _threatHighlights = new List<GameObject>();
+        private List<GameObject> _predictionHighlights = new List<GameObject>();
         
         private Material _lineMaterial;
         private Material _quadMaterial;
@@ -218,6 +222,42 @@ namespace CheckmateRPG.UI
             mr.material = mat;
 
             return quad;
+        }
+
+        public void ShowKnockbackPrediction(Vector2Int source, Vector2Int destination, bool willSplat)
+        {
+            ClearPredictionOverlay();
+            
+            // Highlight path
+            Vector2Int dir = new Vector2Int(
+                Mathf.Clamp(destination.x - source.x, -1, 1),
+                Mathf.Clamp(destination.y - source.y, -1, 1)
+            );
+            
+            int dist = Mathf.Max(Mathf.Abs(destination.x - source.x), Mathf.Abs(destination.y - source.y));
+            
+            for (int i = 1; i <= dist; i++)
+            {
+                Vector2Int pathCell = source + dir * i;
+                _predictionHighlights.Add(CreateTileBorder(pathCell, _predictColor));
+                _predictionHighlights.Add(CreateTileQuad(pathCell, _predictColor * 0.5f));
+            }
+
+            if (willSplat)
+            {
+                // Extra visual for splat
+                var splatTile = CreateTileBorder(destination, Color.red);
+                _predictionHighlights.Add(splatTile);
+            }
+        }
+
+        public void ClearPredictionOverlay()
+        {
+            foreach (var go in _predictionHighlights)
+            {
+                if (go != null) Destroy(go);
+            }
+            _predictionHighlights.Clear();
         }
     }
 }

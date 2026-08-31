@@ -11,6 +11,7 @@ namespace CheckmateRPG.Core
         public static float DefaultTickDurationSeconds => ActionTimelineFormula.TickMilliseconds / 1000f;
 
         public int CurrentTick { get; private set; }
+        public bool IsPaused { get; set; }
         public event Action<int> OnTick;
 
         private float _accumulator;
@@ -46,6 +47,7 @@ namespace CheckmateRPG.Core
 
         private void Update()
         {
+            if (IsPaused) return;
             Advance(Time.deltaTime);
         }
 

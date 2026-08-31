@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using CheckmateRPG.Components;
@@ -22,11 +23,12 @@ namespace CheckmateRPG.UI
         private TextMeshProUGUI _statusText;
         private TextMeshProUGUI _promotionText;
         private TextMeshProUGUI _exReadyText;
-
+        private TextMeshProUGUI _weightText;
         private Camera _mainCamera;
         private Transform _target;
         private System.Collections.Generic.List<CheckmateRPG.Core.StatusEffectType> _activeStatusList = new();
         private bool _isExReady = false;
+        private Coroutine _exReadyRoutine;
 
         public void Initialize(Transform targetUnit)
         {
@@ -148,6 +150,30 @@ namespace CheckmateRPG.UI
             exRect.sizeDelta = new Vector2(3f, 0.6f);
             exRect.anchoredPosition = new Vector2(0f, -0.38f);
             exGo.SetActive(false);
+
+            // Weight Info
+            var weightGo = new GameObject("WeightText");
+            weightGo.transform.SetParent(canvasGo.transform, false);
+            _weightText = weightGo.AddComponent<TextMeshProUGUI>();
+            _weightText.fontSize = 2f;
+            _weightText.alignment = TextAlignmentOptions.Right;
+            _weightText.color = new Color(0.8f, 0.8f, 0.8f);
+            _weightText.text = "W: ?";
+            if (font != null) _weightText.font = font;
+            var weightRect = weightGo.GetComponent<RectTransform>();
+            weightRect.sizeDelta = new Vector2(1f, 0.5f);
+            weightRect.anchoredPosition = new Vector2(0.9f, 0.35f);
+        }
+
+        private void Start()
+        {
+            if (_unitBrain != null && _unitBrain.UnitData != null)
+            {
+                if (_weightText != null)
+                {
+                    _weightText.text = $"W: {_unitBrain.UnitData.Weight}";
+                }
+            }
         }
 
         private void OnDestroy()
@@ -214,6 +240,21 @@ namespace CheckmateRPG.UI
             }
         }
 
+        private IEnumerator ExReadyPulseRoutine()
+        {
+            while (true)
+            {
+                float alpha = Mathf.Lerp(0.3f, 1f, Mathf.PingPong(Time.time * 2f, 1f));
+                if (_exReadyText != null)
+                {
+                    Color c = _exReadyText.color;
+                    c.a = alpha;
+                    _exReadyText.color = c;
+                }
+                yield return null;
+            }
+        }
+
         private void HandleSPChanged(float current, float max)
         {
             if (_spFillImage != null && max > 0f)
@@ -223,13 +264,32 @@ namespace CheckmateRPG.UI
 
                 if (_isExReady)
                 {
-                    _spFillImage.color = new Color(0f, 1f, 0.9f); // Cyan Glow
-                    if (_exReadyText != null) _exReadyText.gameObject.SetActive(true);
+                    _spFillImage.color = new Color(0f, 0.9f, 1f, 1f); // Accent_Cyan
+                    if (_exReadyText != null) 
+                    {
+                        if (!_exReadyText.gameObject.activeSelf)
+                        {
+                            _exReadyText.gameObject.SetActive(true);
+                            _exReadyText.color = new Color(1f, 0.7f, 0f, 1f); // Accent_Gold
+                            if (_exReadyRoutine == null)
+                            {
+                                _exReadyRoutine = StartCoroutine(ExReadyPulseRoutine());
+                            }
+                        }
+                    }
                 }
                 else
                 {
                     _spFillImage.color = Color.yellow;
-                    if (_exReadyText != null) _exReadyText.gameObject.SetActive(false);
+                    if (_exReadyText != null) 
+                    {
+                        _exReadyText.gameObject.SetActive(false);
+                        if (_exReadyRoutine != null)
+                        {
+                            StopCoroutine(_exReadyRoutine);
+                            _exReadyRoutine = null;
+                        }
+                    }
                 }
             }
         }

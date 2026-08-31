@@ -14,12 +14,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
   StageID: STG-02
   StageName: Knight's Charge
+  Objective: 0
+  RecommendedLevel: 1
   Description: 
+  TacticalBriefing: 
+  InitialEnemyAP: 30
+  EnemyAPRegen: 4
+  MaxEnemyAP: 100
   EnemySpawns:
   - EnemyUnit: {fileID: 11400000, guid: 5873dc6993e850845bdf480e0ff4ccf1, type: 2}
     GridPosition: {x: 2, y: 6}
+    OverrideAIBehavior: 0
+    AIBehavior: 0
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 0
   - EnemyUnit: {fileID: 11400000, guid: 5873dc6993e850845bdf480e0ff4ccf1, type: 2}
     GridPosition: {x: 5, y: 6}
+    OverrideAIBehavior: 0
+    AIBehavior: 0
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 0
   - EnemyUnit: {fileID: 11400000, guid: ab40086e9dc11c843a420e7618e4c98f, type: 2}
     GridPosition: {x: 3, y: 5}
+    OverrideAIBehavior: 0
+    AIBehavior: 0
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 0
+  RewardTP: 50
   ClearRewards: []

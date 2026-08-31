@@ -233,6 +233,38 @@ namespace CheckmateRPG.Progression
         }
     }
 
+    public static class UnitSkillRuntime
+    {
+        public static int GetSelectedSkillIndex(string unitId)
+        {
+            var saveManager = SaveManager.EnsureInstance();
+            if (saveManager != null && saveManager.CurrentData != null)
+            {
+                var unitSave = saveManager.CurrentData.UnitProgressions.Find(u => u.UnitId == unitId);
+                if (unitSave != null)
+                {
+                    return unitSave.SelectedSkillIndex;
+                }
+            }
+            return 0;
+        }
+
+        public static void SetSelectedSkillIndex(string unitId, int index)
+        {
+            var saveManager = SaveManager.EnsureInstance();
+            if (saveManager != null && saveManager.CurrentData != null)
+            {
+                var unitSave = saveManager.CurrentData.UnitProgressions.Find(u => u.UnitId == unitId);
+                if (unitSave == null)
+                {
+                    unitSave = new UnitProgressionSaveData { UnitId = unitId };
+                    saveManager.CurrentData.UnitProgressions.Add(unitSave);
+                }
+                unitSave.SelectedSkillIndex = index;
+            }
+        }
+    }
+
     public sealed class SyncCapacityState
     {
         public int Capacity { get; }

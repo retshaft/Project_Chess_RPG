@@ -13,6 +13,9 @@ namespace CheckmateRPG.UI
         [SerializeField] private Button rosterButton;
         [SerializeField] private Button synchroBoardButton;
         [SerializeField] private Button recruitButton;
+        [SerializeField] private Button operatorHubButton;
+        [SerializeField] private Button archiveButton;
+        [SerializeField] private Button kingSuitBayButton;
 
         [Header("Profile & Resources")]
         [SerializeField] private TextMeshProUGUI kingLevelText;
@@ -39,6 +42,9 @@ namespace CheckmateRPG.UI
             if (rosterButton) rosterButton.onClick.AddListener(() => OutgameUIManager.Instance.ChangeView(OutgameViewType.Roster));
             if (synchroBoardButton) synchroBoardButton.onClick.AddListener(() => OutgameUIManager.Instance.ChangeView(OutgameViewType.SynchroBoard));
             if (recruitButton) recruitButton.onClick.AddListener(() => OutgameUIManager.Instance.ChangeView(OutgameViewType.Recruit));
+            if (operatorHubButton) operatorHubButton.onClick.AddListener(() => OutgameUIManager.Instance.ChangeView(OutgameViewType.OperatorHub));
+            if (archiveButton) archiveButton.onClick.AddListener(() => OutgameUIManager.Instance.ChangeView(OutgameViewType.Archive));
+            if (kingSuitBayButton) kingSuitBayButton.onClick.AddListener(() => OutgameUIManager.Instance.ChangeView(OutgameViewType.KingSuitBay));
             
             if (secretaryTouchArea) secretaryTouchArea.onClick.AddListener(TriggerSecretaryQuote);
             if (speechBubblePanel) speechBubblePanel.SetActive(false);

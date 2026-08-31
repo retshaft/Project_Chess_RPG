@@ -40,6 +40,16 @@ namespace CheckmateRPG.Progression
                 return;
             }
 
+            // Automatically register any Units placed in Resources/Units
+            var resourceUnits = Resources.LoadAll<UnitData>("Units");
+            foreach (var unit in resourceUnits)
+            {
+                if (unit != null && !AllUnitsDatabase.Contains(unit))
+                {
+                    AllUnitsDatabase.Add(unit);
+                }
+            }
+
             // Automatically register any Edicts placed in Resources/Edicts so the designer doesn't have to manually bind them
             var resourceEdicts = Resources.LoadAll<EdictData>("Edicts");
             foreach (var edict in resourceEdicts)
