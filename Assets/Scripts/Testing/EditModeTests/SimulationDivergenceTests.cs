@@ -376,6 +376,7 @@ namespace CheckmateRPG.Tests
 
             var schedulerObject = new GameObject("DeterministicSymmetryTickScheduler");
             TickScheduler scheduler = schedulerObject.AddComponent<TickScheduler>();
+            scheduler.Initialise(); // 편집 모드에서는 Awake가 호출되지 않아 _tickDurationSeconds가 0이면 Advance가 무한 루프에 빠진다.
             try
             {
                 for (int tick = 0; tick < totalTicks; tick++)
