@@ -24,19 +24,12 @@ namespace CheckmateRPG.Core.Runtime.Processors
             if (target == null || target.IsDead || target.Movement == null)
                 return PhysicsProcessResult.Empty;
 
-            int effectiveWeight = target.UnitData != null ? target.UnitData.Weight : 0;
+            // 넉백 거리 수식(힘 − 실효 무게, 비틀거림 무게 −1·보스 면역)은 PhysicsRules(순수 규칙)에서 단일 기준으로 관리한다.
+            bool staggered = target.StatusEffects != null && target.StatusEffects.HasStatus(StatusEffectType.Stagger);
+            bool isBoss = target.UnitData != null && target.UnitData.IsBoss;
+            int baseWeight = target.UnitData != null ? target.UnitData.Weight : 0;
 
-            // 비틀거림(Stagger) 체크
-            if (target.StatusEffects != null && target.StatusEffects.HasStatus(StatusEffectType.Stagger))
-            {
-                bool isBoss = target.UnitData != null && target.UnitData.IsBoss;
-                if (!isBoss)
-                {
-                    effectiveWeight = Mathf.Max(0, effectiveWeight - 1);
-                }
-            }
-
-            int distance = Mathf.Max(0, mutation.Force - effectiveWeight);
+            int distance = PhysicsRules.ComputeKnockbackDistance(mutation.Force, baseWeight, staggered, isBoss);
             if (distance <= 0)
                 return PhysicsProcessResult.Empty;
 

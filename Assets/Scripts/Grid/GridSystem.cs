@@ -230,6 +230,8 @@ namespace CheckmateRPG.Grid
 
         /// <summary>
         /// Returns an additive movement speed modifier applied when entering the specified cell.
+        /// 기획서(GDD Part 2)에 지형별 이동 속도 보정 규격이 없어 2026-09-07 기준 의도적으로 항상 0을 반환한다(명시적 제외).
+        /// 기획이 확정되면 이 메서드만 교체하면 이동 런타임과 예측 양쪽에 동시에 반영된다.
         /// </summary>
         public float GetMoveSpeedModifier(Vector2Int cell)
         {
