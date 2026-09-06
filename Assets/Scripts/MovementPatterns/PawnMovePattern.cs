@@ -11,6 +11,9 @@ namespace CheckmateRPG.MovementPatterns
             if (unit == null || GridSystem.Instance == null)
                 return false;
 
+            if (!GridSystem.Instance.IsValidCell(targetCell))
+                return false;
+
             Vector2Int delta = targetCell - currentCell;
             if (delta.x != 0)
                 return false;

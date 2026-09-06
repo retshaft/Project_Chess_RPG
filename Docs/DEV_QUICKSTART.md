@@ -19,11 +19,14 @@
 
 ---
 
-## Running the formal test scene
+## Running the formal game flow
 
-**Canonical execution path:** `Assets/Scenes/Test/OutgameScene.unity` → `Assets/Scenes/Test/BattleScene.unity`
+**Canonical execution path:** `Assets/Scenes/OutgameScene.unity` → `Assets/Scenes/Test/BattleScene.unity`
 
-1. In the **Project** window, navigate to `Assets/Scenes/Test/`.
+> 2026-09-07 기준, 아웃게임 허브 씬은 루트 `Assets/Scenes/OutgameScene.unity`가 유일한 정식 씬이다.
+> (구 `Test/OutgameScene.unity`는 삭제되었고, Build Settings도 루트 씬을 가리킨다.)
+
+1. In the **Project** window, navigate to `Assets/Scenes/`.
 2. Double-click `OutgameScene.unity` to open it.
 3. Press **▶ Play**. (The game will transition to `BattleScene.unity` during play).
 
@@ -31,14 +34,12 @@
 
 | Object | Expected behaviour |
 |--------|--------------------|
-| **GridSystem** (created at runtime) | Singleton available; 8 × 8 occupancy grid active |
-| **Player units** (blue, cells 1-0, 3-0, 5-0) | Spawned, registered in grid, auto-chase nearest enemy |
-| **Enemy units** (red, cells 2-7, 4-7, 6-7) | Same as above, targeting player units |
-| **Camera** | Positioned above the grid, angled 60° down to show all 8 columns |
-| **Console** | No errors; bootstrapper logs six "Spawned … at (x, y)" messages |
+| **Outgame Canvas** | Title / Main Lobby / Stage Select / Roster(덱 편성) / Operator Hub / Recruit Hub / Synchro Board / Archive 뷰 전환 |
+| **GameManagers** | `SaveManager`, `StageManager`, `DeckManager` 등 아웃게임 런타임이 씬에 상주 |
+| **Transition** | 덱 편성 후 출격 시 `Test/BattleScene.unity` 로드 |
+| **Console** | No errors; 예외/Missing Script 없음 |
 
-The `BattleTestBootstrapper` MonoBehaviour creates everything at runtime from scratch — no
-prefabs or ScriptableObject assets need to be configured by hand.
+전투 흐름과 세부 검증 절차는 [MILESTONES.md](MILESTONES.md)와 [DEV_PROCESS.md](DEV_PROCESS.md)를 따른다.
 
 ---
 
@@ -47,62 +48,25 @@ prefabs or ScriptableObject assets need to be configured by hand.
 ```
 Assets/
 ├── Scenes/
-│   ├── SampleScene.unity        – Unity default scene (ignore for now)
+│   ├── OutgameScene.unity       ← Canonical START scene (아웃게임 허브)
+│   ├── CombatSandbox.unity      – 전투 연출 샌드박스 (에디터 툴로 생성)
+│   ├── StageSelectScene.unity   – 레거시 (정식 흐름은 OutgameScene 내 Stage Select 뷰 사용)
 │   └── Test/
-│       ├── OutgameScene.unity   ← Canonical START scene
 │       ├── BattleScene.unity    ← Canonical BATTLE scene
 │       └── TestScene.unity      – Legacy minimal scene (camera + light only)
-├── Scripts/
-│   ├── Core/                    – Interfaces (IDamageable, IMovable, IAttackable, …)
-│   ├── Data/
-│   │   └── UnitData.cs          – ScriptableObject: design-time stats per unit archetype
-│   ├── Grid/
-│   │   └── GridSystem.cs        – 8×8 grid, world↔cell conversion, occupancy tracking
-│   ├── Components/
-│   │   ├── HealthComponent.cs   – HP, damage, healing, death event
-│   │   ├── MovementComponent.cs – Grid-based move with lerp animation, knockback, grab
-│   │   ├── CombatComponent.cs   – Cooldown attack, range check, damage dispatch
-│   │   └── StatusEffectComponent.cs – DoT, CC, elemental auras (framework ready)
-│   ├── Units/
-│   │   └── UnitBrain.cs         – Orchestrator: wires components, runs AI decision loop
-│   └── Testing/
-│       └── BattleTestBootstrapper.cs – Runtime scene builder for BattleTest.unity
 └── Docs/
-    ├── MILESTONES.md            – Full milestone plan (M0 → M7)
+    ├── MILESTONES.md            – 우선순위 실행 계획 + 마일스톤 M0~M6 (단일 기준 문서)
+    ├── DEV_PROCESS.md           – AI·개발자 협업 사이클 + 검증 체크리스트
     ├── ACTION_TIMELINE.md       – Action speed tick formula + timing field definitions
     └── DEV_QUICKSTART.md        ← YOU ARE HERE
 ```
 
 ---
 
-## What is implemented (Milestone 0 baseline)
+## 구현 상태
 
-| System | Status | Notes |
-|--------|--------|-------|
-| 8×8 Grid (`GridSystem`) | ✅ Complete | Singleton, occupancy, world↔grid conversion, tile-effect stubs |
-| Unit stats (`UnitData`) | ✅ Complete | ScriptableObject; all fields data-driven |
-| Health / damage | ✅ Complete | Physical, magical, true damage; defence/resistance; death event |
-| Movement | ✅ Complete | Grid-based lerp, range check, knockback, grab |
-| Combat | ✅ Complete | Cooldown attack, Chebyshev range, damage dispatch |
-| Status effects | ✅ Framework | Durations, DoT ticks, CC flags, elemental aura logic wired |
-| AI decision loop | ✅ Basic | Chase-nearest + attack-if-in-range; runs in `FixedUpdate` |
-| Test scene setup | ✅ Complete | `BattleTestBootstrapper` spawns 6 units with no manual asset setup |
-
-## What is NOT yet implemented
-
-| System | Milestone |
-|--------|-----------|
-| AP economy (regen, action costs) | M1 |
-| Chess class movement rules (Pawn, Knight, …) | M2 |
-| Battle setup / deployment phase | M2 |
-| Tile types with real effects (Swamp, Spikes, Sanctuary) | M3 |
-| Physics 2.0 (weight grades, splat damage, ring-out) | M4 |
-| Elemental reactions & CC matrix | M5 |
-| Scoring AI & override system | M6 |
-| Progression meta (Notation, Resonance, King Edicts) | M7 |
-| Any UI (HUD, overlays, prediction ghost) | M1–M4 |
-
-See `Docs/MILESTONES.md` for the full breakdown and DoD per milestone.
+구현 현황·우선순위·남은 작업의 단일 기준은 [MILESTONES.md](MILESTONES.md)를 참조한다.
+(구버전 "Milestone 0 baseline" 표는 폐기되었다.)
 
 ---
 
@@ -110,10 +74,11 @@ See `Docs/MILESTONES.md` for the full breakdown and DoD per milestone.
 
 | Symptom | Fix |
 |---------|-----|
-| Console shows "Missing Script" on the Bootstrapper | Verify `Assets/Scripts/Testing/BattleTestBootstrapper.cs.meta` is present in the repo; the GUID must match the scene reference (`7e3f9a1b2c4d5e6f0a1b2c3d4e5f6a7b`). |
+| Console shows "Missing Script" | Most likely a stale scene reference after a rename/delete. Check which scene you opened and re-open the canonical `Assets/Scenes/OutgameScene.unity`. |
 | Units spawn but stand still | Expected — the AI requires a valid target. Give them a few FixedUpdate ticks; units find the nearest enemy automatically. |
 | Pink / magenta materials on units | URP shader not applied. Click **Edit → Rendering → Render Pipeline → Upgrade Project Materials** to URP. |
-| Camera shows nothing | Ensure you start from `OutgameScene.unity` and transition to `BattleScene.unity`. Press **F** in Scene view to frame all objects. |
+| Camera shows nothing | Ensure you start from `Assets/Scenes/OutgameScene.unity` and transition to `Test/BattleScene.unity`. Press **F** in Scene view to frame all objects. |
+| 전투 종료 후 오래된 로비로 복귀 | Build Settings가 루트 `Assets/Scenes/OutgameScene.unity`를 가리키는지 확인한다 (9/7 이후 정상). |
 
 ---
 

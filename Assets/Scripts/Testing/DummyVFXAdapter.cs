@@ -216,7 +216,7 @@ namespace CheckmateRPG.Testing
             for (int i = 0; i < assemblies.Length; i++)
             {
                 string assemblyName = assemblies[i].GetName().Name;
-                if (string.IsNullOrWhiteSpace(assemblyName) || !assemblyName.Contains("Assembly-CSharp", StringComparison.Ordinal))
+                if (string.IsNullOrWhiteSpace(assemblyName) || !assemblyName.Contains("CheckmateRPG", StringComparison.Ordinal))
                     continue;
 
                 Type[] types;
