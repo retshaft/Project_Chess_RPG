@@ -15,6 +15,8 @@ namespace CheckmateRPG.Core.Runtime.Processors
     public sealed class DamageMutationProcessor
     {
         private const int HitTakenSPBonus = 10;
+        // 쇄빙 추가 피해 배율: 대상 현재 방어력에 비례 (GDD Part 2 - "방어력 연산이 들어간 막대한 추가 물리 피해")
+        private const float ShatterBonusDefenseMultiplier = 2f;
         private readonly Func<Guid, UnitBrain> _unitLookup;
         private readonly SimulationRuntime _simulationRuntime;
 
@@ -38,10 +40,12 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 string freezeKey = SimulationRuntime.BuildEffectKey(mutation.TargetId, StatusEffectType.Freeze.ToString());
                 if (_simulationRuntime.TryGetMutableEffect(freezeKey, out var freezeEffect) && freezeEffect.Lifecycle != EffectLifecycle.Removed)
                 {
-                    // 빙결 해제 및 방어력 연산을 가정한 막대한 추가 물리 피해
+                    // 빙결 해제 및 방어력 비례 추가 물리 피해 (쇄빙)
                     freezeEffect.TransitionLifecycle("ShatterSystem", EffectLifecycle.Removed);
-                    amount += 50; // TODO: 기획 확정 시 대상의 방어력 스탯을 기반으로 계산식 변경
-                    Debug.Log($"[Shatter] {target.name} 빙결이 깨지며 쇄빙 보너스 물리 피해 적용!");
+                    float targetDefense = Mathf.Max(0f, target.Health.CurrentDefense);
+                    int shatterBonus = Mathf.FloorToInt(targetDefense * ShatterBonusDefenseMultiplier);
+                    amount += shatterBonus;
+                    Debug.Log($"[Shatter] {target.name} 빙결이 깨지며 쇄빙 보너스 물리 피해 적용! (방어력 {targetDefense:F0} x {ShatterBonusDefenseMultiplier:F0} = +{shatterBonus})");
                     // TODO: 쇄빙 파티클 이펙트 스폰 (얼음 파편이 튀는 PC 전용 파티클)
                 }
             }

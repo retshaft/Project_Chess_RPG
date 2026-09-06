@@ -263,7 +263,7 @@ namespace CheckmateRPG.Core.Effects.Processors
             if (movement == null || GridSystem.Instance == null) return;
 
             // TODO: 실제 프로젝트의 Tile 시스템에 Fire 장판을 부여하는 로직 추가
-            // (M8에서 TerrainInteractionProcessor가 처리하는 타일 데이터가 있으나, 현재 타일 변경 API는 미구현 상태이므로 임시 주석)
+            // (타일 변경 API는 미구현 상태이므로 임시 주석. 지형 효과는 EffectSystem의 TerrainEffectProcessor가 담당)
             // GridSystem.Instance.SetTileEffect(movement.GridPosition, TileEffectType.Fire, duration: 60);
         }
 

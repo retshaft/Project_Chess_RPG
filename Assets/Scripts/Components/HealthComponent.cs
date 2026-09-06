@@ -52,6 +52,9 @@ namespace CheckmateRPG.Components
         public float MaxHealth => _maxHealth;
         public bool IsDead => _isDead;
 
+        /// <summary>물리 피해 감산에 사용되는 현재 방어력(기본 방어력 + 지형/버프 보너스 합).</summary>
+        public float CurrentDefense => _defense + _defenseBonus;
+
         public void SetDamageTakenMultiplier(float multiplier)
         {
             _damageTakenMultiplier = Mathf.Max(0f, multiplier);

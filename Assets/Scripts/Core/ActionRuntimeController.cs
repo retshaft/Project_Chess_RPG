@@ -112,7 +112,6 @@ namespace CheckmateRPG.Core
         private RuntimeValidationSystem _runtimeValidationSystem;
         private ValidationExecutionStage _validationExecutionStage;
         private SnapshotRecorder _snapshotRecorder;
-        private TerrainInteractionProcessor _terrainInteractionProcessor;
         private ValidationResult _lastValidationResult = ValidationResult.Valid();
         private bool _validationHalted;
         private int _lastResolveMutationQueueCount;
@@ -242,13 +241,6 @@ namespace CheckmateRPG.Core
                 () => _runtimeValidationSystem);
             _reactionSystem.Attach();
 
-            _terrainInteractionProcessor = new TerrainInteractionProcessor(
-                _eventBus,
-                _mutationCommitService,
-                () => _simulationRuntime,
-                id => _unitsById.TryGetValue(id, out UnitBrain u) ? u : null);
-            _terrainInteractionProcessor.Attach();
-
             _resolutionPipeline = new ResolutionPhasePipeline(
                 resolveAction: (action, _) =>
                 {
@@ -300,12 +292,6 @@ namespace CheckmateRPG.Core
             {
                 _reactionSystem.Detach();
                 _reactionSystem = null;
-            }
-
-            if (_terrainInteractionProcessor != null)
-            {
-                _terrainInteractionProcessor.Dispose();
-                _terrainInteractionProcessor = null;
             }
 
             _eventBus.Unsubscribe<ActionQueuedEvent>(HandleActionQueued);
@@ -679,7 +665,6 @@ namespace CheckmateRPG.Core
             _timelineRecorder?.RecordTick(_scheduler.CurrentTick);
             ResetMutationQueueDebugSnapshot();
             IReadOnlyList<IGameEvent> autoRegenEvents = ExecuteSpAutoRegen();
-            _terrainInteractionProcessor?.AdvanceTick(_scheduler.CurrentTick);
 
             IReadOnlyList<IActionCommand> ready = _scheduler.DrainResolveQueue();
             RecordResolveOrderJournal(ready);
