@@ -94,6 +94,11 @@ namespace CheckmateRPG.Units
         {
             if (_runtimeController != null && _runtimeController.Scheduler != null)
             {
+                // 배치/일시정지 중에는 플레이어 AP와 동일하게 회복을 멈춘다.
+                // 과거에는 이 게이트가 없어 정지 시간 동안 적만 AP를 쌓는 비대칭이 있었다.
+                if (_tickScheduler != null && _tickScheduler.IsPaused)
+                    return;
+
                 // Regenerate Enemy AP every frame based on real delta time
                 CurrentTeamAP = Mathf.Min(_maxAP, CurrentTeamAP + _regenPerSecond * Time.deltaTime);
             }

@@ -68,31 +68,37 @@ namespace CheckmateRPG.UI
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
-            canvasGo.GetComponent<RectTransform>().sizeDelta = new Vector2(2f, 0.5f);
-            
-            var bgGo = new GameObject("HP_BG");
-            bgGo.transform.SetParent(canvasGo.transform, false);
-            var bgImg = bgGo.AddComponent<Image>();
-            bgImg.color = Color.black;
-            var bgRect = bgGo.GetComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(1.5f, 0.2f);
-
-            var fillGo = new GameObject("HP_Fill");
-            fillGo.transform.SetParent(bgGo.transform, false);
-            _hpFillImage = fillGo.AddComponent<Image>();
-            _hpFillImage.color = Color.green;
-            _hpFillImage.type = Image.Type.Filled;
-            _hpFillImage.fillMethod = Image.FillMethod.Horizontal;
-            var fillRect = fillGo.GetComponent<RectTransform>();
-            fillRect.anchorMin = new Vector2(0, 0);
-            fillRect.anchorMax = new Vector2(1, 1);
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
+            // 캔버스를 300x75px로 잡고 0.01 스케일로 월드 3x0.75 유닛에 맞춘다.
+            // 과거에는 sizeDelta(2, 0.5) 캔버스에서 fontSize 2~3을 써서 1px = 1월드유닛이 되어
+            // 무게 라벨("W: N")이 타일 크기의 거대 글자로 렌더링되고 줄바꿈으로 찢어졌다.
+            canvasGo.GetComponent<RectTransform>().sizeDelta = new Vector2(300f, 75f);
+            canvasGo.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
 
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, Color.white);
             tex.Apply();
             var whiteSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), Vector2.zero);
+
+            var bgGo = new GameObject("HP_BG");
+            bgGo.transform.SetParent(canvasGo.transform, false);
+            var bgImg = bgGo.AddComponent<Image>();
+            bgImg.color = Color.black;
+            bgImg.sprite = whiteSprite;
+            var bgRect = bgGo.GetComponent<RectTransform>();
+            bgRect.sizeDelta = new Vector2(225f, 30f);
+
+            var fillGo = new GameObject("HP_Fill");
+            fillGo.transform.SetParent(bgGo.transform, false);
+            _hpFillImage = fillGo.AddComponent<Image>();
+            _hpFillImage.color = Color.green;
+            _hpFillImage.sprite = whiteSprite;
+            _hpFillImage.type = Image.Type.Filled;
+            _hpFillImage.fillMethod = Image.FillMethod.Horizontal;
+            var fillRect = fillGo.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = new Vector2(2f, 2f);
+            fillRect.offsetMax = new Vector2(-2f, -2f);
 
             var spGo = new GameObject("SP_Fill");
             spGo.transform.SetParent(canvasGo.transform, false);
@@ -102,12 +108,10 @@ namespace CheckmateRPG.UI
             _spFillImage.type = Image.Type.Filled;
             _spFillImage.fillMethod = Image.FillMethod.Horizontal;
             var spRect = spGo.GetComponent<RectTransform>();
-            spRect.sizeDelta = new Vector2(1.5f, 0.06f);
-            spRect.anchoredPosition = new Vector2(0f, -0.15f);
+            spRect.sizeDelta = new Vector2(225f, 9f);
+            spRect.anchoredPosition = new Vector2(0f, -22f);
             spRect.anchorMin = new Vector2(0.5f, 0.5f);
             spRect.anchorMax = new Vector2(0.5f, 0.5f);
-            
-            _hpFillImage.sprite = whiteSprite;
 
             var font = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
 
@@ -115,54 +119,61 @@ namespace CheckmateRPG.UI
             var statusGo = new GameObject("StatusText");
             statusGo.transform.SetParent(canvasGo.transform, false);
             _statusText = statusGo.AddComponent<TextMeshProUGUI>();
-            _statusText.fontSize = 2.5f;
+            _statusText.fontSize = 20f;
             _statusText.alignment = TextAlignmentOptions.Center;
             _statusText.color = new Color(1f, 0.2f, 0.3f);
+            _statusText.textWrappingMode = TextWrappingModes.NoWrap;
             if (font != null) _statusText.font = font;
             var statusRect = statusGo.GetComponent<RectTransform>();
-            statusRect.sizeDelta = new Vector2(3f, 0.5f);
-            statusRect.anchoredPosition = new Vector2(0f, 0.35f);
+            statusRect.sizeDelta = new Vector2(300f, 50f);
+            statusRect.anchoredPosition = new Vector2(0f, 35f);
 
             // Promotion Text
             var promoGo = new GameObject("PromotionText");
             promoGo.transform.SetParent(canvasGo.transform, false);
             _promotionText = promoGo.AddComponent<TextMeshProUGUI>();
-            _promotionText.fontSize = 3f;
+            _promotionText.fontSize = 22f;
             _promotionText.alignment = TextAlignmentOptions.Center;
             _promotionText.color = new Color(1f, 0.8f, 0f); // Gold
+            _promotionText.textWrappingMode = TextWrappingModes.NoWrap;
             if (font != null) _promotionText.font = font;
             _promotionText.text = "PROMOTING...";
             _promotionText.gameObject.SetActive(false);
             var promoRect = promoGo.GetComponent<RectTransform>();
-            promoRect.sizeDelta = new Vector2(3f, 0.5f);
-            promoRect.anchoredPosition = new Vector2(0f, 0.7f);
+            promoRect.sizeDelta = new Vector2(300f, 50f);
+            promoRect.anchoredPosition = new Vector2(0f, 70f);
 
             // EX Ready Glow Banner
             var exGo = new GameObject("EXReadyText");
             exGo.transform.SetParent(canvasGo.transform, false);
             _exReadyText = exGo.AddComponent<TextMeshProUGUI>();
-            _exReadyText.fontSize = 3.2f;
+            _exReadyText.fontSize = 22f;
             _exReadyText.fontStyle = FontStyles.Bold;
             _exReadyText.alignment = TextAlignmentOptions.Center;
+            _exReadyText.textWrappingMode = TextWrappingModes.NoWrap;
             _exReadyText.text = "★ EX READY ★";
             if (font != null) _exReadyText.font = font;
             var exRect = exGo.GetComponent<RectTransform>();
-            exRect.sizeDelta = new Vector2(3f, 0.6f);
-            exRect.anchoredPosition = new Vector2(0f, -0.38f);
+            exRect.sizeDelta = new Vector2(300f, 60f);
+            exRect.anchoredPosition = new Vector2(0f, -38f);
             exGo.SetActive(false);
 
-            // Weight Info
-            var weightGo = new GameObject("WeightText");
-            weightGo.transform.SetParent(canvasGo.transform, false);
-            _weightText = weightGo.AddComponent<TextMeshProUGUI>();
-            _weightText.fontSize = 2f;
-            _weightText.alignment = TextAlignmentOptions.Right;
-            _weightText.color = new Color(0.8f, 0.8f, 0.8f);
-            _weightText.text = "W: ?";
-            if (font != null) _weightText.font = font;
-            var weightRect = weightGo.GetComponent<RectTransform>();
-            weightRect.sizeDelta = new Vector2(1f, 0.5f);
-            weightRect.anchoredPosition = new Vector2(0.9f, 0.35f);
+            // Weight Info — 넉백 예측 UI 정착까지 기본 비활성화(StatusReadabilityUI.ShowWeightLabels와 동일 기준)
+            if (StatusReadabilityUI.ShowWeightLabels)
+            {
+                var weightGo = new GameObject("WeightText");
+                weightGo.transform.SetParent(canvasGo.transform, false);
+                _weightText = weightGo.AddComponent<TextMeshProUGUI>();
+                _weightText.fontSize = 14f;
+                _weightText.alignment = TextAlignmentOptions.Right;
+                _weightText.color = new Color(0.8f, 0.8f, 0.8f);
+                _weightText.textWrappingMode = TextWrappingModes.NoWrap;
+                _weightText.text = "W: ?";
+                if (font != null) _weightText.font = font;
+                var weightRect = weightGo.GetComponent<RectTransform>();
+                weightRect.sizeDelta = new Vector2(100f, 50f);
+                weightRect.anchoredPosition = new Vector2(90f, 35f);
+            }
         }
 
         private void Start()
