@@ -877,29 +877,8 @@ namespace CheckmateRPG.Core
         {
             if (_teams.Count == 0 || _allUnits.Count == 0) return;
 
-            if (APManager.Instance != null && _teams.TryGetValue(Team.Blue, out List<UnitRecord> blueRoster))
-            {
-                int totalBlue = 0;
-                int stunnedBlue = 0;
-                foreach (var record in blueRoster)
-                {
-                    if (record.Brain != null && !record.Brain.IsDead)
-                    {
-                        totalBlue++;
-                        if (record.Brain.StatusEffects != null && record.Brain.StatusEffects.HasStatus(StatusEffectType.Stun))
-                        {
-                            stunnedBlue++;
-                        }
-                    }
-                }
-                
-                float multiplier = 1f;
-                if (totalBlue > 0 && stunnedBlue > 0)
-                {
-                    multiplier = 1f - ((float)stunnedBlue / totalBlue);
-                }
-                APManager.Instance.RegenMultiplier = multiplier;
-            }
+            // AP 자연 회복은 양측 동일하게 초당 +4 (GDD Part 3 §1.1).
+            // 과거 스턴된 아군 비율만큼 아군 회복을 깎는 비대칭 페널티는 규격에 없어 제거했다(2026-09-08).
 
             bool blueAlive = HasLivingUnits(Team.Blue);
             bool redAlive = HasLivingUnits(Team.Red);
@@ -1373,44 +1352,9 @@ namespace CheckmateRPG.Core
             _commandPanel.SetActive(false);
             RefreshModeButtonVisuals();
 
-            // Create AP Bar
-            GameObject apPanel = new GameObject("APPanel");
-            apPanel.transform.SetParent(canvasObject.transform, false);
-            RectTransform apRect = apPanel.AddComponent<RectTransform>();
-            apRect.anchorMin = new Vector2(1f, 0f);
-            apRect.anchorMax = new Vector2(1f, 0f);
-            apRect.pivot = new Vector2(1f, 0f);
-            apRect.anchoredPosition = new Vector2(-24f, 120f);
-            apRect.sizeDelta = new Vector2(250f, 40f);
-            Image apBg = apPanel.AddComponent<Image>();
-            apBg.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-            apBg.raycastTarget = false;
-
-            GameObject apFillGO = new GameObject("Fill");
-            apFillGO.transform.SetParent(apPanel.transform, false);
-            RectTransform fillRect = apFillGO.AddComponent<RectTransform>();
-            fillRect.anchorMin = new Vector2(0f, 0f);
-            fillRect.anchorMax = new Vector2(1f, 1f);
-            fillRect.sizeDelta = Vector2.zero;
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
-            Image apFill = apFillGO.AddComponent<Image>();
-            apFill.color = new Color(0.2f, 0.8f, 0.9f, 1f); // Arknights-like cyan
-            apFill.raycastTarget = false;
-            _apFillImage = apFill;
-
-            GameObject apTextGO = new GameObject("APLabel");
-            apTextGO.transform.SetParent(apPanel.transform, false);
-            Text apText = apTextGO.AddComponent<Text>();
-            _apTextLabel = apText;
-            apText.text = "AP";
-            apText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            apText.fontSize = 20;
-            apText.alignment = TextAnchor.MiddleCenter;
-            apText.color = Color.white;
-            apText.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-            apText.GetComponent<RectTransform>().anchorMax = Vector2.one;
-            apText.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
+            // AP 바는 M3 표준 HUD(PlayerAPBar)가 담당한다. 과거 BM 자체 AP 패널은
+            // PlayerAPBar와 중복 표시되어 제거했다(2026-09-08). _apFillImage/_apTextLabel은 null인 채로 남아
+            // Update의 null 가드를 통과한다.
 
             // Create Game Over Panel
             _gameOverPanel = new GameObject("GameOverPanel");
@@ -1426,7 +1370,7 @@ namespace CheckmateRPG.Core
             goTextGO.transform.SetParent(_gameOverPanel.transform, false);
             _gameOverText = goTextGO.AddComponent<Text>();
             _gameOverText.text = "VICTORY";
-            _gameOverText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _gameOverText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             _gameOverText.fontSize = 120;
             _gameOverText.alignment = TextAnchor.MiddleCenter;
             _gameOverText.color = Color.white;
@@ -1446,7 +1390,7 @@ namespace CheckmateRPG.Core
             btnTextGO.transform.SetParent(restartBtnGO.transform, false);
             Text btnText = btnTextGO.AddComponent<Text>();
             btnText.text = "RESTART BATTLE";
-            btnText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            btnText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             btnText.fontSize = 32;
             btnText.alignment = TextAnchor.MiddleCenter;
             btnText.color = Color.white;
@@ -1532,7 +1476,7 @@ namespace CheckmateRPG.Core
             GameObject textGO = new GameObject("CostText");
             textGO.transform.SetParent(statusGO.transform, false);
             _deploymentCostText = textGO.AddComponent<Text>();
-            _deploymentCostText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _deploymentCostText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             _deploymentCostText.fontSize = 24;
             _deploymentCostText.color = Color.cyan;
             _deploymentCostText.alignment = TextAnchor.MiddleCenter;
@@ -1571,7 +1515,7 @@ namespace CheckmateRPG.Core
             text.alignment = TextAnchor.MiddleCenter;
             text.fontSize = 20;
             text.color = Color.white;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             text.raycastTarget = false;
 
             return button;

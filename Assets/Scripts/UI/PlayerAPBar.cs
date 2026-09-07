@@ -110,7 +110,7 @@ namespace CheckmateRPG.UI
             textGo.transform.SetParent(bgGo.transform, false);
             _apText = textGo.AddComponent<Text>();
             _apText.alignment = TextAnchor.MiddleCenter;
-            _apText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _apText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             _apText.fontSize = 20;
             _apText.color = _normalTextColor;
             var textRect = textGo.GetComponent<RectTransform>();
@@ -123,7 +123,7 @@ namespace CheckmateRPG.UI
             warningGo.transform.SetParent(canvasGo.transform, false);
             _warningText = warningGo.AddComponent<Text>();
             _warningText.alignment = TextAnchor.MiddleCenter;
-            _warningText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _warningText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             _warningText.fontSize = 24;
             _warningText.color = _warningTextColor;
             var warningRect = warningGo.GetComponent<RectTransform>();

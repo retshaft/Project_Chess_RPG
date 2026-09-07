@@ -6,6 +6,12 @@ namespace CheckmateRPG.UI
 {
     public class StatusReadabilityUI : MonoBehaviour
     {
+        /// <summary>
+        /// 무게 숫자 라벨 표시 여부. 넉백 예측 전용 UI(M2 후속)가 준비될 때까지 기본 비활성화한다.
+        /// 디버그가 필요하면 true로 바꾼다.
+        /// </summary>
+        public static bool ShowWeightLabels = false;
+
         [Header("UI Elements")]
         [SerializeField] private Text _weightText;
 
@@ -22,10 +28,16 @@ namespace CheckmateRPG.UI
             _target = targetUnit;
             _movement = _target.GetComponent<MovementComponent>();
             _mainCamera = Camera.main;
-            
+
+            if (!ShowWeightLabels)
+            {
+                enabled = false;
+                return;
+            }
+
             if (_weightText == null)
                 CreateProgrammaticUI();
-            
+
             UpdateWeightText();
         }
 
@@ -46,7 +58,7 @@ namespace CheckmateRPG.UI
             textGo.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
             
             // Basic font fallback
-            _weightText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _weightText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             _weightText.horizontalOverflow = HorizontalWrapMode.Overflow;
             _weightText.verticalOverflow = VerticalWrapMode.Overflow;
         }

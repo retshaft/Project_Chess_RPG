@@ -60,7 +60,7 @@ namespace CheckmateRPG.Testing.UI
                 text.text = _unitData.UnitName;
                 text.alignment = TextAnchor.MiddleCenter;
                 text.fontSize = 20;
-                text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                text.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
                 text.color = new Color(1f, 1f, 1f, 0.7f);
                 text.raycastTarget = false;
 

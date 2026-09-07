@@ -77,7 +77,7 @@ namespace CheckmateRPG.UI
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             var text = go.AddComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             text.fontSize = fontSize;
             text.fontStyle = style;
             text.color = Color.white;
