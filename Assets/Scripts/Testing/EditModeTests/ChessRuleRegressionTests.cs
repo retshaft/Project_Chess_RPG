@@ -434,6 +434,31 @@ namespace CheckmateRPG.Tests
             Assert.IsNull(MovePatternFactory.Create(null), "UnitData가 없으면 패턴도 생성되지 않는다.");
         }
 
+        // ─── 이동 쿨타임 파생 (GDD Part 3 §1.1) ──────────────────────────────────
+
+        [Test]
+        public void MoveCooldown_MatchesGddPieceSpecs()
+        {
+            Assert.AreEqual(4.5f, UnitData.GetDefaultMoveCooldown(ChessPieceType.Pawn), "폰 이동 쿨타임은 4.0~5.0초 중간값.");
+            Assert.AreEqual(1.75f, UnitData.GetDefaultMoveCooldown(ChessPieceType.Knight), "나이트 이동 쿨타임은 1.5~2.0초 중간값.");
+            Assert.AreEqual(1.75f, UnitData.GetDefaultMoveCooldown(ChessPieceType.Bishop), "비숍은 나이트와 동일.");
+            Assert.AreEqual(6f, UnitData.GetDefaultMoveCooldown(ChessPieceType.Rook), "룩 이동 쿨타임은 6.0초.");
+            Assert.AreEqual(8f, UnitData.GetDefaultMoveCooldown(ChessPieceType.Queen), "퀸 이동 쿨타임은 8.0초.");
+            Assert.AreEqual(2f, UnitData.GetDefaultMoveCooldown(ChessPieceType.King), "킹은 슈트별 가변(기본 2.0초).");
+        }
+
+        [Test]
+        public void SyncDefaultChessMetadata_DerivesMoveCooldownFromPieceType()
+        {
+            var data = CreateData(MovePatternType.Knight);
+            data.PieceType = ChessPieceType.Rook;
+            data.SyncDefaultChessMetadata();
+
+            Assert.AreEqual(UnitData.GetDefaultMoveCooldown(ChessPieceType.Rook), data.MoveCooldown,
+                "SyncDefaultChessMetadata는 기물 종류에 맞는 이동 쿨타임을 파생해야 한다.");
+            Assert.Greater(data.MoveCooldown, 0f, "이동 쿨타임은 항상 양수여야 한다.");
+        }
+
         private UnitData CreateData(MovePatternType movePatternType)
         {
             var data = ScriptableObject.CreateInstance<UnitData>();

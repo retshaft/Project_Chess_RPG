@@ -46,14 +46,26 @@ namespace CheckmateRPG.Components
         private float _moveSpeed;
         private float _moveAPCost;
         private float _actionSpeed = 1f;
+        private float _moveCooldown;
+        private float _moveCooldownRemaining;
         private StatusEffectComponent _statusEffects;
         private Coroutine _movementRoutine;
         private UnitData _unitData;
         private IMovePattern _movePattern;
 
+        /// <summary>이동 직후 다음 이동까지 대기 중인지. GDD Part 3 §1.1 기물별 이동 쿨타임.</summary>
+        public bool IsMoveOnCooldown => _moveCooldownRemaining > 0f;
+        public float MoveCooldownRemaining => _moveCooldownRemaining;
+
         private void Awake()
         {
             _statusEffects = GetComponent<StatusEffectComponent>();
+        }
+
+        private void Update()
+        {
+            if (_moveCooldownRemaining > 0f)
+                _moveCooldownRemaining = Mathf.Max(0f, _moveCooldownRemaining - Time.deltaTime);
         }
 
         // ─── Initialisation ───────────────────────────────────────────────────────
@@ -83,6 +95,8 @@ namespace CheckmateRPG.Components
             _moveSpeed = data.MoveSpeed;
             _moveAPCost = Mathf.Max(0f, data.MoveCostAP);
             _actionSpeed = Mathf.Max(0.1f, data.ActionSpeed);
+            _moveCooldown = Mathf.Max(0.1f, data.MoveCooldown);
+            _moveCooldownRemaining = 0f;
             Weight = Mathf.Clamp(data.Weight, 0, 4);
             IsBoss = data.IsBoss;
 
@@ -143,6 +157,7 @@ namespace CheckmateRPG.Components
         private IEnumerator MoveCoroutine(Vector2Int destination)
         {
             IsMoving = true;
+            _moveCooldownRemaining = _moveCooldown;
             OnMoveStarted?.Invoke(destination);
 
             Vector2Int startGridPos = GridPosition;
@@ -234,6 +249,13 @@ namespace CheckmateRPG.Components
             {
                 if (logFailures)
                     Debug.LogWarning($"[MovementComponent] {gameObject.name} cannot move due to status effects.");
+                return false;
+            }
+
+            if (IsMoveOnCooldown)
+            {
+                if (logFailures)
+                    Debug.LogWarning($"[MovementComponent] {gameObject.name} move on cooldown ({_moveCooldownRemaining:F1}s left).");
                 return false;
             }
 

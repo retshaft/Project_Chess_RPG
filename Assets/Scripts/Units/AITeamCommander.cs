@@ -11,12 +11,15 @@ namespace CheckmateRPG.Units
     {
         [SerializeField] private bool _isEnemyTeam = true;
         [SerializeField, Min(1)] private int _evaluationTickInterval = 5;
+        [Tooltip("한 평가 틱에 집행할 최대 입찰 수. 1이면 유닛 행동이 순차적으로 분산된다.")]
+        [SerializeField, Min(1)] private int _maxExecutionsPerTick = 1;
         [SerializeField] private List<UnitBrain> _teamMembers = new List<UnitBrain>();
 
         private readonly List<ActionBid> _pendingBids = new List<ActionBid>();
         private TickScheduler _tickScheduler;
         private int _manualTickCounter;
         private int _lastEvaluatedTick = -1;
+        private int _lastNoActionWarningTick = -1000;
         private ActionRuntimeController _runtimeController;
         
         [Header("Enemy AP Pool")]
@@ -121,10 +124,10 @@ namespace CheckmateRPG.Units
             _lastEvaluatedTick = currentTick;
 
 
-            EvaluateAndExecuteTeamActions();
+            EvaluateAndExecuteTeamActions(currentTick);
         }
 
-        private void EvaluateAndExecuteTeamActions()
+        private void EvaluateAndExecuteTeamActions(int currentTick)
         {
             _pendingBids.Clear();
             ThreatMap.UpdateThreatMap();
@@ -154,8 +157,10 @@ namespace CheckmateRPG.Units
 
             if (_pendingBids.Count == 0)
             {
-                if (CurrentTeamAP > 10f)
+                // 이동 쿨타임 등으로 입찰이 비는 것은 정상 상태이므로, 진단 경고는 주기를 제한해 노이즈를 막는다.
+                if (CurrentTeamAP > 10f && currentTick - _lastNoActionWarningTick >= 100)
                 {
+                    _lastNoActionWarningTick = currentTick;
                     Debug.LogWarning($"[AITeamCommander] No actions found for {_teamMembers.Count} members. AP: {CurrentTeamAP}. Check if targets have TeamComponent(IsEnemy=false).");
                 }
                 return;
@@ -163,7 +168,10 @@ namespace CheckmateRPG.Units
 
             _pendingBids.Sort((a, b) => b.Score.CompareTo(a.Score));
 
-            for (int i = 0; i < _pendingBids.Count; i++)
+            // 동시성 제어: 한 틱에 최대 _maxExecutionsPerTick개의 입찰만 집행해
+            // 팀 전체가 같은 순간에 움직이는 것을 방지한다.
+            int executed = 0;
+            for (int i = 0; i < _pendingBids.Count && executed < _maxExecutionsPerTick; i++)
             {
                 ActionBid bid = _pendingBids[i];
 
@@ -172,6 +180,7 @@ namespace CheckmateRPG.Units
                     if (TryExecuteCommand(bid.Executor, bid.Command))
                     {
                         CurrentTeamAP -= bid.RequiredAP;
+                        executed++;
                     }
                 }
             }

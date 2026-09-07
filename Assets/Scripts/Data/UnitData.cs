@@ -166,6 +166,9 @@ namespace CheckmateRPG.Data
         [Tooltip("Target Cell로 Lerp할 때 초당 이동하는 거리(World-units). Level에 따라 자동 계산됩니다.")]
         [Min(0.1f)] public float MoveSpeed = 0.8f;
 
+        [Tooltip("이동 후 다음 이동까지 대기 시간(초). GDD Part 3 §1.1 기물별 이동 쿨타임 규격. OnValidate에서 기물 기본값으로 자동 파생.")]
+        [Min(0.1f)] public float MoveCooldown = 4.5f;
+
         [Tooltip("유닛의 공격/스킬 사용 시 발생하는 선딜레이")]
         [Min(0.1f)] public float ActionDelay = 2.5f;
 
@@ -182,6 +185,30 @@ namespace CheckmateRPG.Data
         {
             BaseRole = GetDefaultRole(PieceType);
             MovePattern = GetDefaultMovePattern(PieceType);
+            UpdateMoveCooldown();
+        }
+
+        /// <summary>
+        /// GDD Part 3 §1.1 기물별 이동 쿨타임 규격 (범위의 중간값).
+        /// 폰 4.0~5.0 / 나이트·비숍 1.5~2.0 / 룩 6.0 / 퀸·보스 8.0 / 킹은 슈트별 가변(중간 기본).
+        /// </summary>
+        public static float GetDefaultMoveCooldown(ChessPieceType pieceType)
+        {
+            return pieceType switch
+            {
+                ChessPieceType.Pawn => 4.5f,
+                ChessPieceType.Knight => 1.75f,
+                ChessPieceType.Bishop => 1.75f,
+                ChessPieceType.Rook => 6f,
+                ChessPieceType.Queen => 8f,
+                ChessPieceType.King => 2f,
+                _ => 4.5f
+            };
+        }
+
+        public void UpdateMoveCooldown()
+        {
+            MoveCooldown = GetDefaultMoveCooldown(PieceType);
         }
 
         public static string GetDefaultRole(ChessPieceType pieceType)

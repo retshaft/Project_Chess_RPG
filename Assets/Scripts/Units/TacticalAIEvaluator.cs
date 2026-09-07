@@ -79,7 +79,10 @@ namespace CheckmateRPG.Units
             }
 
             // 2. Evaluate Moves (1-Step Lookahead)
-            var reachableCells = unit.Movement.GetReachableCells();
+            // 이동 쿨타임 중(GDD Part 3 §1.1)에는 이동 입찰을 생성하지 않아 공격 평가가 우선한다.
+            var reachableCells = unit.Movement.IsMoveOnCooldown
+                ? new List<Vector2Int>()
+                : unit.Movement.GetReachableCells();
             float moveBaseCost = Mathf.Max(0f, unit.UnitData.MoveCostAP);
 
             foreach (Vector2Int cell in reachableCells)
