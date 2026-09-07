@@ -447,6 +447,31 @@ namespace CheckmateRPG.Tests
             Assert.AreEqual(2f, UnitData.GetDefaultMoveCooldown(ChessPieceType.King), "킹은 슈트별 가변(기본 2.0초).");
         }
 
+        // ─── 기물별 행동 AP 소모 (GDD Part 3 §3.1~3.6) ───────────────────────────
+
+        [Test]
+        public void ActionAPCosts_MatchGddPieceSpecs()
+        {
+            Assert.AreEqual(8f, GddUnitSpecs.GetActionAPCost(ChessPieceType.Pawn), "폰은 8 AP 소모 기본.");
+            Assert.AreEqual(24f, GddUnitSpecs.GetActionAPCost(ChessPieceType.Knight), "나이트는 24 AP 소모 기본.");
+            Assert.AreEqual(24f, GddUnitSpecs.GetActionAPCost(ChessPieceType.Bishop), "비숍은 24 AP 소모 기본.");
+            Assert.AreEqual(36f, GddUnitSpecs.GetActionAPCost(ChessPieceType.Rook), "룩은 36 AP 소모 기본.");
+            Assert.AreEqual(48f, GddUnitSpecs.GetActionAPCost(ChessPieceType.Queen), "퀸은 48 AP 소모 기본.");
+            Assert.AreEqual(24f, GddUnitSpecs.GetActionAPCost(ChessPieceType.King), "킹은 24 AP 기본.");
+        }
+
+        [Test]
+        public void ActionAPCosts_MoveAndAttackSharePieceBaseline()
+        {
+            var data = CreateData(MovePatternType.Knight);
+            float baseline = GddUnitSpecs.GetActionAPCost(data.PieceType);
+            data.MoveCostAP = baseline;
+            data.AttackCostAP = baseline;
+
+            Assert.AreEqual(baseline, data.MoveCostAP, "이동 비용은 기물 기본 소모량을 따른다.");
+            Assert.AreEqual(baseline, data.AttackCostAP, "공격 비용은 기물 기본 소모량을 따른다.");
+        }
+
         [Test]
         public void SyncDefaultChessMetadata_DerivesMoveCooldownFromPieceType()
         {
