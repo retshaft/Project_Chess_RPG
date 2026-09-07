@@ -684,3 +684,10 @@ $RECYCLE.BIN/
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,csharp,unity,visualstudiocode,visualstudio
+
+# Parallel development workspaces and local coordination data.
+/.worktrees/
+/.parallel/
+# Unity package definitions must accompany every worktree.
+!/Packages/manifest.json
+!/Packages/packages-lock.json
