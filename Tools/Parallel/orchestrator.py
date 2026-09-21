@@ -132,7 +132,25 @@ def process_request_once():
     request = pipeline_store.transition(requested[0], "Planning")
     emit("status", "요청 계획 시작", request["description"])
     try:
-        plan, plan_path = codex_planner.plan_request(request)
+        plan = plan_path = None
+        planner_error = None
+        planner_models = ("gpt-5.6-luna", "gpt-5.6-sol", "gpt-6-astra")
+        for planner_model in planner_models:
+            health = model_health().get(planner_model, {})
+            if health.get("available") is False:
+                continue
+            try:
+                plan, plan_path = codex_planner.plan_request(request, model=planner_model)
+                break
+            except Exception as exc:
+                planner_error = exc
+                text = str(exc).lower()
+                if any(marker in text for marker in ("usage limit", "rate limit", "quota", "credits", "too many requests")):
+                    mark_model_unavailable(planner_model, "계획 작성 중 사용량 또는 요청 한도 초과")
+                    continue
+                raise
+        if plan is None or plan_path is None:
+            raise RuntimeError(str(planner_error or "사용 가능한 계획 작성 모델이 없습니다."))
         settings = config()
         autonomy_mode = settings.get("autonomy_mode", "guarded")
         review = codex_planner.needs_review(plan, autonomy_mode=autonomy_mode)
@@ -499,7 +517,13 @@ def run_once():
     task = tasks[0]
     selected_agent = task["agent"]
     if int(task.get("attempts", 0)) >= int(settings["maximum_attempts"]):
-        emit("attention", "재시도 한도 도달", task["id"])
+        if task.get("status") != "Attention" or task.get("last_failure") != "자동 재시도 한도 도달":
+            task["status"] = "Attention"
+            task["last_failure"] = "자동 재시도 한도 도달"
+            write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+            emit("attention", "재시도 한도 도달",
+                 f"{task['goal']}\n자동 재시도를 멈췄습니다. 필요하면 아래 버튼으로 새 시도를 시작하세요.",
+                 {"item_id": task["id"], "status": "Attention"})
         return "attempt-limit"
 
     task["status"] = "Running"

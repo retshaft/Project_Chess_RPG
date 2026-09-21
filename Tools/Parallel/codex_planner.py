@@ -27,7 +27,7 @@ def user_questions(plan):
     ]
 
 
-def plan_request(request, timeout=900):
+def plan_request(request, timeout=900, model="gpt-5.6-luna"):
     codex = shutil.which("codex.cmd") or shutil.which("codex")
     if not codex:
         raise RuntimeError("Codex CLI is not installed.")
@@ -54,7 +54,7 @@ User request:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temporary:
         temporary_path = Path(temporary.name)
     try:
-        cmd = [codex, "exec", "--cd", str(ROOT), "--model", "gpt-5.6-luna", "--sandbox", "read-only",
+        cmd = [codex, "exec", "--cd", str(ROOT), "--model", model, "--sandbox", "read-only",
                "--ephemeral", "--color", "never",
                "--output-schema", str(SCHEMA), "--output-last-message", str(temporary_path), "-"]
         result = subprocess.run(

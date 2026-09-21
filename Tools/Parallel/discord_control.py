@@ -188,6 +188,7 @@ class AttentionDecisionView(discord.ui.View):
         task = find_task(self.item_id, "Attention")
         if task:
             task["status"] = "Ready" if task.get("worktree") and task.get("task_file") else "Planned"
+            task["attempts"] = 0
             task.pop("last_failure", None)
             orchestrator.write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
             await interaction.response.send_message("작업을 다시 대기열에 넣었습니다.", ephemeral=True)
@@ -611,6 +612,7 @@ async def dev_retry(interaction: discord.Interaction, item_id: str):
     task = next((item for item in orchestrator.queue_tasks("Attention") if item["id"] == item_id), None)
     if task:
         task["status"] = "Ready" if task.get("worktree") and task.get("task_file") else "Planned"
+        task["attempts"] = 0
         task.pop("last_failure", None)
         orchestrator.write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
         await interaction.response.send_message("작업을 다시 대기열에 넣었습니다.", ephemeral=True)
