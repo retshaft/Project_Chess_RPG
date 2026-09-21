@@ -124,7 +124,8 @@ def process_request_once():
         title = ("작업 계획 완료" if next_status == "Ready" else
                  "사용자 정보 필요" if next_status == "Attention" else "계획 검토 필요")
         emit("attention" if next_status != "Ready" else "result", title,
-             f"{request['id']}: {plan['summary']}")
+             f"{request['id']}: {plan['summary']}",
+             {"item_id": request["id"], "status": next_status})
         return next_status
     except Exception as exc:
         pipeline_store.transition(request, "Attention", error=str(exc))
@@ -382,7 +383,8 @@ def verify_and_review_task(task):
         "status" if task["status"] == "VerificationPending" else "attention"
     )
     emit(kind, "작업 검토 완료" if kind == "result" else "작업 검증 대기" if kind == "status" else "작업 확인 필요",
-         f"{task['id']} 상태: {task['status']}")
+         f"{task['id']} 상태: {task['status']}",
+         {"item_id": task["id"], "status": task["status"]})
     return task["status"].lower()
 
 
