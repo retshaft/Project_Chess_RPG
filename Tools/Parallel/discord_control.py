@@ -198,6 +198,30 @@ class AttentionDecisionView(discord.ui.View):
         await interaction.response.send_message("실행 중인 작업은 `/dev-pause`로 다음 배정부터 멈출 수 있습니다.", ephemeral=True)
 
 
+class AttentionQueueView(discord.ui.View):
+    """A readable button list for all blocked tasks; no ID copying required."""
+    def __init__(self, tasks):
+        super().__init__(timeout=None)
+        for task in tasks[:10]:
+            item_id = task["id"]
+            label = task.get("goal", item_id).replace("\n", " ")[:48]
+            retry = discord.ui.Button(label=f"재시도 · {label}", style=discord.ButtonStyle.primary,
+                                      custom_id=f"automation:retry:list:{item_id}", row=len(self.children) // 2)
+            stop = discord.ui.Button(label=f"중지 · {label}", style=discord.ButtonStyle.danger,
+                                     custom_id=f"automation:stop:list:{item_id}", row=len(self.children) // 2)
+
+            async def retry_callback(interaction, target=item_id):
+                return await AttentionDecisionView(target).retry(interaction)
+
+            async def stop_callback(interaction, target=item_id):
+                return await AttentionDecisionView(target).stop(interaction)
+
+            retry.callback = retry_callback
+            stop.callback = stop_callback
+            self.add_item(retry)
+            self.add_item(stop)
+
+
 def decision_view(item_id, status):
     if not item_id:
         return None
@@ -220,6 +244,7 @@ class ControlClient(discord.Client):
         self.last_progress_task = None
         self.last_progress_sent = 0.0
         self.last_progress_signature = None
+        self.last_attention_signature = None
 
     async def setup_hook(self):
         try:
@@ -286,6 +311,7 @@ class ControlClient(discord.Client):
         task_id = current.get("running_task")
         if not task_id:
             self.last_progress_task = None
+            await self.publish_attention_summary()
             return
         settings = orchestrator.config()
         now = time.monotonic()
@@ -331,6 +357,26 @@ class ControlClient(discord.Client):
     async def before_progress_pump(self):
         await self.wait_until_ready()
 
+    async def publish_attention_summary(self):
+        settings = orchestrator.config()
+        tasks = orchestrator.queue_tasks("Attention")
+        signature = "|".join(f"{task['id']}:{task.get('last_failure', '')}" for task in tasks)
+        if signature == self.last_attention_signature:
+            return
+        guild = self.get_guild(GUILD_ID)
+        if guild is None or not tasks:
+            self.last_attention_signature = signature
+            return
+        channel = discord.utils.get(guild.text_channels, name=settings["discord"]["attention_channel"])
+        if channel is None:
+            return
+        lines = ["**처리가 멈춘 작업**", "아래에서 작업 내용을 확인하고 버튼을 누르세요."]
+        for task in tasks[:10]:
+            reason = str(task.get("last_failure") or "실행 결과 확인 필요").replace("\n", " ")[-180:]
+            lines.append(f"• **{task.get('goal', task['id'])}**\n  이유: {reason}")
+        await channel.send("\n".join(lines)[:1900], view=AttentionQueueView(tasks))
+        self.last_attention_signature = signature
+
 
 INSTANCE_LOCK = acquire_instance_lock()
 client = ControlClient()
@@ -353,6 +399,7 @@ async def dev_status(interaction: discord.Interaction):
     ]
     current_task = next((item for item in queued if item.get("id") == current.get("running_task")), None)
     attention = sum(item.get("status") == "Attention" for item in queued)
+    attention_tasks = [item for item in queued if item.get("status") == "Attention"]
     waiting = sum(item.get("status") in ("Planned", "Ready") for item in queued)
     lines = [
         "**자동 개발 현황**",
@@ -364,7 +411,10 @@ async def dev_status(interaction: discord.Interaction):
         lines.append(f"담당: {current_task.get('agent', '선정 중')} · 모델: {current_task.get('model', 'Jev 선택 중')}")
     if attention:
         lines.append("확인 필요 작업은 `dev-attention` 채널의 재시도 버튼을 눌러 처리합니다.")
-    await interaction.response.send_message("\n".join(lines), ephemeral=True)
+    await interaction.response.send_message(
+        "\n".join(lines), ephemeral=True,
+        view=AttentionQueueView(attention_tasks) if attention_tasks else None,
+    )
 
 
 @client.tree.command(name="dev-start", description="새 개발 작업의 자동 배정을 시작합니다.", guild=GUILD)
