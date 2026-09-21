@@ -275,7 +275,8 @@ def unity_is_running():
 
 def run_unity_checks(task):
     if unity_is_running():
-        return {"passed": False, "reason": "Unity editor is already running; automatic batch verification deferred."}
+        return {"passed": False, "deferred": True,
+                "reason": "Unity editor is already running; automatic batch verification deferred."}
     settings = config()
     unity = Path(settings["unity_path"])
     if not unity.is_file():
@@ -352,10 +353,55 @@ def verify_worker_result(task):
     }
 
 
+def verify_and_review_task(task):
+    verification = verify_worker_result(task)
+    task["verification_result"] = verification
+    unity = verification.get("checks", {}).get("unity", {})
+    if unity.get("deferred"):
+        task["status"] = "VerificationPending"
+        task["verification_pending_reason"] = unity.get("reason")
+    elif not verification["passed"]:
+        task["status"] = "Attention"
+    else:
+        task.pop("verification_pending_reason", None)
+        try:
+            review = codex_reviewer.review_task(task)
+            task["review_result"] = review
+            if review["verdict"] == "pass" and not verification["checks"]["manual_play_mode_required"]:
+                task["status"] = "IntegrationReady"
+            elif review["verdict"] == "pass":
+                task["status"] = "VerificationPending"
+                task["verification_pending_reason"] = "Play Mode interaction verification is required."
+            else:
+                task["status"] = "Attention"
+        except Exception as exc:
+            task["status"] = "Attention"
+            task["review_error"] = str(exc)
+    write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+    kind = "result" if task["status"] == "IntegrationReady" else (
+        "status" if task["status"] == "VerificationPending" else "attention"
+    )
+    emit(kind, "작업 검토 완료" if kind == "result" else "작업 검증 대기" if kind == "status" else "작업 확인 필요",
+         f"{task['id']} 상태: {task['status']}")
+    return task["status"].lower()
+
+
+def deferred_verification_tasks():
+    result = queue_tasks("Review")
+    for task in queue_tasks("VerificationPending"):
+        unity = task.get("verification_result", {}).get("checks", {}).get("unity", {})
+        if unity.get("deferred"):
+            result.append(task)
+    return result
+
+
 def run_once():
     current = state()
     if current.get("paused") or current.get("running_task"):
         return "paused" if current.get("paused") else "busy"
+    pending = deferred_verification_tasks()
+    if pending:
+        return verify_and_review_task(pending[0])
     planned = process_request_once()
     if planned:
         return planned.lower()
@@ -388,27 +434,9 @@ def run_once():
         if result.stderr:
             task["last_failure"] = result.stderr[-2000:]
         if result.returncode == 0:
-            verification = verify_worker_result(task)
-            task["verification_result"] = verification
-            if not verification["passed"]:
-                task["status"] = "Attention"
-            else:
-                try:
-                    review = codex_reviewer.review_task(task)
-                    task["review_result"] = review
-                    if review["verdict"] == "pass" and not verification["checks"]["manual_play_mode_required"]:
-                        task["status"] = "IntegrationReady"
-                    elif review["verdict"] == "pass":
-                        task["status"] = "VerificationPending"
-                    else:
-                        task["status"] = "Attention"
-                except Exception as exc:
-                    task["status"] = "Attention"
-                    task["review_error"] = str(exc)
+            return verify_and_review_task(task)
         write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
-        kind = "result" if task["status"] == "IntegrationReady" else "attention"
-        emit(kind, "작업 검토 완료" if kind == "result" else "작업 확인 필요",
-             f"{task['id']} 상태: {task['status']}")
+        emit("attention", "작업 실행 실패", f"{task['id']} 상태: {task['status']}")
         return task["status"].lower()
     finally:
         update_state(running_task=None)

@@ -91,6 +91,24 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(task["id"], "first")
         self.assertEqual(agent, "codex")
 
+    def test_running_unity_defers_verification_without_attention(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "task.json"
+            task = {"id": "x", "status": "Review", "_path": str(path)}
+            verification = {
+                "passed": False,
+                "checks": {"unity": {"passed": False, "deferred": True, "reason": "Unity is open."}},
+            }
+            with patch.object(orchestrator, "verify_worker_result", return_value=verification), \
+                 patch.object(orchestrator, "emit") as emit, \
+                 patch.object(orchestrator.codex_reviewer, "review_task") as review:
+                status = orchestrator.verify_and_review_task(task)
+
+            self.assertEqual(status, "verificationpending")
+            self.assertEqual(task["status"], "VerificationPending")
+            review.assert_not_called()
+            self.assertEqual(emit.call_args.args[0], "status")
+
 
 if __name__ == "__main__":
     unittest.main()
