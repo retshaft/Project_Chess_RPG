@@ -11,6 +11,14 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = Path(__file__).with_name("planner_schema.json")
 
 
+def normalize_plan(plan):
+    for task in plan["tasks"]:
+        task["eligible_agents"] = list(dict.fromkeys(task["eligible_agents"]))
+        if not task["eligible_agents"]:
+            raise ValueError("A planned task must have at least one eligible agent.")
+    return plan
+
+
 def plan_request(request, timeout=900):
     codex = shutil.which("codex.cmd") or shutil.which("codex")
     if not codex:
@@ -37,7 +45,7 @@ User request:
         result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout)
         if result.returncode:
             raise RuntimeError((result.stderr or result.stdout)[-3000:])
-        plan = json.loads(temporary_path.read_text(encoding="utf-8-sig"))
+        plan = normalize_plan(json.loads(temporary_path.read_text(encoding="utf-8-sig")))
         pipeline_store.write_json(output, plan)
         return plan, output
     finally:

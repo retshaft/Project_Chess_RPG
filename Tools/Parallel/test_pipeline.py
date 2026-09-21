@@ -28,6 +28,11 @@ class PipelineStoreTests(unittest.TestCase):
         self.assertFalse(codex_planner.needs_review(ordinary))
         self.assertTrue(codex_planner.needs_review(scene))
 
+    def test_plan_agent_choices_are_deduplicated_after_structured_output(self):
+        plan = {"tasks": [{"eligible_agents": ["zcode", "zcode", "codex"]}]}
+        normalized = codex_planner.normalize_plan(plan)
+        self.assertEqual(normalized["tasks"][0]["eligible_agents"], ["zcode", "codex"])
+
 
 if __name__ == "__main__":
     unittest.main()

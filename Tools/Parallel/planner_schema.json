@@ -35,7 +35,6 @@
           "eligible_agents": {
             "type": "array",
             "minItems": 1,
-            "uniqueItems": true,
             "items": {"type": "string", "enum": ["zcode", "antigravity", "codex"]}
           },
           "needs_user_decision": {"type": "boolean"},
@@ -45,4 +44,3 @@
     }
   }
 }
-
