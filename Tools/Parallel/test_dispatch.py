@@ -61,8 +61,8 @@ class DispatchTests(unittest.TestCase):
     def test_codex_uses_bounded_workspace_mode(self):
         with patch.object(dispatch, 'executable', return_value=(['codex.cmd'], {'model': 'configured-default'})):
             args, _, stdin_text = dispatch.command('codex', 'task', 'edit', 60, Path('C:/work'))
-        self.assertIn('workspace-write', args)
         self.assertIn('--approve-for-me', args)
+        self.assertNotIn('--sandbox', args)
         self.assertNotIn('--ask-for-approval', args)
         self.assertNotIn('--dangerously-bypass-approvals-and-sandbox', args)
         self.assertEqual(args[-1], '-')

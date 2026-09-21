@@ -255,7 +255,10 @@ def dispatch(task, agent, timeout):
     worktree, task_file = validate_task(task)
     cmd = [sys.executable, str(DISPATCH), "run", "--agent", agent,
            "--worktree", str(worktree), "--task", str(task_file), "--timeout", str(timeout)]
-    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout + 60)
+    return subprocess.run(
+        cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=timeout + 60,
+    )
 
 
 def unity_is_running():

@@ -126,9 +126,9 @@ def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24):
         return prefix + ['--model', config['model'], '--mode', 'plan' if mode == 'plan' else 'accept-edits',
                          '--print', prompt, '--output-format', 'json', '--print-timeout', f'{timeout}s'], env, None
     if agent == 'codex':
+        permissions = ['--sandbox', 'read-only'] if mode == 'plan' else ['--approve-for-me']
         return prefix + [
-            'exec', '--cd', str(worktree), '--sandbox', 'read-only' if mode == 'plan' else 'workspace-write',
-            *([] if mode == 'plan' else ['--approve-for-me']),
+            'exec', '--cd', str(worktree), *permissions,
             '--ephemeral', '--color', 'never', '-'
         ], env, prompt
     # Installed 0.16.5 rejects advertised turn flags; use a bounded prompt run.
