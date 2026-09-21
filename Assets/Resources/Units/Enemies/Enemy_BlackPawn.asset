@@ -37,13 +37,14 @@ MonoBehaviour:
   InitSP: 4
   BasicAttackAbilityData: {fileID: 0}
   BasicAttackAbility: {fileID: 0}
-  DeploymentCost: 2
+  DeploymentCost: 1
   MoveCostAP: 8
-  AttackCostAP: 12
+  AttackCostAP: 8
   ActionSpeed: 1
   MoveRange: 3
   SpeedLevel: 1
   MoveSpeed: 0.8
+  MoveCooldown: 4.5
   ActionDelay: 2.5
   Weight: 1
   IsBoss: 0

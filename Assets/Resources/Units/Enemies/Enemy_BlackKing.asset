@@ -17,8 +17,8 @@ MonoBehaviour:
   Icon: {fileID: 0}
   Prefab: {fileID: 7280224136315881766, guid: a08f66414462a6648bbe724bdf5709ec, type: 3}
   PieceType: 5
-  MovePattern: 0
-  BaseRole: "\uCC99\uD6C4\uB300"
+  MovePattern: 2
+  BaseRole: "\uAD70\uC8FC"
   Subclass: 0
   ResonanceRole: 0
   MaxHealth: 200
@@ -37,13 +37,14 @@ MonoBehaviour:
   InitSP: 4
   BasicAttackAbilityData: {fileID: 0}
   BasicAttackAbility: {fileID: 0}
-  DeploymentCost: 2
-  MoveCostAP: 8
-  AttackCostAP: 40
+  DeploymentCost: 3
+  MoveCostAP: 24
+  AttackCostAP: 24
   ActionSpeed: 1
   MoveRange: 3
   SpeedLevel: 1
   MoveSpeed: 0.8
+  MoveCooldown: 2
   ActionDelay: 2.5
   Weight: 5
   IsBoss: 0

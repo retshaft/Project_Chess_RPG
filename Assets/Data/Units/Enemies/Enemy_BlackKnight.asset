@@ -16,9 +16,9 @@ MonoBehaviour:
   UnitName: Black Knight
   Icon: {fileID: 0}
   Prefab: {fileID: 9115544909242704181, guid: 37f93dc3859037c4987242a9c115a57c, type: 3}
-  PieceType: 0
-  MovePattern: 0
-  BaseRole: "\uCC99\uD6C4\uB300"
+  PieceType: 1
+  MovePattern: 1
+  BaseRole: "\uB3CC\uACA9\uAE30\uC0AC"
   Subclass: 0
   ResonanceRole: 0
   MaxHealth: 30
@@ -37,13 +37,14 @@ MonoBehaviour:
   InitSP: 4
   BasicAttackAbilityData: {fileID: 0}
   BasicAttackAbility: {fileID: 0}
-  DeploymentCost: 2
-  MoveCostAP: 8
-  AttackCostAP: 8
+  DeploymentCost: 3
+  MoveCostAP: 24
+  AttackCostAP: 24
   ActionSpeed: 1
   MoveRange: 3
   SpeedLevel: 1
   MoveSpeed: 0.8
+  MoveCooldown: 1.75
   ActionDelay: 2.5
   Weight: 1
   IsBoss: 0
