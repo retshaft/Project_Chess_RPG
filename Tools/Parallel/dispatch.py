@@ -36,7 +36,7 @@ def read_json(path):
     return json.loads(path.read_text(encoding='utf-8-sig'))
 
 
-def validate_worktree(path, agent):
+def validate_worktree(path, agent, allowed_files=None):
     path = Path(path).resolve(strict=True)
     if not path.is_relative_to((ROOT / '.worktrees').resolve()) or not (path / '.git').is_file():
         raise ValueError('Use a linked worktree under this project/.worktrees.')
@@ -48,8 +48,12 @@ def validate_worktree(path, agent):
     branch = git(path, 'branch', '--show-current')
     if not branch.startswith(f'codex/{agent}/'):
         raise ValueError('The branch does not belong to the selected agent.')
-    if git(path, 'status', '--porcelain'):
-        raise ValueError('Worktree is not clean. Review existing changes before dispatching.')
+    dirty = git(path, 'status', '--porcelain')
+    if dirty:
+        changed = [line[3:] for line in dirty.splitlines() if len(line) > 3]
+        violations = sorted(set(changed) - set(allowed_files or []))
+        if violations:
+            raise ValueError('Worktree has changes outside the task scope: ' + ', '.join(violations))
     return path, branch, git(path, 'rev-parse', 'HEAD')
 
 
@@ -200,7 +204,10 @@ def changed_files(worktree, base):
 
 
 def run(args):
-    worktree, branch, base = validate_worktree(args.worktree, args.agent)
+    task_preview = None if args.smoke else read_json(Path(args.task))
+    worktree, branch, base = validate_worktree(
+        args.worktree, args.agent, (task_preview or {}).get('allowed_files', [])
+    )
     if args.smoke:
         task = {'mode': 'plan', 'allowed_files': [], 'prompt':
                 'Connectivity check only. Do not use tools, read files, or modify anything. '
