@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import os
 
 import pipeline_store
 
@@ -68,6 +69,55 @@ User request:
         return plan, output
     finally:
         temporary_path.unlink(missing_ok=True)
+
+
+def plan_request_external(request, agent, model, timeout=900):
+    """Create the same structured plan through Gemini (Antigravity) or ZCode."""
+    agents = json.loads((Path(__file__).with_name("agents.json")).read_text(encoding="utf-8"))
+    profile = agents[agent]
+    prompt = f"""You are the lead planner for the Checkmate RPG Unity repository.
+Read AGENTS.md, Docs/MILESTONES.md, Docs/DEV_PROCESS.md, and relevant implementation files.
+Do not edit files. Return only a JSON object matching this schema: {SCHEMA.read_text(encoding='utf-8')}
+Create the smallest independent implementation tasks for this request. Use exact repository-relative
+file paths, keep existing game rules, and set needs_user_decision only for an actual blocker.
+User request:\n{request['description']}"""
+    if agent == "antigravity":
+        binary = Path(os.environ["LOCALAPPDATA"]) / profile["cliRelativePath"]
+        cmd = [str(binary), "--model", model, "--effort", profile.get("effort", "low"),
+               "--dangerously-skip-permissions", "--mode", "plan", "-p", prompt,
+               "--output-format", "json", "--json-schema", str(SCHEMA)]
+        env = os.environ.copy()
+    else:
+        binary = Path(os.environ["LOCALAPPDATA"]) / profile["cliRelativePath"]
+        node = shutil.which("node")
+        if not node or not binary.is_file():
+            raise RuntimeError("ZCode CLI 또는 Node.js를 찾을 수 없습니다.")
+        user_config = json.loads((Path.home() / ".zcode/cli/config.json").read_text(encoding="utf-8"))
+        provider = user_config.get("provider", {}).get(profile["provider"], {})
+        options = provider.get("options", {})
+        if not options.get("apiKey") or not options.get("baseURL"):
+            raise RuntimeError("ZCode CLI 로그인이 필요합니다.")
+        env = os.environ.copy()
+        env["ZCODE_MODEL"] = profile["provider"] + "/" + model
+        env["ANTHROPIC_API_KEY"] = options["apiKey"]
+        env["ZCODE_BASE_URL"] = options["baseURL"]
+        cmd = [node, str(binary), "--cwd", str(ROOT), "--mode", "plan", "--json",
+               "--prompt", prompt]
+    result = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True,
+                            encoding="utf-8", errors="replace", timeout=timeout)
+    if result.returncode:
+        raise RuntimeError((result.stderr or result.stdout)[-3000:])
+    payload = json.loads(result.stdout.strip())
+    if agent == "zcode":
+        payload = payload.get("result", payload)
+        payload = payload.get("text", payload) if isinstance(payload, dict) else payload
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    plan = normalize_plan(payload)
+    pipeline_store.PLANS.mkdir(parents=True, exist_ok=True)
+    output = pipeline_store.PLANS / f"{request['id']}.json"
+    pipeline_store.write_json(output, plan)
+    return plan, output
 
 
 def needs_review(plan, autonomy_mode="guarded"):

@@ -134,18 +134,31 @@ def process_request_once():
     try:
         plan = plan_path = None
         planner_error = None
-        planner_models = ("gpt-5.6-luna", "gpt-5.6-sol", "gpt-6-astra")
-        for planner_model in planner_models:
+        planner_routes = [
+            ("gpt-5.6-luna", "codex_planner.plan_request"),
+            ("gpt-5.6-sol", "codex_planner.plan_request"),
+            ("gpt-6-astra", "codex_planner.plan_request"),
+            ("gemini-3.1-pro-high", "codex_planner.plan_request_external"),
+            ("gemini-3.8-flash", "codex_planner.plan_request_external"),
+            ("GLM-5.3-Flash", "codex_planner.plan_request_external"),
+        ]
+        for planner_model, planner_kind in planner_routes:
             health = model_health().get(planner_model, {})
             if health.get("available") is False:
                 continue
             try:
-                plan, plan_path = codex_planner.plan_request(request, model=planner_model)
+                if planner_kind.endswith("external"):
+                    profile = config().get("models", {}).get(planner_model, {})
+                    plan, plan_path = codex_planner.plan_request_external(
+                        request, profile.get("agent", "antigravity"), planner_model
+                    )
+                else:
+                    plan, plan_path = codex_planner.plan_request(request, model=planner_model)
                 break
             except Exception as exc:
                 planner_error = exc
                 text = str(exc).lower()
-                if any(marker in text for marker in ("usage limit", "rate limit", "quota", "credits", "too many requests")):
+                if planner_kind.endswith("external") or any(marker in text for marker in ("usage limit", "rate limit", "quota", "credits", "too many requests")):
                     mark_model_unavailable(planner_model, "계획 작성 중 사용량 또는 요청 한도 초과")
                     continue
                 raise
