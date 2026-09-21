@@ -1,0 +1,68 @@
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+import orchestrator
+from jev_router import _choice
+
+
+class OrchestratorTests(unittest.TestCase):
+    def test_state_starts_paused(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(orchestrator, "STATE_PATH", Path(folder) / "state.json"):
+            self.assertTrue(orchestrator.state()["paused"])
+
+    def test_only_ready_tasks_are_returned_in_priority_order(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(orchestrator, "QUEUE", Path(folder)):
+            Path(folder, "later.json").write_text(json.dumps({"id": "later", "goal": "b", "status": "Ready", "priority": 20}), encoding="utf-8")
+            Path(folder, "first.json").write_text(json.dumps({"id": "first", "goal": "a", "status": "Ready", "priority": 10}), encoding="utf-8")
+            Path(folder, "done.json").write_text(json.dumps({"id": "done", "goal": "c", "status": "Review"}), encoding="utf-8")
+            self.assertEqual([task["id"] for task in orchestrator.ready_tasks()], ["first", "later"])
+
+    def test_task_paths_are_confined_to_coordination_folders(self):
+        task = {"id": "x", "goal": "x", "allowed_files": ["x"],
+                "worktree": str(orchestrator.ROOT), "task_file": str(orchestrator.ROOT / "task.json")}
+        with self.assertRaises(ValueError):
+            orchestrator.validate_task(task)
+
+    def test_paused_loop_does_not_call_jev(self):
+        with patch.object(orchestrator, "state", return_value={"paused": True, "running_task": None}), \
+             patch.object(orchestrator, "choose_route") as choose:
+            self.assertEqual(orchestrator.run_once(), "paused")
+            choose.assert_not_called()
+
+    def test_official_sdk_answer_shape_is_read(self):
+        class Answer:
+            def model_dump(self, mode="json"):
+                return {"choice": "zcode", "confidence": 0.91, "probabilities": {"zcode": 0.91}}
+        class Response:
+            answers = {"agent": Answer()}
+        choice, confidence, _ = _choice(Response(), "agent")
+        self.assertEqual(choice, "zcode")
+        self.assertEqual(confidence, 0.91)
+
+    def test_plan_materializes_without_execution_paths(self):
+        plan = {"tasks": [{"id": "fix-ui", "goal": "fix", "allowed_files": ["x"],
+                            "verification": ["check"], "risk": "low",
+                            "eligible_agents": ["zcode"], "needs_user_decision": False,
+                            "user_question": None, "current_behavior": "bad",
+                            "expected_behavior": "good"}]}
+        with tempfile.TemporaryDirectory() as folder, patch.object(orchestrator, "QUEUE", Path(folder)):
+            tasks = orchestrator.materialize_plan({"id": "request-12345678"}, plan)
+            self.assertEqual(tasks[0]["status"], "Planned")
+            self.assertTrue(tasks[0]["id"].startswith("12345678-"))
+            self.assertNotIn("worktree", tasks[0])
+
+    def test_verification_rejects_scope_violations(self):
+        task = {"worktree": "C:/work", "base_commit": "abc", "allowed_files": ["allowed.cs"]}
+        completed = type("Result", (), {"returncode": 0, "stdout": "other.cs\n"})()
+        empty = type("Result", (), {"returncode": 0, "stdout": ""})()
+        with patch.object(orchestrator.subprocess, "run", side_effect=[empty, completed, empty]):
+            result = orchestrator.verify_worker_result(task)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["checks"]["scope_violations"], ["other.cs"])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,11 @@
+# 아웃게임 UI/UX 완성
+- 상태: Ready
+- 담당: Codex 메인 및 지정 내부 작업자
+- 워크스페이스: C:/PersonalFiles/2026/Task/Unity/Graduation_Project/Graduation_Project_v01
+- 브랜치: codex/integration / 기준 77160f4 및 기존 사용자 미커밋 변경 보존
+- 사용자 2026-09-09 요청: 기획서 기반 레벨업·스킬·기보·칙령 완성. 수정 전 실제 화면과 호출 흐름 확인.
+- 메인 소유: OperatorHubUI.cs, OutgameUIManager.cs, 성장 UI 및 새 관련 도우미/테스트. 수치 미정 사항은 사용자 답변 대기.
+- 내부 edict 작업자 소유: Assets/Scripts/UI/SynchroBoardUI.cs, Assets/Scripts/UI/EdictSelectorModal.cs, Assets/Scripts/Progression/PolarityCalculator.cs, Assets/Scripts/Progression/DeckManager.cs, Assets/Scripts/Progression/MetaProgressionCalculator.cs, Assets/Scripts/Progression/MetaProgressionRuntime.cs. 메인과 협의 없이 다른 파일 편집 금지.
+- 검증: 메인이 Unity 실행권 확보 후 컴파일, EditMode, 실제 화면·저장·재진입 검증. 내부 작업자는 Unity/Git/외부AI 실행 금지.
+- 금지: 전투 코어 미커밋 작업, 물 리소스, 기존 씬 사용자 편집 덮어쓰기, 제안16 돌파 변경, 제안18 AP 회복 변경.
+- 완료 기준: 선택 결과 저장, 실제 전투 데이터 반영 일치, 잠금/비용/실패 표시, 화면 넘침 방지. 테스트 미실행은 명시.

@@ -688,6 +688,13 @@ $RECYCLE.BIN/
 # Parallel development workspaces and local coordination data.
 /.worktrees/
 /.parallel/
+/.codex-remote-attachments/
+/.zcode/
+/ArtSource/
+/Assets/_Recovery/
+/Assets/Plugins/Roslyn/
+/Assets/Plugins.meta
+/editmode-results.xml
 # Unity package definitions must accompany every worktree.
 !/Packages/manifest.json
 !/Packages/packages-lock.json

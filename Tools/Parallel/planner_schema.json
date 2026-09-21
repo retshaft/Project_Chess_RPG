@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "tasks"],
+  "properties": {
+    "summary": {"type": "string"},
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id", "goal", "current_behavior", "expected_behavior", "allowed_files",
+          "verification", "risk", "eligible_agents", "needs_user_decision", "user_question"
+        ],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,47}$"},
+          "goal": {"type": "string"},
+          "current_behavior": {"type": "string"},
+          "expected_behavior": {"type": "string"},
+          "allowed_files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"}
+          },
+          "verification": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string"}
+          },
+          "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+          "eligible_agents": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "enum": ["zcode", "antigravity", "codex"]}
+          },
+          "needs_user_decision": {"type": "boolean"},
+          "user_question": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}
+

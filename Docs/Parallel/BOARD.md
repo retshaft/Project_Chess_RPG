@@ -1,11 +1,26 @@
 # 병렬 작업 보드
 
+## 2026-09-09 C01 리뷰 후 배정
+
+- 기존 attack-move-grace: Review 유지. 인계 기준 67/68 테스트 통과, Play Mode 미실행. 메인 정적 리뷰에서 실전/예측 사거리 규칙 불일치 및 강제 이동 뒤 기존 유예 기록 잔존 확인.
+- C01 리뷰 수정: ZCode / GLM-5.3-Flash에 자동 호출 시작. 작업서 `Tasks/c01-attack-grace-review-fixes.md`, 전용 워크트리 `.worktrees/zcode-c01-grace-review-fixes`, 기준 `01a5417` (코드 기준 aa0637a + 작업서).
+- 첫 실행 `20260908T173622Z-c3fe3630`은 미지원 CLI 옵션으로 Failed, 변경 0건. 연결기 수정 및 단위 테스트 9개 통과 후 재배정: `20260908T173804Z-cd1d276e`. 상태는 `.parallel/runs/<실행ID>/result.json` 확인. 실행 시작은 기능 완료나 검증 통과를 뜻하지 않는다.
+- 해당 작업서의 전투 코어·테스트 파일은 ZCode 단독 소유. 원본 코드·물 리소스·씬 및 기존 사용자 변경은 이번 배정에서 수정하지 않는다. Unity 최종 검증은 메인 담당.
+
 메인 개발자만 갱신한다. 기준일: 2026-09-08.
+
+회의 후 총괄 지시: [개발 명령서](DEVELOPMENT_ORDERS.md). 제안 16 보류, 18 조사 전용, 나머지 유지. 개별 작업은 Draft / 미배정이며 이 문서 작성으로 AI 호출·자동 실행을 시작하지 않았다.
 
 | 작업 | 담당 | 상태 | 소유 파일 / 다음 단계 |
 |---|---|---|---|
-| 병렬 개발 기반 | Codex | Verified (운영 도구) | 격리 저장소 도구 검증 11개 통과. 게임 코드 변경 없음; Unity 컴파일·플레이 미실행 |
-| zcode-bootstrap | ZCode / GLM-5.3-Flash | Draft | 연결 확인용. 기능 작업 미배정 |
+| 침수 유적 보드·씬 준비 | Codex | Verified (아트 초안) | 별도 BaseMap 편집본 실제 보드 적용, 단상·계단·기둥·아치·청록 수면 블록아웃. Battle/신규 씬 Play와 콘솔 확인. 최종 건축/식생/전투 통합은 후속. `Tasks/sunken-court.md`, `../SunkenCourt.md` |
+| 서브컬쳐 풍 배경 셰이더 | Codex | Verified (체스보드 적용) | 실제 RuinTiles/TileRock/TileMetal 64칸 적용. 기존 atlas/normal/mask 유지, 금속칸 색 분리. BattleScene 기물·이동 테두리 Play 렌더/콘솔 검증. 기존 테스트 109개 중 별개 Poison 1건 실패 기록 유지. `Tasks/stylized-background.md`, `../StylizedBackground.md` |
+| 얕은 물 셰이더 | Codex | Verified | 레퍼런스 후속 및 씬 이동 투명도 보정 완료: 4중 변위/굴절, Beach/Lagoon, portable prefab, 카메라 Depth/Opaque 자동 설정, 컴파일/Play 확인. 이전 전투 회귀 67/68(별개 Poison 내림 실패). `Tasks/shallow-water.md`, `../Water.md` |
+| 병렬 개발 기반 | Codex | Verified | 도구 단위 테스트 8개 + 워크트리/모델 연결 검증. 게임 코드 변경 없음 |
+| GLM 작업 큐 | Codex | Ready | `Docs/Parallel/GLM_TASK_QUEUE.md`; 우선순위·병렬 가능 여부·복사 가능한 지시문 정리 |
+| M1 정식 Play Mode 검증 | 사용자 | Verified | 적 MaxAP 100 확인. 정식 진입·전투·승패·복귀 정상, 콘솔 오류 보고 없음 |
+| M2 대표 넉백/Splat 콤보 셋업 | ZCode / GLM-5.3-Flash | Review | `codex/zcode/bootstrap`에 Editor 파일 1개(+.meta)와 인계서 배치 완료. 에디터 빌드 통과, Play Mode 확인 대기 |
+| M3 상태 효과 회귀 테스트 | Antigravity / Gemini 3.1 Pro (High) | Review | `codex/antigravity/bootstrap`에 테스트 1개(+.meta)와 인계서 배치 완료. Unity Test Runner 확인 대기 |
 | antigravity-bootstrap | Antigravity / Gemini | Draft | 연결 확인용. 기능 작업 미배정 |
 
 ## 첫 배정 전 확인

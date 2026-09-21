@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('New', 'Status', 'AcquireUnity', 'ReleaseUnity')]
     [string]$Action,
-    [ValidateSet('zcode', 'antigravity')][string]$Agent,
+    [ValidateSet('zcode', 'antigravity', 'codex')][string]$Agent,
     [string]$Task = 'bootstrap',
     [string]$Base = 'HEAD',
     [string]$Token

@@ -1,0 +1,14 @@
+{
+  "poll_seconds": 30,
+  "jev_model": "jev-latest",
+  "minimum_confidence": 0.85,
+  "maximum_attempts": 2,
+  "default_timeout_seconds": 900,
+  "unity_path": "E:/UnityInstallation/6000.3.10f1/Editor/Unity.exe",
+  "unity_test_timeout_seconds": 900,
+  "discord": {
+    "status_channel": "dev-status",
+    "result_channel": "dev-results",
+    "attention_channel": "dev-attention"
+  }
+}

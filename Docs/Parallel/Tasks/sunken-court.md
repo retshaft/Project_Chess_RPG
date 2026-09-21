@@ -1,0 +1,16 @@
+# Sunken court reference preparation
+- Status: Verified — small terrain follow-up
+- Owner: Codex main, sequential
+- Branch: codex/integration
+- Workspace: C:/PersonalFiles/2026/Task/Unity/Graduation_Project/Graduation_Project_v01
+- Base: 77160f46d11c6780484164d3167f5a7140d3135d
+- Scope: Assets/Environment/SunkenCourt/ and .meta; Assets/Scripts/Editor/StylizedBackground/SunkenCourtSetup.cs and .meta; Assets/Resources/Materials/RuinTiles.mat; Docs/SunkenCourt.md, Docs/SunkenCourtPreview.png, this task, BOARD.md.
+- Goal: subtle separate albedo edit from original atlas, preserve original normal/mask/mesh/UV; prepare separate visual blockout scene with existing 8x8 tile assets, platform, stairs, turquoise water, columns and distant broken arch.
+- Preserve: source textures, existing scenes, water source resources, gameplay, grid coordinates, packages/settings.
+- Validate: shader/editor compile, actual board render in BattleScene Play, prepared scene render/Play, console and Play exit. Scene is art preparation, not a new battle stage or finished environment.
+- Additional evidence scope: Docs/SunkenCourtBoard.png.
+- Result: built-in ImageGen edited albedo saved to dedicated texture path and connected to existing RuinTiles material. Source textures and scene files preserved. Separate blockout scene prepared with 64 original tile prefabs, platform/stairs/pylons/background arch/columns/turquoise water.
+- Validation: C# compile error 0; BattleScene Play board/unit/movement overlay render checked; new scene Play capture completed after transient MCP reload reconnection; console error/warning 0; Play exited. Existing gameplay tests not rerun for this art-only change.
+- Limit: prepared art scene, no gameplay wiring/final architecture/vegetation/baking/performance signoff. Existing normal/mask reused; generated atlas retains broad layout, not pixel-identical crack registration.
+- Terrain follow-up: add one 48x48 Unity Terrain with 129 height samples and dedicated TerrainData/Layer/Material under existing SunkenCourt scope. Low submerged center and modest shore shoulders outside the board. Preserve original objects/camera/water and board footprint. Evidence: Docs/SunkenCourtTerrain.png. No runtime code or game rule changes.
+- Terrain result: saved scene and dedicated Terrain assets; existing sand texture reused with muted layer tint; camera render in Play verified, console errors/warnings 0, Play stopped. No C# edits or gameplay test rerun; terrain shader messages checked.
