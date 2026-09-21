@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ShallowWater_Battle
+  m_Shader: {fileID: 4800000, guid: fed140d304f91314eb26d167f41f7b55, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _CAUSTICSSHADOWS_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CausticsTex:
+        m_Texture: {fileID: 2800000, guid: 02a2204374d8b3543a5b0e65b9eb9120, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalA:
+        m_Texture: {fileID: 2800000, guid: f13f658d41ae2144683a9059134581e5, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalB:
+        m_Texture: {fileID: 2800000, guid: e7884c989541cf24ca0501f287af36c9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalC:
+        m_Texture: {fileID: 2800000, guid: f13f658d41ae2144683a9059134581e5, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _CausticsDepth: 2.5
+    - _CausticsIntensity: 0.45
+    - _CausticsShadows: 1
+    - _ContactIntensity: 0.04
+    - _ContactMode: 0
+    - _ContactWidth: 0.12
+    - _CrestFoam: 0
+    - _DebugView: 0
+    - _Density: 0.95
+    - _EdgeFade: 0.07
+    - _F0: 0.02
+    - _FadeEnd: 45
+    - _FadeStart: 12
+    - _FoamBreakup: 0.55
+    - _FoamIntensity: 0
+    - _MaxOffset: 0.018
+    - _MaxThickness: 12
+    - _Quality: 2
+    - _Reflection: 1.05
+    - _Refraction: 0.0577
+    - _Roughness: 0.19
+    - _Specular: 0.8
+    - _SpecularLimit: 3
+    - _StrengthA: 0.22
+    - _StrengthB: 0.15
+    - _StrengthC: 0.035
+    - _StylizedSpecular: 1
+    - _SurfaceTintStrength: 0.28
+    - _WaveAmplitude: 0.061
+    - _WaveFrequency: 1.65
+    - _WaveRefraction: 1.15
+    - _WaveSpeed: 0.55
+    m_Colors:
+    - _Absorption: {r: 0.85, g: 0.23, b: 0.16, a: 0}
+    - _CausticsA: {r: 0.19, g: 0.24, b: 0.018, a: 0.1}
+    - _CausticsB: {r: 0.26, g: 1.12, b: -0.013, a: 0.08}
+    - _ContactColor: {r: 0.7, g: 0.86, b: 0.8, a: 1}
+    - _LayerA: {r: 0.19, g: 1, b: 0.3, a: 0.026}
+    - _LayerB: {r: 0.31, g: -0.4, b: 1, a: 0.018}
+    - _LayerC: {r: 0.8, g: 0.65, b: -1, a: 0.014}
+    - _Scattering: {r: 0.07, g: 0.3, b: 0.29, a: 1}
+    - _SurfaceTint: {r: 0.03, g: 0.3, b: 0.34, a: 1}
+    - _WaveDirection: {r: 1, g: 0.3, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

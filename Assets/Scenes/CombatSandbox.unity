@@ -230,7 +230,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -424,7 +424,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 0.15, g: 0.75, b: 1, a: 1}
-    - _Color: {r: 0.5, g: 0.8, b: 0.19999996, a: 1}
+    - _Color: {r: 0.14999998, g: 0.75, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
@@ -2131,6 +2131,96 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 316013271}
   m_Mesh: {fileID: -759463323998400011, guid: 52a8a33eee5de4d469345a3763d7ef3a, type: 3}
+--- !u!1 &318416024
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 318416027}
+  - component: {fileID: 318416026}
+  - component: {fileID: 318416025}
+  m_Layer: 4
+  m_Name: Shallow Water
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!23 &318416025
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 318416024}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 161e9499c806ab141a957d41acf4cb2c, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &318416026
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 318416024}
+  m_Mesh: {fileID: 4300000, guid: 87760921bc8e0fb46936c3a82faa2c32, type: 2}
+--- !u!4 &318416027
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 318416024}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 8, y: 2, z: 8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &325900685
 GameObject:
   m_ObjectHideFlags: 0
@@ -2855,6 +2945,7 @@ MonoBehaviour:
   _lineWidth: 0.05
   _threatColor: {r: 1, g: 0.1, b: 0.1, a: 0.4}
   _threatBorderColor: {r: 1, g: 0.1, b: 0.1, a: 1}
+  _predictColor: {r: 1, g: 0.7, b: 0, a: 0.6}
   _yOffset: 0.75
 --- !u!114 &399618149
 MonoBehaviour:
@@ -4060,7 +4151,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 0.95, g: 0.4, b: 0.1, a: 1}
-    - _Color: {r: 0.5, g: 0.8, b: 0.19999996, a: 1}
+    - _Color: {r: 0.95, g: 0.39999998, b: 0.09999997, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
@@ -4243,7 +4334,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &605702420
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -4803,9 +4894,10 @@ MonoBehaviour:
   Icon: {fileID: 0}
   Prefab: {fileID: 0}
   PieceType: 5
-  MovePattern: 0
-  BaseRole: "\uCC99\uD6C4\uB300"
+  MovePattern: 2
+  BaseRole: "\uAD70\uC8FC"
   Subclass: 0
+  ResonanceRole: 0
   MaxHealth: 50000
   Defense: 40
   Resistance: 0.2
@@ -4829,6 +4921,7 @@ MonoBehaviour:
   MoveRange: 2
   SpeedLevel: 1
   MoveSpeed: 0.8
+  MoveCooldown: 2
   ActionDelay: 2.5
   Weight: 1
   IsBoss: 1
@@ -5911,10 +6004,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.UI.PlayerAPBar
   _apSlider: {fileID: 0}
+  _ghostSlider: {fileID: 0}
   _apText: {fileID: 0}
   _warningText: {fileID: 0}
   _normalTextColor: {r: 1, g: 1, b: 1, a: 1}
   _warningTextColor: {r: 1, g: 0, b: 0, a: 1}
+  _ghostColor: {r: 0, g: 0.9, b: 1, a: 0.4}
   _warningDuration: 1.5
 --- !u!4 &924903465
 Transform:
@@ -6010,7 +6105,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -8277,7 +8372,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 0.85, g: 0.15, b: 0.2, a: 1}
-    - _Color: {r: 0.5, g: 0.8, b: 0.19999996, a: 1}
+    - _Color: {r: 0.85, g: 0.14999998, b: 0.19999996, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
@@ -10903,7 +10998,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -11315,7 +11410,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _BaseColor: {r: 0.85, g: 0.9, b: 0.95, a: 1}
-    - _Color: {r: 0.5, g: 0.8, b: 0.19999996, a: 1}
+    - _Color: {r: 0.85, g: 0.9, b: 0.95, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
@@ -12653,7 +12748,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -15200,3 +15295,4 @@ SceneRoots:
   - {fileID: 2063378021}
   - {fileID: 1576102830}
   - {fileID: 2080105399}
+  - {fileID: 318416027}

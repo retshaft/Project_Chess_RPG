@@ -1,0 +1,7 @@
+{
+    "name": "Checkmate.Water.Editor",
+    "rootNamespace": "Checkmate.Water.Editor",
+    "references": ["Checkmate.Water", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Universal.Runtime"],
+    "includePlatforms": ["Editor"],
+    "autoReferenced": true
+}
