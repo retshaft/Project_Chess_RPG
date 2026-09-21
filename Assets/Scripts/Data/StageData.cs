@@ -47,6 +47,11 @@ namespace CheckmateRPG.Progression
 
         [Header("Rewards Foundation")]
         public int RewardTP = 50;
+
+        [Tooltip("첫 클리어 시에만 추가 지급되는 보너스 TP. 기획 미확정 — 기본 0(반복과 동일).")]
+        [Min(0)]
+        public int FirstClearBonusTP = 0;
+
         public List<UnitData> ClearRewards = new List<UnitData>();
     }
 }

@@ -39,6 +39,9 @@ namespace CheckmateRPG.Progression
         // 킹 전용 육성 및 칙령 장착 현황
         public KingProgressionSaveData KingProgression = new KingProgressionSaveData();
 
+        // 첫 클리어가 기록된 스테이지 키(스테이지 에셋 이름). R01a: 첫 클리어 보너스와 반복 보상 구분용.
+        public List<string> ClearedStages = new List<string>();
+
         public SaveData()
         {
             TacticalPoints = 0;
