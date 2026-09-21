@@ -80,7 +80,7 @@ class DispatchTests(unittest.TestCase):
         print_flag = '-p' if '-p' in args else '--print'
         self.assertEqual(args[args.index(print_flag) + 1], prompt)
         self.assertIsNone(stdin_text)
-            self.assertIn('--dangerously-skip-permissions', args)
+        self.assertIn('--dangerously-skip-permissions', args)
         self.assertIn('accept-edits', args)
 
     def test_zcode_goal_and_turn_budget_are_forwarded(self):
