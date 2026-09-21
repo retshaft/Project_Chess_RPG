@@ -418,7 +418,9 @@ def verify_and_review_task(task):
         "status" if task["status"] == "VerificationPending" else "attention"
     )
     emit(kind, "작업 검토 완료" if kind == "result" else "작업 검증 대기" if kind == "status" else "작업 확인 필요",
-         f"{task['id']} 상태: {task['status']}",
+         f"{task['id']} 상태: {task['status']}\n변경 파일: "
+         + ", ".join(verification.get("checks", {}).get("changed_files", [])[:8])
+         + ("\n다음: Unity 검증 또는 통합 대기" if task["status"] == "VerificationPending" else "\n다음: 결과 확인"),
          {"item_id": task["id"], "status": task["status"]})
     return task["status"].lower()
 
@@ -463,7 +465,10 @@ def run_once():
     task["started_utc"] = utc_now()
     write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
     update_state(running_task=task["id"])
-    emit("status", "작업 시작", f"{task['id']} → {selected_agent}")
+    emit("status", "작업 시작",
+         f"{task['id']} → {selected_agent} / {task.get('model', '기본 모델')}\n"
+         f"목표: {task.get('goal', '')}\n대상: {', '.join(task.get('allowed_files', [])[:8])}",
+         {"item_id": task["id"], "status": "Running"})
     try:
         result = dispatch(task, selected_agent, int(task.get("timeout_seconds", settings["default_timeout_seconds"])))
         if result.returncode != 0 and requeue_after_provider_failure(task, result):

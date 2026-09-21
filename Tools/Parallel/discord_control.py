@@ -65,6 +65,38 @@ def find_task(item_id, status=None):
     return next((item for item in orchestrator.queue_tasks(status) if item["id"] == item_id), None)
 
 
+def latest_run(item_id):
+    runs = []
+    for path in (orchestrator.LOCAL / "runs").glob("*/task.json"):
+        try:
+            data = orchestrator.read_json(path)
+        except (OSError, ValueError):
+            continue
+        if data.get("id") == item_id:
+            runs.append(path.parent)
+    return max(runs, key=lambda path: path.stat().st_mtime) if runs else None
+
+
+def run_log_tail(run_path):
+    if not run_path:
+        return "로그 수집 중"
+    chunks = []
+    for name in ("stdout.json", "stderr.log"):
+        path = run_path / name
+        if path.exists():
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace").strip()
+            except OSError:
+                text = ""
+            if text:
+                chunks.append(text[-1400:])
+    if not chunks:
+        return "에이전트 시작 중"
+    text = "\n".join(chunks).replace("```", "''' ")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return discord.utils.escape_mentions(" ".join(lines[-4:])[-1400:])
+
+
 class PlanDecisionView(discord.ui.View):
     def __init__(self, request_id):
         super().__init__(timeout=None)
@@ -169,6 +201,7 @@ class ControlClient(discord.Client):
         self.sent_events = set()
         self.last_progress_task = None
         self.last_progress_sent = 0.0
+        self.last_progress_signature = None
 
     async def setup_hook(self):
         try:
@@ -239,8 +272,6 @@ class ControlClient(discord.Client):
         settings = orchestrator.config()
         now = time.monotonic()
         interval = float(settings.get("progress_update_seconds", 180))
-        if self.last_progress_task == task_id and now - self.last_progress_sent < interval:
-            return
         task = find_task(task_id)
         if task is None:
             return
@@ -249,6 +280,12 @@ class ControlClient(discord.Client):
             return
         channel = discord.utils.get(guild.text_channels, name=settings["discord"]["status_channel"])
         if channel is None:
+            return
+        run = latest_run(task_id)
+        log_tail = run_log_tail(run) if run else "로그 수집 중"
+        signature = f"{task_id}|{log_tail}"
+        if (self.last_progress_task == task_id and signature == self.last_progress_signature
+                and now - self.last_progress_sent < interval):
             return
         started = task.get("started_utc", "")
         elapsed = "계산 중"
@@ -260,12 +297,17 @@ class ControlClient(discord.Client):
                 pass
         queued = orchestrator.queue_tasks()
         waiting = sum(item["status"] in ("Planned", "Ready") for item in queued)
+        model = task.get("model") or "Jev가 선택 중"
+        files = ", ".join(task.get("allowed_files", [])[:3]) or "범위 확인 중"
         await channel.send(
-            f"**작업 진행 중**\n`{task_id}` · 담당 `{task.get('agent', '선정 중')}` · 경과 {elapsed}\n"
-            f"{task.get('goal', '')}\n남은 대기 작업: {waiting}개"
+            f"**작업 진행 중**\n`{task_id}` · 담당 `{task.get('agent', '선정 중')}` · 모델 `{model}` · 경과 {elapsed}\n"
+            f"목표: {task.get('goal', '')}\n대상: `{files}`\n"
+            f"최근 로그: {log_tail}\n다음: 작업 종료 후 변경 범위와 검증 결과를 확인합니다.\n"
+            f"남은 대기 작업: {waiting}개"
         )
         self.last_progress_task = task_id
         self.last_progress_sent = now
+        self.last_progress_signature = signature
 
     @progress_pump.before_loop
     async def before_progress_pump(self):
@@ -364,6 +406,25 @@ async def dev_detail(interaction: discord.Interaction, item_id: str):
                if key not in ("_path", "last_output", "last_failure")}
     body = json.dumps(visible, ensure_ascii=False, indent=2, default=str)
     await interaction.response.send_message(f"```json\n{body[:1800]}\n```", ephemeral=True)
+
+
+@client.tree.command(name="dev-trace", description="실행 중인 작업의 최근 로그와 현재 단계를 확인합니다.", guild=GUILD)
+@app_commands.describe(item_id="확인할 요청 또는 작업 ID")
+async def dev_trace(interaction: discord.Interaction, item_id: str):
+    if not await client.interaction_check(interaction):
+        return
+    task = find_task(item_id)
+    if task is None:
+        await interaction.response.send_message("해당 작업 ID를 찾지 못했습니다.", ephemeral=True)
+        return
+    run = latest_run(item_id)
+    log_tail = run_log_tail(run) if run else "아직 외부 에이전트 실행 로그가 없습니다."
+    files = ", ".join(task.get("allowed_files", [])) or "확정 전"
+    body = (
+        f"작업: {item_id}\n상태: {task.get('status')}\n담당: {task.get('agent', '미정')}\n"
+        f"모델: {task.get('model', 'Jev 선택 전')}\n대상 파일: {files}\n\n최근 로그:\n{log_tail}"
+    )
+    await interaction.response.send_message(body[:1900], ephemeral=True)
 
 
 @client.tree.command(name="dev-approve", description="검토 중인 작업 계획을 승인합니다.", guild=GUILD)

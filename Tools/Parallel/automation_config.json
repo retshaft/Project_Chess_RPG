@@ -1,6 +1,6 @@
 {
   "poll_seconds": 30,
-  "progress_update_seconds": 180,
+  "progress_update_seconds": 60,
   "show_agent_windows": true,
   "emergency_fallback_agent": "antigravity",
   "allow_emergency_fallback": true,
