@@ -203,7 +203,11 @@ def repository_state():
         changed.append(path)
     ignored = set(config().get("ignorable_root_changes", []))
     meaningful = [path for path in changed if path not in ignored]
-    return {"root_dirty": bool(meaningful), "changed_files": meaningful[:100], "ignored_changes": [path for path in changed if path in ignored], "model_health": model_health()}
+    running = queue_tasks("Running")
+    return {"root_dirty": bool(meaningful), "changed_files": meaningful[:100],
+            "ignored_changes": [path for path in changed if path in ignored],
+            "model_health": model_health(),
+            "running_agents": sorted({task.get("agent") for task in running if task.get("agent")})}
 
 
 def prepare_task(task, agent, selected_model=None):
@@ -301,6 +305,16 @@ def route_planned_task():
                 break
     profile = settings.get("models", {}).get(chosen_model, {}) if chosen_model else {}
     chosen_agent = profile.get("agent") or decision.agent
+    active_agents = set(repository_state().get("running_agents", []))
+    if chosen_agent in active_agents and selected:
+        for candidate in settings.get("model_policy_order", []):
+            candidate_profile = settings.get("models", {}).get(candidate, {})
+            candidate_agent = candidate_profile.get("agent")
+            unavailable_candidate = model_health().get(candidate, {}).get("available") is False
+            if (candidate_agent in selected.get("eligible_agents", []) and candidate_agent not in active_agents
+                    and not unavailable_candidate):
+                chosen_model, profile, chosen_agent = candidate, candidate_profile, candidate_agent
+                break
     invalid_choice = selected is None or chosen_agent not in selected.get("eligible_agents", [])
     needs_fallback = (
         decision.task_id == "wait" or decision.agent == "hold"
