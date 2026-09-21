@@ -6,6 +6,7 @@
   },
   "antigravity": {
     "model": "gemini-3.1-pro-high",
+    "effort": "low",
     "cliRelativePath": "agy/bin/agy.exe"
   },
   "codex": {

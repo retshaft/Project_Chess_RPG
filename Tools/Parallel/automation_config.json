@@ -1,7 +1,7 @@
 {
   "poll_seconds": 30,
   "progress_update_seconds": 60,
-  "show_agent_windows": true,
+  "show_agent_windows": false,
   "emergency_fallback_agent": "antigravity",
   "allow_emergency_fallback": true,
   "model_policy_order": ["gpt-5.6-luna", "gemini-3.1-pro-high", "gemini-3.8-flash", "GLM-5.3-Flash", "gpt-5.6-sol", "gpt-6-astra"],
