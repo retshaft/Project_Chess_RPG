@@ -109,6 +109,12 @@ class OrchestratorTests(unittest.TestCase):
             review.assert_not_called()
             self.assertEqual(emit.call_args.args[0], "status")
 
+    def test_open_unity_does_not_block_other_ready_work(self):
+        with patch.object(orchestrator, "queue_tasks", side_effect=[[], [{
+                 "id": "pending", "verification_result": {"checks": {"unity": {"deferred": True}}}
+             }]]), patch.object(orchestrator, "unity_is_running", return_value=True):
+            self.assertEqual(orchestrator.deferred_verification_tasks(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
