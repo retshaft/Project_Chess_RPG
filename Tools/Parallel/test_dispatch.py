@@ -73,14 +73,14 @@ class DispatchTests(unittest.TestCase):
             self.assertEqual(dispatch.parse_result('zcode', output, 0)['status'], 'Failed')
         self.assertEqual(dispatch.parse_result('zcode', '{"response":"partial"}', 1)['status'], 'Failed')
 
-    def test_prompt_is_one_argument_and_permissions_not_bypassed(self):
+    def test_prompt_is_one_argument_and_headless_permissions_are_enabled(self):
         prompt = 'Read "a file"; $(not-a-command)\n한글 테스트'
         with patch.object(dispatch, 'executable', return_value=(['agy.exe'], {'model': 'gemini-3.1-pro-high'})):
             args, _, stdin_text = dispatch.command('antigravity', prompt, 'edit', 60, Path('.'))
         print_flag = '-p' if '-p' in args else '--print'
         self.assertEqual(args[args.index(print_flag) + 1], prompt)
         self.assertIsNone(stdin_text)
-        self.assertNotIn('--dangerously-skip-permissions', args)
+            self.assertIn('--dangerously-skip-permissions', args)
         self.assertIn('accept-edits', args)
 
     def test_zcode_goal_and_turn_budget_are_forwarded(self):
