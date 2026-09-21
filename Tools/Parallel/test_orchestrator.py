@@ -149,6 +149,20 @@ class OrchestratorTests(unittest.TestCase):
         self.assertTrue(orchestrator.tasks_conflict(left, same))
         self.assertFalse(orchestrator.tasks_conflict(left, separate))
 
+    def test_stale_running_task_without_changes_returns_to_planning(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "task.json"
+            task = {"id": "stale", "status": "Running", "_path": str(path),
+                    "worktree": folder, "base_commit": "abc", "agent": "zcode"}
+            empty = type("Result", (), {"returncode": 0, "stdout": ""})()
+            with patch.object(orchestrator, "queue_tasks", return_value=[task]), \
+                 patch.object(orchestrator.subprocess, "run", return_value=empty), \
+                 patch.object(orchestrator, "emit"), patch.object(orchestrator, "update_state"):
+                recovered = orchestrator.recover_stale_running_tasks()
+            self.assertEqual(recovered, ["stale"])
+            self.assertEqual(task["status"], "Planned")
+            self.assertNotIn("agent", task)
+
 
 if __name__ == "__main__":
     unittest.main()

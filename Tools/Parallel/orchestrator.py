@@ -770,8 +770,33 @@ def run_once(background=False):
     return execute_ready_task(tasks[0])
 
 
+def recover_stale_running_tasks():
+    """Recover durable queue state after the controller process was restarted."""
+    recovered = []
+    for task in queue_tasks("Running"):
+        worktree = Path(task.get("worktree", ""))
+        base = task.get("base_commit")
+        changed = []
+        if worktree.is_dir() and base:
+            probe = subprocess.run(["git", "-C", str(worktree), "diff", "--name-only", base],
+                                   capture_output=True, text=True, encoding="utf-8", errors="replace")
+            changed = probe.stdout.splitlines() if probe.returncode == 0 else []
+        task["status"] = "Review" if changed else "Planned"
+        task["last_failure"] = "제어 프로세스 재시작 후 자동 복구"
+        if not changed:
+            for key in ("agent", "worktree", "task_file", "base_commit", "prepared_utc", "started_utc", "model"):
+                task.pop(key, None)
+        write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+        recovered.append(task["id"])
+    if recovered:
+        emit("status", "중단 작업 자동 복구", ", ".join(recovered), {"status": "Recovered"})
+    update_state(running_tasks=[], running_task=None)
+    return recovered
+
+
 def serve(stop_event=None):
     stop_event = stop_event or threading.Event()
+    recover_stale_running_tasks()
     while not stop_event.is_set():
         try:
             result = run_once(background=True)
