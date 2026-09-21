@@ -3,6 +3,7 @@
     "rootNamespace": "CheckmateRPG.Tests",
     "references": [
         "CheckmateRPG",
+        "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

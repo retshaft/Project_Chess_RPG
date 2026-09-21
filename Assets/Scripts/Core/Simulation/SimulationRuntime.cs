@@ -379,6 +379,18 @@ namespace CheckmateRPG.Core.Simulation
             MarkOccupiedPositionViewDirty();
         }
 
+        /// <summary>
+        /// 마지막 정상 이동 기록을 갱신한다(이동 유예 판정용). 점유 사전은 변경하지 않는다.
+        /// </summary>
+        internal void RecordNormalMove(Guid unitId, Vector2Int fromCell, int tick, string ownerName)
+        {
+            if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
+                return;
+
+            state.RecordNormalMove(fromCell, tick, ownerName);
+            MarkRuntimeStateViewDirty();
+        }
+
         internal void SetUnitActionState(Guid unitId, Guid? currentActionId, int recoveryUntilTick, string ownerName)
         {
             if (!TryGetMutableUnit(unitId, out UnitRuntimeState state))
@@ -606,6 +618,8 @@ namespace CheckmateRPG.Core.Simulation
                 RecoveryUntilTick = source.RecoveryUntilTick;
                 StatusFlags = source.StatusFlags;
                 HasBaseline = source.HasBaseline;
+                LastNormalMoveFromCell = source.LastNormalMoveFromCell;
+                LastNormalMoveTick = source.LastNormalMoveTick;
             }
 
             public Guid UnitId { get; }
@@ -618,6 +632,8 @@ namespace CheckmateRPG.Core.Simulation
             public int RecoveryUntilTick { get; }
             public UnitStatusFlags StatusFlags { get; }
             public bool HasBaseline { get; }
+            public Vector2Int LastNormalMoveFromCell { get; }
+            public int LastNormalMoveTick { get; }
         }
 
         private sealed class ReadOnlyEffectRuntimeStateView : IReadOnlyEffectRuntimeState

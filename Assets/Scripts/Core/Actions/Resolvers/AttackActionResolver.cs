@@ -24,7 +24,8 @@ namespace CheckmateRPG.Core.Actions.Resolvers
                 return ActionResolutionResult.Failed();
             if ((target.StatusFlags & UnitStatusFlags.Dead) != 0)
                 return ActionResolutionResult.Failed();
-            if (!battleContext.IsTargetInAttackRange(action.ActorId, action.TargetId))
+            // 사거리 판정은 유예 규칙 포함 공유 메서드로 — 사전검증과 항상 동일 결과를 보장한다.
+            if (!battleContext.IsTargetInAttackRangeWithGrace(action.ActorId, action.TargetId, action.QueuedTick, action.ResolveTick))
                 return ActionResolutionResult.Failed();
 
             // 공격 시전 직전 패시브/버프 연동

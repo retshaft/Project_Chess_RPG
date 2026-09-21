@@ -6,6 +6,7 @@ using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Runtime.Mutations;
 using CheckmateRPG.Core.Simulation;
 using CheckmateRPG.Core.Simulation.Spatial;
+using CheckmateRPG.Data;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Prediction
@@ -34,6 +35,9 @@ namespace CheckmateRPG.Core.Prediction
         private readonly int _criticalDamageMultiplier;
         private readonly MutationOrderingService _mutationOrderingService;
         private readonly PositionReservationSystem _positionReservationSystem;
+        private readonly Func<Guid, int> _attackGraceTicksLookup;
+        private readonly Func<Guid, ChessPieceType> _attackPieceTypeLookup;
+        private readonly Func<Guid, bool> _attackIsEnemyLookup;
 
         /// <param name="isCellValid">
         /// Delegate that returns <c>true</c> when a board cell is within bounds.
@@ -55,13 +59,19 @@ namespace CheckmateRPG.Core.Prediction
             Func<Vector2Int, bool> isCellValid,
             Func<Guid, int> attackRangeLookup,
             int criticalDamageMultiplier = 2,
-            SpatialResolutionPolicy spatialPolicy = SpatialResolutionPolicy.PriorityWin)
+            SpatialResolutionPolicy spatialPolicy = SpatialResolutionPolicy.PriorityWin,
+            Func<Guid, int> attackGraceTicksLookup = null,
+            Func<Guid, ChessPieceType> attackPieceTypeLookup = null,
+            Func<Guid, bool> attackIsEnemyLookup = null)
         {
             _isCellValid = isCellValid ?? throw new ArgumentNullException(nameof(isCellValid));
             _attackRangeLookup = attackRangeLookup ?? throw new ArgumentNullException(nameof(attackRangeLookup));
             _criticalDamageMultiplier = Math.Max(1, criticalDamageMultiplier);
             _mutationOrderingService = new MutationOrderingService();
             _positionReservationSystem = new PositionReservationSystem(spatialPolicy);
+            _attackGraceTicksLookup = attackGraceTicksLookup;
+            _attackPieceTypeLookup = attackPieceTypeLookup;
+            _attackIsEnemyLookup = attackIsEnemyLookup;
         }
 
         /// <summary>
@@ -115,10 +125,13 @@ namespace CheckmateRPG.Core.Prediction
                 context.ClonedRuntime,
                 _isCellValid,
                 _attackRangeLookup,
-                criticalDamageMultiplier: _criticalDamageMultiplier);
+                criticalDamageMultiplier: _criticalDamageMultiplier,
+                attackGraceTicksLookup: _attackGraceTicksLookup,
+                attackPieceTypeLookup: _attackPieceTypeLookup,
+                attackIsEnemyLookup: _attackIsEnemyLookup);
 
             var resolutionContext = new ActionResolutionContext(tick, sorted);
-            RunPreResolve(sorted, spatialSnapshot, battleContext, resolutionContext, context);
+            RunPreResolve(sorted, spatialSnapshot, battleContext, resolutionContext, context, tick);
             RunResolve(sorted, resolutionContext, battleContext);
 
             // ── Apply mutations to the cloned runtime only ────────────────────────
@@ -143,12 +156,13 @@ namespace CheckmateRPG.Core.Prediction
         /// same checks performed by the production
         /// <see cref="ResolutionPhasePipeline"/>.
         /// </summary>
-        private static void RunPreResolve(
+        private void RunPreResolve(
             IReadOnlyList<IActionCommand> sorted,
             PositionReservationSnapshot spatialSnapshot,
             PredictionBattleContext battleContext,
             ActionResolutionContext resolutionContext,
-            PredictionContext context)
+            PredictionContext context,
+            int tick)
         {
             resolutionContext.CurrentPhase = ResolutionPhase.PreResolve;
 
@@ -182,7 +196,7 @@ namespace CheckmateRPG.Core.Prediction
                         ValidateMovePreResolve(move, spatialSnapshot, battleContext, resolutionContext, context);
                         break;
                     case AttackActionCommand attack:
-                        ValidateAttackPreResolve(attack, battleContext, resolutionContext, context);
+                        ValidateAttackPreResolve(attack, battleContext, resolutionContext, context, tick);
                         break;
                 }
             }
@@ -213,11 +227,12 @@ namespace CheckmateRPG.Core.Prediction
             }
         }
 
-        private static void ValidateAttackPreResolve(
+        private void ValidateAttackPreResolve(
             AttackActionCommand attack,
             PredictionBattleContext battleContext,
             ActionResolutionContext resolutionContext,
-            PredictionContext context)
+            PredictionContext context,
+            int tick)
         {
             if (resolutionContext.IsCancelled(attack.ActionId))
                 return;
@@ -237,8 +252,8 @@ namespace CheckmateRPG.Core.Prediction
                 return;
             }
 
-            // Target must be within attack range.
-            if (!battleContext.IsTargetInAttackRange(attack.ActorId, attack.TargetId))
+            // Target must be within attack range (이동 직후 공격 유예 규칙 포함 — 실전과 동일 판정).
+            if (!battleContext.IsTargetInAttackRangeWithGrace(attack.ActorId, attack.TargetId, attack.QueuedTick, tick))
             {
                 CancelAction(attack, ActionCancellationReason.OutOfRange, resolutionContext, context);
             }

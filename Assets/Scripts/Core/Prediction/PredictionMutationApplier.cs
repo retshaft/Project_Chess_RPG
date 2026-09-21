@@ -121,6 +121,11 @@ namespace CheckmateRPG.Core.Prediction
 
             runtime.SetUnitPosition(mutation.TargetId, mutation.To, OwnershipOwners.MovementMutationProcessor);
 
+            // 실전 경로(MovementMutationProcessor)와 동일한 조건으로 정상 이동 기록을 클론에 남긴다.
+            // 넉백 등 강제 이동(사유 "Knockback")은 제외된다 — 예측-실측 판정 일치를 위한 필수 쌍.
+            if (string.Equals(mutation.Context.MutationReason, nameof(MovementMutation), StringComparison.Ordinal))
+                runtime.RecordNormalMove(mutation.TargetId, mutation.From, mutation.Context.Tick, OwnershipOwners.MovementMutationProcessor);
+
             context.RecordPosition(new PredictedPosition(
                 mutation.TargetId,
                 mutation.From,

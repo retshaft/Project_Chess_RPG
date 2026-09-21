@@ -45,6 +45,12 @@ namespace CheckmateRPG.Core
         [SerializeField] private int _snapshotInterval = 1;
         [SerializeField] private int _maxSnapshotCount = 32;
 
+        [Header("Attack Move Grace")]
+        [Tooltip("이동 직후 공격 유예(근접): 대상 논리 이동 완료 틱부터 유예 틱 수. 0이면 기존 동작. 시험값 — 기획 미확정.")]
+        [SerializeField] private int _meleeAttackGraceTicks = 5;
+        [Tooltip("이동 직후 공격 유예(원거리). 0이면 기존 동작. 시험값 — 기획 미확정.")]
+        [SerializeField] private int _rangedAttackGraceTicks = 10;
+
         public static ActionRuntimeController Instance { get; private set; }
 
         private readonly Dictionary<Guid, UnitBrain> _unitsById = new();
@@ -202,7 +208,10 @@ namespace CheckmateRPG.Core
                     return 1;
                 },
                 criticalDamageMultiplier: 2,
-                spatialPolicy: SpatialResolutionPolicy.PriorityWin);
+                spatialPolicy: SpatialResolutionPolicy.PriorityWin,
+                attackGraceTicksLookup: ResolveAttackGraceTicks,
+                attackPieceTypeLookup: ResolveAttackPieceType,
+                attackIsEnemyLookup: ResolveAttackIsEnemy);
             _predictionQueryService = new PredictionQueryService(
                 tickProvider: () => _scheduler != null ? _scheduler.CurrentTick : 0,
                 runtimeProvider: () => BuildSimulationRuntime(_scheduler != null ? _scheduler.CurrentTick : 0),
@@ -418,6 +427,16 @@ namespace CheckmateRPG.Core
             if (!TryGetActorId(target, out Guid targetId))
             {
                 Debug.LogWarning($"[TryEnqueueAttack] TryGetActorId failed for target {target.name}");
+                return false;
+            }
+
+            // 접수 시점에도 사거리 규칙을 강제한다 — UI 선검사를 우회한 직접 호출이
+            // 사거리 밖 공격을 예약하지 않게 한다(해석 시 취소·환불 낭비 방지).
+            if (_unitsById.TryGetValue(targetId, out UnitBrain targetBrain) && targetBrain != null)
+                SyncRuntimeState(targetBrain);
+            if (_battleContext == null || !_battleContext.IsTargetInAttackRange(actor.ActorId, targetId))
+            {
+                Debug.LogWarning($"[TryEnqueueAttack] Admission range check failed. Actor={actor.name}, Target={target.name}");
                 return false;
             }
 
@@ -972,10 +991,41 @@ namespace CheckmateRPG.Core
                 return;
             }
 
-            if (!_battleContext.IsTargetInAttackRange(attack.ActorId, attack.TargetId))
+            // 사전검증과 리졸버(ResolveTick 기준)가 항상 같은 판정·같은 틱 기준을 쓰도록 한다.
+            if (!_battleContext.IsTargetInAttackRangeWithGrace(attack.ActorId, attack.TargetId, attack.QueuedTick, attack.ResolveTick))
             {
                 CancelResolvingAction(attack, ActionCancellationReason.OutOfRange, context);
             }
+        }
+
+        /// <summary>
+        /// 공격자의 근접/원거리 유형(UnitData.CombatStyle)에 따른 이동 직후 공격 유예 틱 수.
+        /// </summary>
+        private int ResolveAttackGraceTicks(Guid attackerId)
+        {
+            CombatStyle style = CombatStyle.Melee;
+            if (_unitsById.TryGetValue(attackerId, out UnitBrain brain) && brain != null && brain.UnitData != null)
+                style = brain.UnitData.Style;
+
+            return style == CombatStyle.Range ? _rangedAttackGraceTicks : _meleeAttackGraceTicks;
+        }
+
+        /// <summary>예측 판정이 실전과 같은 기물 사거리 규칙을 쓰도록 공격자 기물 종류를 제공한다.</summary>
+        private ChessPieceType ResolveAttackPieceType(Guid attackerId)
+        {
+            if (_unitsById.TryGetValue(attackerId, out UnitBrain brain) && brain != null && brain.UnitData != null)
+                return brain.UnitData.PieceType;
+
+            return ChessPieceType.Pawn;
+        }
+
+        /// <summary>예측 판정이 실전과 같은 팀 방향(폰 전진 방향 등)을 쓰도록 공격자 팀을 제공한다.</summary>
+        private bool ResolveAttackIsEnemy(Guid attackerId)
+        {
+            return _unitsById.TryGetValue(attackerId, out UnitBrain brain)
+                && brain != null
+                && brain.TryGetComponent(out TeamComponent team)
+                && team.IsEnemy;
         }
 
         private void CancelResolvingAction(
@@ -1814,7 +1864,9 @@ namespace CheckmateRPG.Core
                         state.UnitId,
                         state.Position,
                         state.HP,
-                        state.StatusFlags);
+                        state.StatusFlags,
+                        state.LastNormalMoveFromCell,
+                        state.LastNormalMoveTick);
                     return true;
                 }
 
@@ -1858,12 +1910,50 @@ namespace CheckmateRPG.Core
                     return false;
                 if (!TryGetUnit(targetId, out BattleUnitSnapshot target))
                     return false;
+                if (!TryBuildAttackJudge(attackerId, out _, out _, out _, out Func<Vector2Int, Vector2Int, bool> judge))
+                    return false;
+
+                return judge(attacker.Position, target.Position);
+            }
+
+            public bool IsTargetInAttackRangeWithGrace(Guid attackerId, Guid targetId, int attackQueuedTick, int currentTick)
+            {
+                if (!TryGetUnit(attackerId, out BattleUnitSnapshot attacker))
+                    return false;
+                if (!TryGetUnit(targetId, out BattleUnitSnapshot target))
+                    return false;
+                if (!TryBuildAttackJudge(attackerId, out _, out _, out _, out Func<Vector2Int, Vector2Int, bool> judge))
+                    return false;
+
+                return AttackGraceRules.IsHitAllowed(
+                    attacker.Position,
+                    target.Position,
+                    new AttackGraceRules.TargetMoveRecord(target.LastNormalMoveFromCell, target.LastNormalMoveTick),
+                    attacker.LastNormalMoveTick,
+                    attackQueuedTick,
+                    currentTick,
+                    _controller.ResolveAttackGraceTicks(attackerId),
+                    judge);
+            }
+
+            /// <summary>
+            /// 공격자의 기물 규칙과 현재 점유를 반영한 사거리 판정 함수를 만든다.
+            /// 정상 판정과 유예 재검사가 같은 함수를 쓰도록 공유한다.
+            /// </summary>
+            private bool TryBuildAttackJudge(
+                Guid attackerId,
+                out ChessPieceType pieceType,
+                out bool isEnemy,
+                out int range,
+                out Func<Vector2Int, Vector2Int, bool> judge)
+            {
+                pieceType = ChessPieceType.Pawn;
+                isEnemy = false;
+                range = 1;
+                judge = null;
                 if (!_controller._unitsById.TryGetValue(attackerId, out UnitBrain attackerBrain) || attackerBrain == null)
                     return false;
 
-                int range = 1;
-                ChessPieceType pieceType = ChessPieceType.Pawn;
-                bool isEnemy = false;
                 if (attackerBrain.UnitData != null)
                 {
                     range = Mathf.Max(1, attackerBrain.UnitData.AttackRange);
@@ -1872,17 +1962,21 @@ namespace CheckmateRPG.Core
                 if (attackerBrain.TryGetComponent(out TeamComponent attackerTeam))
                     isEnemy = attackerTeam.IsEnemy;
 
-                return CombatPatternRules.IsAttackReachable(
-                    pieceType,
-                    isEnemy,
-                    attacker.Position,
-                    target.Position,
-                    range,
+                // out 매개변수는 람다에서 직접 캡처할 수 없어(CS1628) 지역 복사본으로 넘긴다.
+                ChessPieceType judgePieceType = pieceType;
+                bool judgeIsEnemy = isEnemy;
+                int judgeRange = range;
+                // 예측 컨텍스트와 같은 공유 판정기 생성 함수 — 기물 규칙의 단일 출처.
+                judge = AttackGraceRules.BuildPieceReachJudge(
+                    judgePieceType,
+                    judgeIsEnemy,
+                    judgeRange,
                     sampleCell =>
                     {
                         IReadOnlyList<IReadOnlyUnitRuntimeState> occupants = _controller._simulationRuntime.GetUnitsAtPosition(sampleCell);
                         return occupants != null && occupants.Count > 0;
                     });
+                return true;
             }
             public int GetAttackCount(Guid unitId)
             {

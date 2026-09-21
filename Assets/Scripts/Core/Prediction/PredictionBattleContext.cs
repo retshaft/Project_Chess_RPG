@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CheckmateRPG.Core.Actions.Resolvers;
 using CheckmateRPG.Core.Simulation;
 using CheckmateRPG.Core.Runtime;
+using CheckmateRPG.Data;
 using UnityEngine;
 
 namespace CheckmateRPG.Core.Prediction
@@ -23,6 +24,9 @@ namespace CheckmateRPG.Core.Prediction
         private readonly Func<Guid, int> _attackRangeLookup;
         private readonly Func<Guid, int> _attackCountLookup;
         private readonly Func<Guid, float> _attackDamageRatioLookup;
+        private readonly Func<Guid, int> _attackGraceTicksLookup;
+        private readonly Func<Guid, ChessPieceType> _attackPieceTypeLookup;
+        private readonly Func<Guid, bool> _attackIsEnemyLookup;
 
         /// <param name="runtime">The cloned runtime to query.</param>
         /// <param name="isCellValid">
@@ -36,19 +40,33 @@ namespace CheckmateRPG.Core.Prediction
         /// <param name="attackCountLookup">Returns attack count for a given unit id.</param>
         /// <param name="attackDamageRatioLookup">Returns attack damage ratio for a given unit id.</param>
         /// <param name="criticalDamageMultiplier">Multiplier applied to critical hits.</param>
+        /// <param name="attackGraceTicksLookup">Returns the move-attack grace ticks for a given unit id.</param>
+        /// <param name="attackPieceTypeLookup">
+        /// Returns the attacker's <see cref="ChessPieceType"/>. Provided together with
+        /// <paramref name="attackIsEnemyLookup"/>, range checks use the same piece rules as the
+        /// real battle context (<see cref="CombatPatternRules"/>) against clone positions.
+        /// When either is null the legacy Chebyshev fallback is used (headless callers).
+        /// </param>
+        /// <param name="attackIsEnemyLookup">Returns whether the attacker is on the enemy team.</param>
         public PredictionBattleContext(
             SimulationRuntime runtime,
             Func<Vector2Int, bool> isCellValid,
             Func<Guid, int> attackRangeLookup,
             Func<Guid, int> attackCountLookup = null,
             Func<Guid, float> attackDamageRatioLookup = null,
-            int criticalDamageMultiplier = 2)
+            int criticalDamageMultiplier = 2,
+            Func<Guid, int> attackGraceTicksLookup = null,
+            Func<Guid, ChessPieceType> attackPieceTypeLookup = null,
+            Func<Guid, bool> attackIsEnemyLookup = null)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _isCellValid = isCellValid ?? throw new ArgumentNullException(nameof(isCellValid));
             _attackRangeLookup = attackRangeLookup ?? throw new ArgumentNullException(nameof(attackRangeLookup));
             _attackCountLookup = attackCountLookup;
             _attackDamageRatioLookup = attackDamageRatioLookup;
+            _attackGraceTicksLookup = attackGraceTicksLookup;
+            _attackPieceTypeLookup = attackPieceTypeLookup;
+            _attackIsEnemyLookup = attackIsEnemyLookup;
             CriticalDamageMultiplier = Math.Max(1, criticalDamageMultiplier);
         }
 
@@ -62,7 +80,9 @@ namespace CheckmateRPG.Core.Prediction
                     state.UnitId,
                     state.Position,
                     state.HP,
-                    state.StatusFlags);
+                    state.StatusFlags,
+                    state.LastNormalMoveFromCell,
+                    state.LastNormalMoveTick);
                 return true;
             }
 
@@ -102,10 +122,55 @@ namespace CheckmateRPG.Core.Prediction
             if (!TryGetUnit(targetId, out BattleUnitSnapshot target))
                 return false;
 
+            return IsWithinAttackRange(attackerId, attacker.Position, target.Position);
+        }
+
+        public bool IsTargetInAttackRangeWithGrace(Guid attackerId, Guid targetId, int attackQueuedTick, int currentTick)
+        {
+            if (!TryGetUnit(attackerId, out BattleUnitSnapshot attacker))
+                return false;
+            if (!TryGetUnit(targetId, out BattleUnitSnapshot target))
+                return false;
+
+            int graceTicks = _attackGraceTicksLookup != null ? _attackGraceTicksLookup(attackerId) : 0;
+            return AttackGraceRules.IsHitAllowed(
+                attacker.Position,
+                target.Position,
+                new AttackGraceRules.TargetMoveRecord(target.LastNormalMoveFromCell, target.LastNormalMoveTick),
+                attacker.LastNormalMoveTick,
+                attackQueuedTick,
+                currentTick,
+                graceTicks,
+                (attackerCell, targetCell) => IsWithinAttackRange(attackerId, attackerCell, targetCell));
+        }
+
+        /// <summary>
+        /// 실전(RuntimeBattleContext)과 같은 기물 사거리 규칙으로 판정한다. 기물·팀 룩업이 주어지면
+        /// <see cref="CombatPatternRules"/>를 클론 점유 샘플러와 함께 쓰고, 없으면 기존 체비셰프
+        /// 거리 폴백(헤드리스 호환)을 유지한다.
+        /// </summary>
+        private bool IsWithinAttackRange(Guid attackerId, Vector2Int attackerCell, Vector2Int targetCell)
+        {
             int range = Math.Max(1, _attackRangeLookup(attackerId));
+
+            if (_attackPieceTypeLookup != null && _attackIsEnemyLookup != null)
+            {
+                Func<Vector2Int, Vector2Int, bool> judge = AttackGraceRules.BuildPieceReachJudge(
+                    _attackPieceTypeLookup(attackerId),
+                    _attackIsEnemyLookup(attackerId),
+                    range,
+                    sampleCell =>
+                    {
+                        IReadOnlyList<IReadOnlyUnitRuntimeState> occupants = _runtime.GetUnitsAtPosition(sampleCell);
+                        return occupants != null && occupants.Count > 0;
+                    });
+                return judge(attackerCell, targetCell);
+            }
+
+            // 헤드리스 폴백 — 기존 예측 규칙(기물 구분 없는 최대축 거리).
             int distance = Math.Max(
-                Math.Abs(attacker.Position.x - target.Position.x),
-                Math.Abs(attacker.Position.y - target.Position.y));
+                Math.Abs(attackerCell.x - targetCell.x),
+                Math.Abs(attackerCell.y - targetCell.y));
 
             return distance <= range;
         }

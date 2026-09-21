@@ -53,6 +53,11 @@ namespace CheckmateRPG.Core.Runtime.Processors
 
             _simulationRuntime.SetUnitPosition(mutation.TargetId, resolution.FinalCell, OwnershipOwners.MovementMutationProcessor);
 
+            // 정상 이동(이동 행동에서 온 뮤테이션)만 유예 판정용 기록으로 남긴다.
+            // 넉백 등 강제 이동은 사유가 다르므로("Knockback") 자동으로 제외된다.
+            if (string.Equals(mutation.Context.MutationReason, nameof(MovementMutation), StringComparison.Ordinal))
+                _simulationRuntime.RecordNormalMove(mutation.TargetId, origin, mutation.Context.Tick, OwnershipOwners.MovementMutationProcessor);
+
             MoveCompletedEvent moveCompletedEvent = new(
                 new CheckmateRPG.Core.Events.ActionEvents.MoveCompletedPayload(mutation.TargetId, origin, resolution.FinalCell),
                 mutation.TargetId.ToString("N"),
