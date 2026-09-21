@@ -386,8 +386,10 @@ def serve(stop_event=None):
     stop_event = stop_event or threading.Event()
     while not stop_event.is_set():
         try:
-            run_once()
+            result = run_once()
+            update_state(last_cycle_utc=utc_now(), last_cycle_result=result, last_cycle_error=None)
         except Exception as exc:
+            update_state(last_cycle_utc=utc_now(), last_cycle_result="error", last_cycle_error=str(exc)[:1000])
             emit("attention", "자동화 오류", str(exc))
         stop_event.wait(float(config()["poll_seconds"]))
 

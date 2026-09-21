@@ -63,6 +63,25 @@ class OrchestratorTests(unittest.TestCase):
         self.assertFalse(result["passed"])
         self.assertEqual(result["checks"]["scope_violations"], ["other.cs"])
 
+    def test_serve_records_each_cycle_result(self):
+        class StopAfterWait:
+            stopped = False
+
+            def is_set(self):
+                return self.stopped
+
+            def wait(self, _seconds):
+                self.stopped = True
+
+        with patch.object(orchestrator, "run_once", return_value="idle"), \
+             patch.object(orchestrator, "update_state") as update, \
+             patch.object(orchestrator, "config", return_value={"poll_seconds": 30}):
+            orchestrator.serve(StopAfterWait())
+
+        update.assert_called_once()
+        self.assertEqual(update.call_args.kwargs["last_cycle_result"], "idle")
+        self.assertIsNone(update.call_args.kwargs["last_cycle_error"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,7 +5,11 @@ $Python = Join-Path $Venv 'Scripts\python.exe'
 
 foreach ($Name in @('DISCORD_BOT_TOKEN', 'DISCORD_GUILD_ID', 'DISCORD_OWNER_ID', 'TYPESAFE_API_KEY')) {
     if (-not [Environment]::GetEnvironmentVariable($Name, 'Process')) {
-        throw "$Name 환경 변수가 없습니다. 새 터미널에서 다시 실행해 주세요."
+        $UserValue = [Environment]::GetEnvironmentVariable($Name, 'User')
+        if (-not $UserValue) {
+            throw "$Name 환경 변수가 없습니다."
+        }
+        Set-Item -Path "Env:$Name" -Value $UserValue
     }
 }
 
@@ -16,4 +20,3 @@ if (-not (Test-Path -LiteralPath $Python)) {
 
 Set-Location -LiteralPath $Root
 & $Python (Join-Path $PSScriptRoot 'discord_control.py')
-

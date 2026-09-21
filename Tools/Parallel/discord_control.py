@@ -28,7 +28,9 @@ GUILD = discord.Object(id=GUILD_ID)
 
 class ControlClient(discord.Client):
     def __init__(self):
-        super().__init__(intents=discord.Intents.none())
+        intents = discord.Intents.none()
+        intents.guilds = True
+        super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.stop_event = threading.Event()
         self.worker = None
@@ -93,12 +95,26 @@ async def dev_status(interaction: discord.Interaction):
         return
     requests = pipeline_store.list_requests()
     queued = orchestrator.queue_tasks()
+    current = orchestrator.state()
+    latest_requests = [
+        {"id": item["id"], "status": item["status"], "updated_utc": item.get("updated_utc")}
+        for item in sorted(requests, key=lambda item: item.get("updated_utc", ""), reverse=True)[:5]
+    ]
+    latest_tasks = [
+        {"id": item["id"], "status": item["status"], "agent": item.get("agent")}
+        for item in sorted(queued, key=lambda item: item.get("started_utc", item.get("created_utc", "")), reverse=True)[:5]
+    ]
     data = {
-        "state": orchestrator.state(),
+        "automation": "paused" if current.get("paused", True) else "running",
+        "current_task": current.get("running_task") or "none",
+        "last_cycle_utc": current.get("last_cycle_utc", "not recorded yet"),
+        "last_cycle_result": current.get("last_cycle_result", "not recorded yet"),
         "requests": {status: sum(1 for item in requests if item["status"] == status)
                      for status in sorted({item["status"] for item in requests})},
         "tasks": {status: sum(1 for item in queued if item["status"] == status)
                   for status in sorted({item["status"] for item in queued})},
+        "latest_requests": latest_requests,
+        "latest_tasks": latest_tasks,
     }
     await interaction.response.send_message(f"```json\n{json.dumps(data, ensure_ascii=False, indent=2)}\n```", ephemeral=True)
 
@@ -136,8 +152,10 @@ async def dev_request(interaction: discord.Interaction, description: str):
         return
     try:
         request = pipeline_store.add_request(description)
+        current = orchestrator.state()
+        state_note = "작업 계획을 곧 시작합니다." if not current.get("paused", True) else "현재 일시정지 상태입니다. `/dev-start`를 실행하세요."
         await interaction.response.send_message(
-            f"요청을 등록했습니다: `{request['id']}`\n자동화가 실행 중이면 Codex가 작업 계획을 만듭니다.",
+            f"요청을 등록했습니다: `{request['id']}`\n{state_note}\n진행 확인: `/dev-status` 또는 `/dev-detail item_id:{request['id']}`",
             ephemeral=True,
         )
     except ValueError as exc:
