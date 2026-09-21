@@ -115,6 +115,13 @@ class OrchestratorTests(unittest.TestCase):
              }]]), patch.object(orchestrator, "unity_is_running", return_value=True):
             self.assertEqual(orchestrator.deferred_verification_tasks(), [])
 
+    def test_parallel_scheduler_blocks_overlapping_files(self):
+        left = {"allowed_files": ["Assets/Scripts/UI/Menu.cs", "Assets/A.cs"]}
+        same = {"allowed_files": ["Assets/Scripts/UI/Menu.cs"]}
+        separate = {"allowed_files": ["Assets/Scripts/UI/Stage.cs"]}
+        self.assertTrue(orchestrator.tasks_conflict(left, same))
+        self.assertFalse(orchestrator.tasks_conflict(left, separate))
+
 
 if __name__ == "__main__":
     unittest.main()

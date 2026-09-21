@@ -226,6 +226,8 @@ def run(args):
     prompt = task['prompt'] if args.smoke else (
         'You are a delegated developer in Checkmate RPG. Read AGENTS.md and '
         'Docs/Parallel/WORKFLOW.md first. This Ready task is assigned by the lead developer. '
+        'Keep context small: inspect the allowed files and their direct callers or data types only. '
+        'Do not scan the entire repository, start background agents, or run Unity/dotnet builds. '
         'Work only in the current worktree. Do not change branches, commit, merge, push, '
         'launch Unity, or access another worktree. The lead handles Git integration and Unity tests. '
         'Do not start subagents. Report blocked permissions and unverified tests. '

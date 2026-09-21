@@ -337,11 +337,12 @@ class ControlClient(discord.Client):
     @tasks.loop(seconds=30)
     async def progress_pump(self):
         current = orchestrator.state()
-        task_id = current.get("running_task")
-        if not task_id:
+        task_ids = current.get("running_tasks") or ([current.get("running_task")] if current.get("running_task") else [])
+        if not task_ids:
             self.last_progress_task = None
             await self.publish_attention_summary()
             return
+        task_id = task_ids[0]
         settings = orchestrator.config()
         now = time.monotonic()
         interval = float(settings.get("progress_update_seconds", 180))
@@ -372,8 +373,9 @@ class ControlClient(discord.Client):
         waiting = sum(item["status"] in ("Planned", "Ready") for item in queued)
         model = task.get("model") or "Jev가 선택 중"
         files = ", ".join(task.get("allowed_files", [])[:3]) or "범위 확인 중"
+        parallel_note = f" · 병렬 {len(task_ids)}개" if len(task_ids) > 1 else ""
         message = (
-            f"**작업 진행 중**\n`{task_id}` · 담당 `{task.get('agent', '선정 중')}` · 모델 `{model}` · 경과 {elapsed}\n"
+            f"**작업 진행 중**{parallel_note}\n`{task_id}` · 담당 `{task.get('agent', '선정 중')}` · 모델 `{model}` · 경과 {elapsed}\n"
             f"목표: {task.get('goal', '')}\n대상: `{files}`\n"
             f"최근 로그: {log_tail}\n다음: 작업 종료 후 변경 범위와 검증 결과를 확인합니다.\n"
             f"남은 대기 작업: {waiting}개"
@@ -432,14 +434,16 @@ async def dev_status(interaction: discord.Interaction):
         {"id": item["id"], "status": item["status"], "agent": item.get("agent")}
         for item in sorted(queued, key=lambda item: item.get("started_utc", item.get("created_utc", "")), reverse=True)[:5]
     ]
-    current_task = next((item for item in queued if item.get("id") == current.get("running_task")), None)
+    running_ids = current.get("running_tasks") or ([current.get("running_task")] if current.get("running_task") else [])
+    running_tasks = [item for item in queued if item.get("id") in running_ids]
+    current_task = running_tasks[0] if running_tasks else None
     attention = sum(item.get("status") == "Attention" for item in queued)
     attention_tasks = [item for item in queued if item.get("status") == "Attention"]
     waiting = sum(item.get("status") in ("Planned", "Ready") for item in queued)
     lines = [
         "**자동 개발 현황**",
         f"상태: {'일시정지' if current.get('paused', True) else '자동 실행 중'}",
-        f"현재: {current_task.get('goal', current.get('running_task')) if current_task else '진행 중인 작업 없음'}",
+        f"현재: {len(running_tasks)}개 병렬 작업 중" if running_tasks else "현재: 진행 중인 작업 없음",
         f"대기: {waiting}개 · 확인 필요: {attention}개",
     ]
     if current_task:

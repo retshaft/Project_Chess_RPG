@@ -25,6 +25,8 @@ MODEL_HEALTH_PATH = LOCAL / "model-health.json"
 CONFIG_PATH = Path(__file__).with_name("automation_config.json")
 DISPATCH = Path(__file__).with_name("dispatch.py")
 LOCK = threading.Lock()
+ACTIVE_LOCK = threading.Lock()
+ACTIVE_WORKERS = {}
 TEAM = Path(__file__).with_name("Team.ps1")
 
 
@@ -543,41 +545,28 @@ def deferred_verification_tasks():
     return result
 
 
-def run_once():
-    current = state()
-    if current.get("paused") or current.get("running_task"):
-        return "paused" if current.get("paused") else "busy"
-    pending = deferred_verification_tasks()
-    if pending:
-        return verify_and_review_task(pending[0])
-    planned = process_request_once()
-    if planned:
-        return planned.lower()
-    routed = route_planned_task()
-    if routed and routed != "prepared":
-        return routed
-    tasks = ready_tasks()
-    if not tasks:
-        return routed or "idle"
+def tasks_conflict(left, right):
+    """Two workers may run together only when their declared file ownership is disjoint."""
+    return bool(set(left.get("allowed_files", [])) & set(right.get("allowed_files", [])))
 
+
+def execute_ready_task(task):
+    """Execute one prepared task. Safe to call from a background worker thread."""
     settings = config()
-    task = tasks[0]
     selected_agent = task["agent"]
     if int(task.get("attempts", 0)) >= int(settings["maximum_attempts"]):
-        if task.get("status") != "Attention" or task.get("last_failure") != "자동 재시도 한도 도달":
-            task["status"] = "Attention"
-            task["last_failure"] = "자동 재시도 한도 도달"
-            write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
-            emit("attention", "재시도 한도 도달",
-                 f"{task['goal']}\n자동 재시도를 멈췄습니다. 필요하면 아래 버튼으로 새 시도를 시작하세요.",
-                 {"item_id": task["id"], "status": "Attention"})
+        task["status"] = "Attention"
+        task["last_failure"] = "자동 재시도 한도 도달"
+        write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+        emit("attention", "재시도 한도 도달",
+             f"{task['goal']}\nJev가 다른 모델로도 해결하지 못했습니다.",
+             {"item_id": task["id"], "status": "Attention"})
         return "attempt-limit"
 
     task["status"] = "Running"
     task["attempts"] = int(task.get("attempts", 0)) + 1
     task["started_utc"] = utc_now()
     write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
-    update_state(running_task=task["id"])
     emit("status", "작업 시작",
          f"{task['id']} → {selected_agent} / {task.get('model', '기본 모델')}\n"
          f"목표: {task.get('goal', '')}\n대상: {', '.join(task.get('allowed_files', [])[:8])}",
@@ -595,23 +584,80 @@ def run_once():
         if result.returncode == 0:
             return verify_and_review_task(task)
         if int(task.get("attempts", 0)) < int(settings["maximum_attempts"]):
-            task["status"] = "Ready"
-            task["last_failure"] = "자동 재시도 예정: " + (result.stderr or "외부 에이전트가 작업을 완료하지 못함")[-1000:]
+            task["status"] = "Planned"
+            task["last_failure"] = "실패 원인을 반영해 다른 모델을 다시 선택합니다."
+            for key in ("agent", "worktree", "task_file", "base_commit", "prepared_utc", "started_utc", "model"):
+                task.pop(key, None)
             write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
-            emit("status", "작업 자동 재시도", f"{task['id']}는 확인 없이 다시 시도합니다.", {"item_id": task["id"], "status": "Ready"})
-            return "retrying"
+            emit("status", "Jev 재배정", f"{task['id']}를 다른 모델에 자동 재배정합니다.",
+                 {"item_id": task["id"], "status": "Planned"})
+            return "rerouting"
         write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
         emit("attention", "작업 실행 실패", f"{task['id']} 상태: {task['status']}")
         return task["status"].lower()
     finally:
-        update_state(running_task=None)
+        with ACTIVE_LOCK:
+            ACTIVE_WORKERS.pop(task["id"], None)
+            running = sorted(ACTIVE_WORKERS)
+        update_state(running_tasks=running, running_task=running[0] if running else None)
+
+
+def launch_ready_tasks():
+    settings = config()
+    maximum = max(1, int(settings.get("max_parallel_tasks", 3)))
+    with ACTIVE_LOCK:
+        finished = [task_id for task_id, worker in ACTIVE_WORKERS.items() if not worker.is_alive()]
+        for task_id in finished:
+            ACTIVE_WORKERS.pop(task_id, None)
+        running_tasks = queue_tasks("Running")
+        active_agents = {task.get("agent") for task in running_tasks}
+        launched = []
+        for task in ready_tasks():
+            if len(ACTIVE_WORKERS) >= maximum:
+                break
+            if task.get("agent") in active_agents:
+                continue
+            if any(tasks_conflict(task, active) for active in running_tasks):
+                continue
+            worker = threading.Thread(target=execute_ready_task, args=(task,), daemon=True,
+                                      name=f"automation-{task['id']}")
+            ACTIVE_WORKERS[task["id"]] = worker
+            running_tasks.append(task)
+            active_agents.add(task.get("agent"))
+            launched.append(task["id"])
+            worker.start()
+        running = sorted(ACTIVE_WORKERS)
+    update_state(running_tasks=running, running_task=running[0] if running else None)
+    return launched
+
+
+def run_once(background=False):
+    current = state()
+    if current.get("paused"):
+        return "paused"
+    pending = deferred_verification_tasks()
+    if pending and not ACTIVE_WORKERS:
+        return verify_and_review_task(pending[0])
+    planned = process_request_once()
+    if planned:
+        return planned.lower()
+    routed = route_planned_task()
+    if routed and routed != "prepared":
+        return routed
+    tasks = ready_tasks()
+    if not tasks:
+        return "busy" if ACTIVE_WORKERS else (routed or "idle")
+    if background:
+        launched = launch_ready_tasks()
+        return "launched:" + ",".join(launched) if launched else "busy"
+    return execute_ready_task(tasks[0])
 
 
 def serve(stop_event=None):
     stop_event = stop_event or threading.Event()
     while not stop_event.is_set():
         try:
-            result = run_once()
+            result = run_once(background=True)
             update_state(last_cycle_utc=utc_now(), last_cycle_result=result, last_cycle_error=None)
         except Exception as exc:
             update_state(last_cycle_utc=utc_now(), last_cycle_result="error", last_cycle_error=str(exc)[:1000])
