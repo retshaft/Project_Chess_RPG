@@ -447,7 +447,7 @@ async def dev_status(interaction: discord.Interaction):
         lines.append("확인 필요 작업은 `dev-attention` 채널의 재시도 버튼을 눌러 처리합니다.")
     await interaction.response.send_message(
         "\n".join(lines), ephemeral=True,
-        view=AttentionQueueView(attention_tasks) if attention_tasks else None,
+        view=AttentionQueueView(attention_tasks[:5]) if attention_tasks else None,
     )
 
 
