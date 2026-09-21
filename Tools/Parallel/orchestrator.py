@@ -569,11 +569,10 @@ def verify_and_review_task(task):
 
 def deferred_verification_tasks():
     result = queue_tasks("Review")
-    if unity_is_running():
-        return result
+    unity_running = unity_is_running()
     for task in queue_tasks("VerificationPending"):
         unity = task.get("verification_result", {}).get("checks", {}).get("unity", {})
-        if unity.get("deferred"):
+        if not task.get("worker_commit") or (unity.get("deferred") and not unity_running):
             result.append(task)
     return result
 

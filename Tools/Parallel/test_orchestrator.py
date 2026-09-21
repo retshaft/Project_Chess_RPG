@@ -115,11 +115,11 @@ class OrchestratorTests(unittest.TestCase):
             commit.assert_called_once()
             self.assertEqual(emit.call_args.args[0], "status")
 
-    def test_open_unity_does_not_block_other_ready_work(self):
+    def test_open_unity_still_reviews_uncommitted_pending_work(self):
         with patch.object(orchestrator, "queue_tasks", side_effect=[[], [{
                  "id": "pending", "verification_result": {"checks": {"unity": {"deferred": True}}}
              }]]), patch.object(orchestrator, "unity_is_running", return_value=True):
-            self.assertEqual(orchestrator.deferred_verification_tasks(), [])
+            self.assertEqual(len(orchestrator.deferred_verification_tasks()), 1)
 
     def test_parallel_scheduler_blocks_overlapping_files(self):
         left = {"allowed_files": ["Assets/Scripts/UI/Menu.cs", "Assets/A.cs"]}
