@@ -21,6 +21,7 @@ QUEUE = LOCAL / "queue"
 DECISIONS = LOCAL / "decisions"
 EVENTS = LOCAL / "events"
 STATE_PATH = LOCAL / "orchestrator-state.json"
+MODEL_HEALTH_PATH = LOCAL / "model-health.json"
 CONFIG_PATH = Path(__file__).with_name("automation_config.json")
 DISPATCH = Path(__file__).with_name("dispatch.py")
 LOCK = threading.Lock()
@@ -45,6 +46,28 @@ def write_json(path, value):
 
 def config():
     return read_json(CONFIG_PATH)
+
+
+def model_health():
+    if not MODEL_HEALTH_PATH.exists():
+        return {}
+    try:
+        return read_json(MODEL_HEALTH_PATH)
+    except (OSError, ValueError):
+        return {}
+
+
+def mark_model_unavailable(model, reason, cooldown_hours=6):
+    if not model:
+        return
+    health = model_health()
+    health[model] = {
+        "available": False,
+        "reason": reason[:300],
+        "disabled_until": (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=cooldown_hours)).isoformat(),
+        "updated_utc": utc_now(),
+    }
+    write_json(MODEL_HEALTH_PATH, health)
 
 
 def state():
@@ -113,11 +136,10 @@ def process_request_once():
         settings = config()
         autonomy_mode = settings.get("autonomy_mode", "guarded")
         review = codex_planner.needs_review(plan, autonomy_mode=autonomy_mode)
-        next_status = "PlanReview" if review else "Ready"
+        # In full autonomy, ordinary implementation assumptions are accepted automatically.
+        # Only plan generation failure or an irreversible external action may stop the queue.
+        next_status = "Ready" if autonomy_mode == "full" or not review else "PlanReview"
         fields = {"plan_path": str(plan_path), "plan_summary": plan["summary"]}
-        if review and autonomy_mode == "full":
-            fields["error"] = "자동 판단으로 해결할 수 없는 정보가 필요합니다: " + " | ".join(codex_planner.user_questions(plan))
-            next_status = "Attention"
         pipeline_store.transition(request, next_status, **fields)
         if next_status == "Ready":
             materialize_plan(request, plan)
@@ -138,7 +160,7 @@ def repository_state():
     if result.returncode:
         raise RuntimeError(result.stderr.strip())
     changed = [line[3:] for line in result.stdout.splitlines() if len(line) > 3]
-    return {"root_dirty": bool(changed), "changed_files": changed[:100]}
+    return {"root_dirty": bool(changed), "changed_files": changed[:100], "model_health": model_health()}
 
 
 def prepare_task(task, agent, selected_model=None):
@@ -189,7 +211,25 @@ def route_planned_task():
     record_decision(decision)
     autonomy_mode = settings.get("autonomy_mode", "guarded")
     selected = next((item for item in tasks if item["id"] == decision.task_id), None)
-    profile = settings.get("models", {}).get(decision.model, {}) if decision.model else {}
+    health = model_health()
+    chosen_model = decision.model or ""
+    unavailable = health.get(chosen_model, {})
+    try:
+        blocked = unavailable.get("available") is False and dt.datetime.fromisoformat(
+            unavailable.get("disabled_until", "")
+        ) > dt.datetime.now(dt.timezone.utc)
+    except (TypeError, ValueError):
+        blocked = False
+    if blocked:
+        chosen_model = ""
+        for candidate in settings.get("model_policy_order", [
+            "gpt-5.6-luna", "gemini-3.1-pro-high", "gemini-3.8-flash", "GLM-5.3-Flash", "gpt-5.6-sol", "gpt-6-astra"
+        ]):
+            candidate_profile = settings.get("models", {}).get(candidate, {})
+            if candidate_profile.get("agent") in (selected or {}).get("eligible_agents", []) and not model_health().get(candidate, {}).get("available") is False:
+                chosen_model = candidate
+                break
+    profile = settings.get("models", {}).get(chosen_model, {}) if chosen_model else {}
     chosen_agent = profile.get("agent") or decision.agent
     invalid_choice = selected is None or chosen_agent not in selected.get("eligible_agents", [])
     needs_fallback = (
@@ -218,7 +258,7 @@ def route_planned_task():
     else:
         task, agent = selected, chosen_agent
     try:
-        prepare_task(task, agent, decision.model or None)
+        prepare_task(task, agent, chosen_model or None)
         emit("status", "작업 공간 준비 완료", f"{task['id']} → {agent}")
         return "prepared"
     except Exception as exc:
@@ -250,6 +290,8 @@ def requeue_after_provider_failure(task, result):
     markers = ("usage limit", "rate limit", "quota", "credits", "too many requests")
     if not any(marker in output for marker in markers):
         return False
+    model = task.get("model") or config().get("models", {}).get(task.get("agent"), {}).get("model") or task.get("agent")
+    mark_model_unavailable(model, "사용량 또는 요청 한도 초과")
     eligible = list(task.get("eligible_agents", []))
     if fallback not in eligible:
         eligible.append(fallback)
@@ -481,6 +523,12 @@ def run_once():
             task["last_failure"] = result.stderr[-2000:]
         if result.returncode == 0:
             return verify_and_review_task(task)
+        if int(task.get("attempts", 0)) < int(settings["maximum_attempts"]):
+            task["status"] = "Ready"
+            task["last_failure"] = "자동 재시도 예정: " + (result.stderr or "외부 에이전트가 작업을 완료하지 못함")[-1000:]
+            write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+            emit("status", "작업 자동 재시도", f"{task['id']}는 확인 없이 다시 시도합니다.", {"item_id": task["id"], "status": "Ready"})
+            return "retrying"
         write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
         emit("attention", "작업 실행 실패", f"{task['id']} 상태: {task['status']}")
         return task["status"].lower()

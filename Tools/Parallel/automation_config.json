@@ -4,6 +4,7 @@
   "show_agent_windows": true,
   "emergency_fallback_agent": "antigravity",
   "allow_emergency_fallback": true,
+  "model_policy_order": ["gpt-5.6-luna", "gemini-3.1-pro-high", "gemini-3.8-flash", "GLM-5.3-Flash", "gpt-5.6-sol", "gpt-6-astra"],
   "models": {
     "gpt-6-astra": {"agent": "codex", "tier": "premium", "purpose": "고위험 설계·복잡한 통합"},
     "gpt-5.6-sol": {"agent": "codex", "tier": "standard", "purpose": "일반 기능 구현·리뷰"},
