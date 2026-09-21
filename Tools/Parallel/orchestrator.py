@@ -280,6 +280,8 @@ def route_planned_task():
     selected = next((item for item in tasks if item["id"] == decision.task_id), None)
     health = model_health()
     chosen_model = decision.model or ""
+    if chosen_model == "hold":
+        chosen_model = ""
     unavailable = health.get(chosen_model, {})
     try:
         blocked = unavailable.get("available") is False and dt.datetime.fromisoformat(
@@ -287,7 +289,7 @@ def route_planned_task():
         ) > dt.datetime.now(dt.timezone.utc)
     except (TypeError, ValueError):
         blocked = False
-    if blocked:
+    if blocked or not chosen_model:
         chosen_model = ""
         for candidate in settings.get("model_policy_order", [
             "gpt-5.6-luna", "gemini-3.1-pro-high", "gemini-3.8-flash", "GLM-5.3-Flash", "gpt-5.6-sol", "gpt-6-astra"
@@ -339,7 +341,7 @@ def route_planned_task():
 def fallback_route(tasks):
     task = tasks[0]
     eligible = task.get("eligible_agents", [])
-    for agent in ("codex", "antigravity", "zcode"):
+    for agent in ("zcode", "antigravity", "codex"):
         if agent in eligible:
             return task, agent
     raise ValueError(f"No eligible fallback agent for {task['id']}")

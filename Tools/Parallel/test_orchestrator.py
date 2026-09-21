@@ -82,14 +82,14 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(update.call_args.kwargs["last_cycle_result"], "idle")
         self.assertIsNone(update.call_args.kwargs["last_cycle_error"])
 
-    def test_full_autonomy_fallback_prefers_lead_agent(self):
+    def test_full_autonomy_fallback_prefers_low_cost_agent(self):
         tasks = [
             {"id": "first", "eligible_agents": ["zcode", "codex"]},
             {"id": "second", "eligible_agents": ["antigravity"]},
         ]
         task, agent = orchestrator.fallback_route(tasks)
         self.assertEqual(task["id"], "first")
-        self.assertEqual(agent, "codex")
+        self.assertEqual(agent, "zcode")
 
     def test_running_unity_defers_verification_without_attention(self):
         with tempfile.TemporaryDirectory() as folder:
