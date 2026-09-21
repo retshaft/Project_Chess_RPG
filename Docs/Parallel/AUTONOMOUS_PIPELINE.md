@@ -98,7 +98,7 @@ Requested
 | `/dev-start` | 새 작업 배정 허용 |
 | `/dev-pause` | 새 작업 배정 중지 |
 | `/dev-retry` | Attention 작업 재시도 승인 |
-| `/dev-approve` | 계획 또는 통합 후보 승인 |
+| `/dev-approve` | 검토 중인 작업 계획 승인 |
 | `/dev-reject` | 작업 거부 및 사유 기록 |
 
 ## 구현 단계

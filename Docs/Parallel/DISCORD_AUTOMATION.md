@@ -59,4 +59,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Parallel/Start-Automat
 - Discord 전송 이벤트: `.parallel/events/`
 - 외부 AI 결과: `.parallel/runs/`
 
-봇은 지정한 서버의 지정한 사용자 명령만 받으며 Message Content Intent를 사용하지 않는다. 판단 신뢰도가 설정값보다 낮거나 Jev가 `wait` 또는 `hold`를 선택하면 실행하지 않고 `dev-attention`에 알린다. 외부 AI 실행 결과는 `Review`까지만 진행하며 자동 커밋, 병합, push, Unity 실행은 하지 않는다.
+봇은 지정한 서버의 지정한 사용자 명령만 받으며 Message Content Intent를 사용하지 않는다. 판단 신뢰도가 설정값보다 낮거나 Jev가 `wait` 또는 `hold`를 선택하면 실행하지 않고 `dev-attention`에 알린다. 외부 AI 실행 뒤 허용 파일과 Git diff를 검사하고, Unity가 꺼져 있으면 별도 실행권을 얻어 배치 컴파일과 Edit Mode 테스트를 수행한다. 검증과 Codex 리뷰를 통과한 결과도 자동으로 main에 병합하거나 원격으로 push하지 않는다.
