@@ -214,13 +214,21 @@ def prepare_task(task, agent, selected_model=None):
             ["git", "-C", str(worktree), "status", "--porcelain"],
             capture_output=True, text=True,
         )
-        if existing_status.returncode or existing_status.stdout.strip():
+        ignored = set(config().get("ignorable_root_changes", []))
+        status_paths = []
+        for line in existing_status.stdout.splitlines():
+            path = line[3:] if len(line) >= 3 else ""
+            if path.startswith('"') and path.endswith('"'):
+                path = path[1:-1].replace('\\"', '"').replace('\\\\', '\\')
+            status_paths.append(path)
+        meaningful_status = [path for path in status_paths if path not in ignored]
+        if existing_status.returncode or meaningful_status:
             raise RuntimeError("기존 에이전트 작업 공간에 미커밋 변경이 있어 재사용할 수 없습니다.")
     else:
         result = subprocess.run(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(TEAM),
              "-Action", "New", "-Agent", agent, "-Task", task["id"], "-Base", "HEAD"],
-            cwd=ROOT, capture_output=True, text=True,
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         if result.returncode:
             raise RuntimeError((result.stderr or result.stdout).strip())
