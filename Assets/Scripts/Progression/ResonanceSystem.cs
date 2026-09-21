@@ -70,7 +70,8 @@ namespace CheckmateRPG.Progression
         }
 
         // ─── Phase 10: Multi-Preset Resonance Effects (Offensive / Defensive / Support) ───
-        // NOTE: "부활 없음" (Perma-death) 디자이너 원칙에 따라, 기존 부활 대기시간 감소 대신 역할군별 전투 수치 강화가 적용됩니다.
+        // NOTE: "부활 없음" (Perma-death) 디자이너 원칙 및 "스킬은 쿨타임이 아닌 SP 시스템" 원칙에 따라, 
+        // 기존 부활 쿨타임 감소 및 스킬 쿨타임 단축 대신 역할군별 실전 고유 수치 강화가 적용됩니다.
 
         public static float GetAttackMultiplier(UnitBrain unit)
         {
@@ -86,16 +87,23 @@ namespace CheckmateRPG.Progression
             if (unit == null || unit.UnitData == null) return 1.0f;
             int stage = GetResonanceStage(unit);
             if (stage >= 1 && unit.UnitData.ResonanceRole == ResonanceRoleType.Defensive)
-                return 1.10f; // 수비형 1단계: 부활 철폐 -> 생명력(Max HP) 10% 상승
+                return 1.10f; // 수비형 1단계: 부활 철폐(영구 사망 원칙) -> 생명력(Max HP) 10% 상승
             return 1.0f;
         }
 
-        public static float GetCooldownReduction(UnitBrain unit)
+        public static float GetSupportPowerMultiplier(UnitBrain unit)
         {
-            if (unit == null || unit.UnitData == null) return 0.0f;
+            if (unit == null || unit.UnitData == null) return 1.0f;
             int stage = GetResonanceStage(unit);
             if (stage >= 1 && unit.UnitData.ResonanceRole == ResonanceRoleType.Support)
-                return 0.10f; // 지원형 1단계: 스킬 가속(쿨타임 단축) 10%
+                return 1.10f; // 지원형 1단계: 치유량 및 버프 효과 계수 10% 상승
+            return 1.0f;
+        }
+
+        // 구버전 호환용 (스킬은 SP 시스템이므로 스킬 쿨타임 개념 없음)
+        [System.Obsolete("Skills use the SP system, not cooldowns. Use GetSupportPowerMultiplier instead.")]
+        public static float GetCooldownReduction(UnitBrain unit)
+        {
             return 0.0f;
         }
 

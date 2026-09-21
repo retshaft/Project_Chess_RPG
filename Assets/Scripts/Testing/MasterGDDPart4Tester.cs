@@ -81,16 +81,16 @@ namespace CheckmateRPG.Testing
 
             float offAttack = ResonanceSystem.GetAttackMultiplier(offBrain);
             float defHP = ResonanceSystem.GetMaxHealthMultiplier(defBrain);
-            float supCDR = ResonanceSystem.GetCooldownReduction(supBrain);
+            float supPower = ResonanceSystem.GetSupportPowerMultiplier(supBrain);
             float offSP = ResonanceSystem.GetInitialSPBonus(offBrain);
             float defSP = ResonanceSystem.GetInitialSPBonus(defBrain);
             float defResist = ResonanceSystem.GetStatusResistanceBonus(defBrain);
             int tpBonus = ResonanceSystem.GetNotationTP(_simulatedResonanceStage);
 
-            _testLog = $"[3대 공명 프리셋 시연 결과 (Stage {_simulatedResonanceStage}) - 부활 불가능 규칙 적용]\n" +
+            _testLog = $"[3대 공명 프리셋 시연 결과 (Stage {_simulatedResonanceStage}) - 부활 불가능(영구 사망) 규칙 적용]\n" +
                        $"🗡️ [공격형 - 키아라]: 공격력 배율 {offAttack:F2}x | 초기 SP +{offSP} | 관통 보너스 +{ResonanceSystem.GetArmorPenetrationBonus(offBrain) * 100}%\n" +
                        $"🛡️ [수비형 - 베스타]: 최대 체력(HP) {defHP:F2}x | 초기 SP +{defSP} | 방어력 {ResonanceSystem.GetDefenseMultiplier(defBrain):F2}x | CC 저항 +{defResist * 100}%\n" +
-                       $"🪄 [지원형 - 책사]: 스킬 쿨타임 단축 -{supCDR * 100}% | 초기 SP +{ResonanceSystem.GetInitialSPBonus(supBrain)} | CC 지속시간 {ResonanceSystem.GetStatusDurationMultiplier(supBrain):F2}x\n" +
+                       $"🪄 [지원형 - 책사]: 지원 계수(치유/버프) {supPower:F2}x | 초기 SP +{ResonanceSystem.GetInitialSPBonus(supBrain)} | CC 지속시간 {ResonanceSystem.GetStatusDurationMultiplier(supBrain):F2}x\n" +
                        $"🧩 기보 풀이 보조 TP: +{tpBonus} TP 지급 (기획서 3~4 TP 부족 설계 완충)";
 
             Debug.Log(_testLog);
