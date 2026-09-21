@@ -20,21 +20,123 @@ namespace CheckmateRPG.UI
         [SerializeField] private Button closeButton;
 
         private Action<EdictData> currentCallback;
+        private Func<EdictData, string> selectionDescription;
         private readonly List<GameObject> activeCards = new List<GameObject>();
 
         private void Awake()
         {
+            UiFontProvider.EnsureTmpKoreanFallback();
             if (closeButton) closeButton.onClick.AddListener(CloseModal);
             if (modalPanel) modalPanel.SetActive(false);
         }
 
-        public void OpenSelector(EdictKind filterKind, Action<EdictData> onSelected)
+        /// <summary>
+        /// 씬/빌더에서 참조가 주입되지 않은 경우 표준 선택창을 스스로 구성한다(부분 주입도 필드별로 보수한다).
+        /// SynchroBoardUI의 런타임 자기 구성 경로에서 호출된다.
+        /// </summary>
+        public void EnsureRuntimeUI()
+        {
+            if (modalPanel != null && windowTitleText != null && cardGridContainer != null && closeButton != null)
+                return;
+
+            if (modalPanel == null)
+            {
+                var panelGo = new GameObject("ModalPanel", typeof(RectTransform));
+                panelGo.transform.SetParent(transform, false);
+                var panelRt = (RectTransform)panelGo.transform;
+                panelRt.anchorMin = Vector2.zero;
+                panelRt.anchorMax = Vector2.one;
+                panelRt.sizeDelta = Vector2.zero;
+                panelRt.anchoredPosition = Vector2.zero;
+                var dim = panelGo.AddComponent<Image>();
+                dim.color = new Color(0f, 0f, 0f, 0.86f); // 배경 클릭 차단 + 딤
+                modalPanel = panelGo;
+
+                var windowGo = new GameObject("Window", typeof(RectTransform));
+                windowGo.transform.SetParent(panelGo.transform, false);
+                var windowRt = (RectTransform)windowGo.transform;
+                windowRt.anchorMin = windowRt.anchorMax = new Vector2(0.5f, 0.5f);
+                windowRt.sizeDelta = new Vector2(1150f, 780f);
+                var windowImg = windowGo.AddComponent<Image>();
+                windowImg.color = new Color(0.09f, 0.1f, 0.13f, 0.98f);
+
+                var titleGo = new GameObject("WindowTitle", typeof(RectTransform));
+                titleGo.transform.SetParent(windowGo.transform, false);
+                var titleRt = (RectTransform)titleGo.transform;
+                titleRt.anchorMin = new Vector2(0f, 1f);
+                titleRt.anchorMax = new Vector2(1f, 1f);
+                titleRt.pivot = new Vector2(0.5f, 1f);
+                titleRt.sizeDelta = new Vector2(-40f, 70f);
+                titleRt.anchoredPosition = new Vector2(0f, -18f);
+                windowTitleText = titleGo.AddComponent<TextMeshProUGUI>();
+                windowTitleText.fontSize = 30;
+                windowTitleText.alignment = TextAlignmentOptions.Center;
+                windowTitleText.raycastTarget = false;
+
+                var gridGo = new GameObject("CardGrid", typeof(RectTransform));
+                gridGo.transform.SetParent(windowGo.transform, false);
+                var gridRt = (RectTransform)gridGo.transform;
+                gridRt.anchorMin = Vector2.zero;
+                gridRt.anchorMax = Vector2.one;
+                gridRt.offsetMin = new Vector2(25f, 30f);
+                gridRt.offsetMax = new Vector2(-25f, -110f);
+                cardGridContainer = gridGo.transform;
+                var grid = gridGo.AddComponent<GridLayoutGroup>();
+                grid.cellSize = new Vector2(190f, 260f);
+                grid.spacing = new Vector2(16f, 16f);
+                grid.childAlignment = TextAnchor.UpperCenter;
+                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = 5;
+
+                closeButton = CreateModalButton(windowGo.transform, "CloseButton", "닫기", new Vector2(0f, -24f), new Vector2(180f, 56f));
+            }
+
+            if (closeButton != null)
+            {
+                // Awake 시점에는 closeButton이 없어 리스너가 붙지 못했을 수 있다 — 생성 후 확실히 연결.
+                closeButton.onClick.RemoveAllListeners();
+                closeButton.onClick.AddListener(CloseModal);
+            }
+
+            if (modalPanel != null && modalPanel.activeSelf)
+                modalPanel.SetActive(false);
+        }
+
+        private static Button CreateModalButton(Transform parent, string objectName, string label, Vector2 anchoredPosition, Vector2 size)
+        {
+            var go = new GameObject(objectName, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = anchoredPosition;
+            rt.sizeDelta = size;
+            var img = go.AddComponent<Image>();
+            img.color = new Color(0.22f, 0.24f, 0.3f, 1f);
+            var btn = go.AddComponent<Button>();
+
+            var textGo = new GameObject("Text", typeof(RectTransform));
+            textGo.transform.SetParent(go.transform, false);
+            var textRt = (RectTransform)textGo.transform;
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = Vector2.zero;
+            textRt.offsetMax = Vector2.zero;
+            var tmp = textGo.AddComponent<TextMeshProUGUI>();
+            tmp.text = label;
+            tmp.fontSize = 24;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.raycastTarget = false;
+            return btn;
+        }
+
+        public void OpenSelector(EdictKind filterKind, Action<EdictData> onSelected, Func<EdictData, string> describe = null)
         {
             currentCallback = onSelected;
+            selectionDescription = describe;
             if (modalPanel) modalPanel.SetActive(true);
             if (windowTitleText) windowTitleText.text = filterKind == EdictKind.Absolute 
-                ? "SELECT ABSOLUTE EDICT (AURA/COMMAND)" 
-                : "SELECT GENERAL EDICT (MOD CIRCUIT)";
+                ? "절대 칙령 선택 · 수용량과 효과 비교"
+                : "일반 칙령 선택 · 슬롯 비용과 효과 비교";
 
             RefreshCardList(filterKind);
         }
@@ -97,9 +199,10 @@ namespace CheckmateRPG.UI
             headerObj.transform.SetParent(obj.transform, false);
             var headerTmp = headerObj.AddComponent<TextMeshProUGUI>();
             headerTmp.text = edict != null 
-                ? $"<color=yellow>[{edict.SyncCost}]</color>                 <b><color=#00E5FF>{edict.Polarity}</color></b>" 
+                ? $"<color=yellow>{(edict.Kind == EdictKind.Absolute ? "수용량 +" : "기본 비용 ")}{edict.SyncCost}</color> · <color=#00E5FF>{SynchroBoardUI.PolarityLabel(edict.Polarity)}</color>"
                 : "";
             headerTmp.fontSize = 18;
+            headerTmp.raycastTarget = false;
             headerTmp.alignment = TextAlignmentOptions.TopLeft;
             var hRect = headerTmp.GetComponent<RectTransform>();
             hRect.anchorMin = Vector2.zero;
@@ -114,7 +217,7 @@ namespace CheckmateRPG.UI
             
             if (edict == null)
             {
-                bodyTmp.text = "\n\n\n<color=#B0B0B0><b>[ UNEQUIP ]</b>\nClear Slot</color>";
+                bodyTmp.text = $"<color=#B0B0B0><b>장착 해제</b>\n슬롯을 비웁니다.</color>\n\n<size=70%>{selectionDescription?.Invoke(null)}</size>";
             }
             else
             {
@@ -123,24 +226,37 @@ namespace CheckmateRPG.UI
                 {
                     foreach (var b in edict.Bonuses)
                     {
-                        if (b.FlatBonus != 0) bonusStr += $"• {b.Stat} +{b.FlatBonus}\n";
-                        if (b.PercentBonus != 0) bonusStr += $"• {b.Stat} +{b.PercentBonus * 100f}%\n";
+                        if (b.FlatBonus != 0) bonusStr += $"{StatLabel(b.Stat)} {b.FlatBonus:+0.##;-0.##;0}\n";
+                        if (b.PercentBonus != 0) bonusStr += $"{StatLabel(b.Stat)} {b.PercentBonus * 100f:+0.##;-0.##;0}%\n";
                     }
                 }
-                bodyTmp.text = $"\n<b><size=115%>{edict.EdictName}</size></b>\n<color=#D7D7D7><size=75%>{edict.Kind} Circuit</size></color>\n\n<size=85%>{bonusStr}</size>";
+                bodyTmp.text = $"<b>{edict.EdictName}</b>\n<size=80%>{bonusStr}</size>\n<size=65%>{selectionDescription?.Invoke(edict)}</size>";
             }
 
             bodyTmp.fontSize = 20;
+            bodyTmp.enableAutoSizing = true;
+            bodyTmp.fontSizeMin = 12;
+            bodyTmp.fontSizeMax = 20;
+            bodyTmp.raycastTarget = false;
             bodyTmp.alignment = TextAlignmentOptions.Center;
             bodyTmp.color = Color.white;
             var bRect = bodyTmp.GetComponent<RectTransform>();
             bRect.anchorMin = Vector2.zero;
-            bRect.anchorMax = Vector2.one;
+            bRect.anchorMax = new Vector2(1f, 0.8f);
             bRect.offsetMin = new Vector2(10, 10);
             bRect.offsetMax = new Vector2(-10, -10);
 
             return obj;
         }
+
+        private static string StatLabel(MetaStatType stat) => stat switch
+        {
+            MetaStatType.MaxHealth => "최대 체력", MetaStatType.AttackDamage => "공격력",
+            MetaStatType.Defense => "방어력", MetaStatType.Resistance => "마법 저항",
+            MetaStatType.MoveRange => "이동 범위", MetaStatType.AttackRange => "공격 범위",
+            MetaStatType.MoveCostAP => "이동 AP", MetaStatType.AttackCostAP => "공격 AP",
+            MetaStatType.ActionSpeed => "행동 속도", MetaStatType.MaxSP => "최대 SP", _ => stat.ToString()
+        };
 
         private Color GetCardFrameColor(EdictData edict)
         {

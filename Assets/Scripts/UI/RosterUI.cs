@@ -59,6 +59,8 @@ namespace CheckmateRPG.UI
         public override void Show()
         {
             base.Show();
+            foreach (var label in GetComponentsInChildren<TMP_Text>(true))
+                label.font = UiFontProvider.GetTmpFont();
             RefreshUnitList();
             
             if (notationModalPanel != null)
@@ -66,7 +68,7 @@ namespace CheckmateRPG.UI
 
             if (DeckManager.Instance != null && DeckManager.Instance.AllUnitsDatabase.Count > 0)
             {
-                SelectUnit(DeckManager.Instance.AllUnitsDatabase[0]);
+                SelectUnit(DeckManager.Instance.AllUnitsDatabase.Find(unit => DeckManager.Instance.CanUseUnit(unit)));
             }
             else
             {
@@ -88,7 +90,7 @@ namespace CheckmateRPG.UI
 
             foreach (var unit in DeckManager.Instance.AllUnitsDatabase)
             {
-                if (unit == null) continue;
+                if (!DeckManager.Instance.CanUseUnit(unit)) continue;
 
                 var btnObj = Instantiate(unitSlotButtonPrefab, unitListContainer, false);
                 btnObj.gameObject.SetActive(true);
@@ -97,6 +99,7 @@ namespace CheckmateRPG.UI
                 var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
                 if (tmp != null)
                 {
+                    tmp.font = UiFontProvider.GetTmpFont();
                     tmp.text = $"[{unit.PieceType}] {unit.UnitName}";
                 }
 
@@ -111,7 +114,7 @@ namespace CheckmateRPG.UI
 
         public void SelectUnit(UnitData unit)
         {
-            selectedUnit = unit;
+            selectedUnit = DeckManager.Instance != null && DeckManager.Instance.CanUseUnit(unit) ? unit : null;
             RefreshUnitDetails();
         }
 
@@ -176,6 +179,7 @@ namespace CheckmateRPG.UI
                     $"<b>Movement Range:</b> {movStr}\n\n" +
                     $"<b>Move AP Cost:</b> {modified.MoveCostAP}\n\n" +
                     $"<b>Attack AP Cost:</b> {modified.AttackCostAP}";
+                Destroy(modified);
             }
         }
 
@@ -230,10 +234,10 @@ namespace CheckmateRPG.UI
             int cost = prog.ResonanceStage * 30;
             if (SaveManager.Instance != null && SaveManager.Instance.CurrentData != null)
             {
-                // Give some free test TP if insufficient to make debugging smooth
                 if (SaveManager.Instance.CurrentData.TacticalPoints < cost)
                 {
-                    SaveManager.Instance.CurrentData.TacticalPoints += cost;
+                    if (enhanceCostText) enhanceCostText.text = $"TP 부족 · 필요 {cost} / 보유 {SaveManager.Instance.CurrentData.TacticalPoints}";
+                    return;
                 }
                 SaveManager.Instance.CurrentData.TacticalPoints -= cost;
                 prog.ResonanceStage++;
@@ -319,6 +323,7 @@ namespace CheckmateRPG.UI
             GameObject textGo = new GameObject("Text");
             textGo.transform.SetParent(card.transform, false);
             var tmp = textGo.AddComponent<TextMeshProUGUI>();
+            tmp.font = UiFontProvider.GetTmpFont();
             
             var tRect = tmp.GetComponent<RectTransform>();
             tRect.anchorMin = Vector2.zero;
@@ -357,7 +362,8 @@ namespace CheckmateRPG.UI
                 {
                     if (SaveManager.Instance.CurrentData.TacticalPoints < node.TPCost)
                     {
-                        SaveManager.Instance.CurrentData.TacticalPoints += node.TPCost; // Test buffer
+                        if (tpBudgetText) tpBudgetText.text = $"TP 부족 · 필요 {node.TPCost} / 보유 {SaveManager.Instance.CurrentData.TacticalPoints}";
+                        return;
                     }
                     SaveManager.Instance.CurrentData.TacticalPoints -= node.TPCost;
                     prog.UnlockedNodeIds.Add(node.NodeId);

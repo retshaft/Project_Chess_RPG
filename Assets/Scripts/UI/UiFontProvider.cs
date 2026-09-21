@@ -58,6 +58,12 @@ namespace CheckmateRPG.UI
         /// TMP 텍스트가 한글 글리프를 사용할 수 있도록 OS 폰트 기반 동적 TMP 폰트 에셋을
         /// 전역 폴백으로 등록한다. 씬 로드 후 1회 호출하면 이후 모든 TMP 텍스트에 적용된다.
         /// </summary>
+        public static TMPro.TMP_FontAsset GetTmpFont()
+        {
+            EnsureTmpKoreanFallback();
+            return _tmpFontAsset != null ? _tmpFontAsset : TMPro.TMP_Settings.defaultFontAsset;
+        }
+
         public static void EnsureTmpKoreanFallback()
         {
             if (_tmpFallbackRegistered)
@@ -69,11 +75,9 @@ namespace CheckmateRPG.UI
                 {
                     foreach (string candidate in KoreanFontCandidates)
                     {
-                        Font osFont = Font.CreateDynamicFontFromOSFont(candidate, 90);
-                        if (osFont == null)
-                            continue;
-
-                        TMPro.TMP_FontAsset asset = TMPro.TMP_FontAsset.CreateFontAsset(osFont);
+                        // TMP cannot recover a file from Unity's dynamic Font wrapper.
+                        // DynamicOS resolves the installed family and keeps glyphs dynamic.
+                        TMPro.TMP_FontAsset asset = TMPro.TMP_FontAsset.CreateFontAsset(candidate, "Regular", 90);
                         if (asset != null)
                         {
                             asset.name = $"KoreanDynamic({candidate})";
@@ -89,7 +93,7 @@ namespace CheckmateRPG.UI
                     TMPro.TMP_Settings.fallbackFontAssets.Add(_tmpFontAsset);
                 }
 
-                _tmpFallbackRegistered = true;
+                _tmpFallbackRegistered = _tmpFontAsset != null;
             }
             catch (System.Exception ex)
             {

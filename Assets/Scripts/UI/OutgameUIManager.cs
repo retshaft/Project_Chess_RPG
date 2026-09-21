@@ -27,6 +27,8 @@ namespace CheckmateRPG.UI
         public virtual void Show()
         {
             gameObject.SetActive(true);
+            foreach (var text in GetComponentsInChildren<TMPro.TMP_Text>(true))
+                text.font = UiFontProvider.GetTmpFont();
             if (gameObject.activeInHierarchy)
             {
                 if (_transitionRoutine != null) StopCoroutine(_transitionRoutine);
@@ -103,12 +105,20 @@ namespace CheckmateRPG.UI
 
         public void ChangeView(OutgameViewType targetViewType)
         {
+            // Both roster entry points share the same progression UI and TP rules.
+            if (targetViewType == OutgameViewType.Roster)
+                targetViewType = OutgameViewType.OperatorHub;
+            var nextView = views.Find(v => v != null && v.ViewType == targetViewType);
+            if (nextView == null)
+            {
+                Debug.LogWarning($"[OutgameUIManager] 뷰를 찾을 수 없습니다: {targetViewType}");
+                return;
+            }
             if (currentView != null)
             {
                 currentView.Hide();
             }
 
-            var nextView = views.Find(v => v.ViewType == targetViewType);
             if (nextView != null)
             {
                 currentView = nextView;

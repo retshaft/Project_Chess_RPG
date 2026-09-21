@@ -17,9 +17,9 @@ namespace CheckmateRPG.Progression
             if (source == null)
                 return null;
 
-            UnitData result = ScriptableObject.CreateInstance<UnitData>();
-            Copy(source, result);
-            result.name = string.IsNullOrEmpty(nameSuffix) ? source.name : source.name + nameSuffix;
+            UnitData result = UnityEngine.Object.Instantiate(source);
+            // Asset name is the persisted progression identity, including skill selection.
+            result.name = source.name;
 
             if (loadout == null)
                 return result;
@@ -29,6 +29,8 @@ namespace CheckmateRPG.Progression
             AddResonanceModifiers(loadout.ResonanceProfile, loadout.ResonanceStage, modifiers);
             AddEdictModifiers(loadout, modifiers);
             ApplyModifiers(result, modifiers);
+            // 공명 단계 효과(초기 SP 등)는 사용자 결정(2026-09-11)에 따라 미구현 유지 —
+            // 단계별 내용이 부정확하다는 지적으로, 정확한 기획이 확정될 때까지 연결하지 않는다.
 
             return result;
         }
@@ -83,7 +85,7 @@ namespace CheckmateRPG.Progression
             for (int i = 0; i < sorted.Count; i++)
             {
                 EdictData edict = sorted[i];
-                if (!syncState.TryAssign(edict) || edict.Bonuses == null)
+                if (edict == null || (!loadout.EdictsValidated && !syncState.TryAssign(edict)) || edict.Bonuses == null)
                     continue;
 
                 AddEntries(edict.Bonuses, output);
@@ -172,27 +174,5 @@ namespace CheckmateRPG.Progression
             }
         }
 
-        private static void Copy(UnitData source, UnitData destination)
-        {
-            destination.UnitName = source.UnitName;
-            destination.PieceType = source.PieceType;
-            destination.MovePattern = source.MovePattern;
-            destination.BaseRole = source.BaseRole;
-            destination.MaxHealth = source.MaxHealth;
-            destination.Defense = source.Defense;
-            destination.Resistance = source.Resistance;
-            destination.AttackDamage = source.AttackDamage;
-            destination.AttackCooldown = source.AttackCooldown;
-            destination.AttackRange = source.AttackRange;
-            destination.KillValue = source.KillValue;
-            destination.MaxSP = source.MaxSP;
-            destination.MoveCostAP = source.MoveCostAP;
-            destination.AttackCostAP = source.AttackCostAP;
-            destination.ActionSpeed = source.ActionSpeed;
-            destination.MoveRange = source.MoveRange;
-            destination.MoveSpeed = source.MoveSpeed;
-            destination.Weight = source.Weight;
-            destination.IsBoss = source.IsBoss;
-        }
     }
 }

@@ -29,7 +29,7 @@ namespace CheckmateRPG.Progression
             if (absoluteEdict != null && absoluteEdict.Kind == EdictKind.Absolute)
             {
                 // 절대 칙령은 수용량을 늘려주는 보너스 역할을 수행함
-                int bonus = absoluteEdict.SyncCost > 0 ? absoluteEdict.SyncCost : 10;
+                int bonus = Mathf.Max(0, absoluteEdict.SyncCost);
                 if (absoluteEdict.Polarity != PolarityType.Neutral && absoluteEdict.Polarity == kingSlotPolarity)
                 {
                     bonus *= 2; // 극성 일치 시 보너스 수용량 2배 증폭!
@@ -37,6 +37,23 @@ namespace CheckmateRPG.Progression
                 totalCapacity += bonus;
             }
             return totalCapacity;
+        }
+
+        // Slot 0 is absolute; slots 1..N are general. Old saves have neutral general slots.
+        public static PolarityType GetSlotPolarity(KingProgressionSaveData save, int slot, PolarityType absoluteFallback)
+        {
+            if (save?.SlotPolarities != null && slot >= 0 && slot < save.SlotPolarities.Count)
+                return save.SlotPolarities[slot];
+            return slot == 0 ? absoluteFallback : PolarityType.Neutral;
+        }
+
+        public static int CalculateSlotCost(EdictData edict, PolarityType slotPolarity)
+        {
+            if (edict == null || edict.Kind == EdictKind.Absolute) return 0;
+            int cost = Mathf.Max(0, edict.SyncCost);
+            if (edict.Polarity == PolarityType.Neutral || slotPolarity == PolarityType.Neutral) return cost;
+            // Conventional half-up rounding: 13 / 2 -> 7, 15 / 2 -> 8.
+            return Mathf.FloorToInt(cost * (edict.Polarity == slotPolarity ? 0.5f : 1.2f) + 0.5f);
         }
 
         /// <summary>

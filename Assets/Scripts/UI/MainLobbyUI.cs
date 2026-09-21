@@ -90,7 +90,7 @@ namespace CheckmateRPG.UI
                 }
                 if (tacticalPointsText != null)
                 {
-                    tacticalPointsText.text = $"AP: {data.TacticalPoints}";
+                    tacticalPointsText.text = $"보유 TP: {data.TacticalPoints}";
                 }
             }
         }

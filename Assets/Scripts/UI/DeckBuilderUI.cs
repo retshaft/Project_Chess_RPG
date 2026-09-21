@@ -125,7 +125,7 @@ namespace CheckmateRPG.UI
             {
                 foreach (var unit in DeckManager.Instance.AllUnitsDatabase)
                 {
-                    if (unit == null) continue;
+                    if (!DeckManager.Instance.CanUseUnit(unit)) continue;
                     
                     var slot = Instantiate(_inventorySlotPrefab, _inventoryContainer, false);
                     slot.transform.localScale = Vector3.one;
@@ -158,6 +158,7 @@ namespace CheckmateRPG.UI
                 {
                     int unitScore = Mathf.RoundToInt(mUnit.MaxHealth + (mUnit.AttackDamage * 10f) + (mUnit.ActionSpeed * 10f));
                     totalPower += unitScore;
+                    if (mUnit != DeckManager.Instance.CurrentDeck[i]) Destroy(mUnit);
                 }
             }
 

@@ -27,6 +27,30 @@ namespace CheckmateRPG.Progression
 
         public event Action OnDeckChanged;
 
+        public static bool IsPlayerUnit(UnitData unit)
+        {
+            return unit != null && unit.AIProfile == null &&
+                !unit.name.StartsWith("Enemy_", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsAvailableToPlayer(UnitData unit, SaveData save)
+        {
+            if (!IsPlayerUnit(unit)) return false;
+            // The king is the non-gacha player avatar. Empty inventories retain the starter prototype.
+            if (unit.PieceType == ChessPieceType.King || save?.UnlockedUnits == null || save.UnlockedUnits.Count == 0)
+                return true;
+            if (save.UnlockedUnits.Contains(unit.name)) return true;
+            if (save.CurrentDeck != null)
+            {
+                for (int slot = 1; slot < save.CurrentDeck.Count && slot < MAX_DECK_SIZE; slot++)
+                    if (save.CurrentDeck[slot] == unit.name) return true;
+            }
+            return false;
+        }
+
+        public bool CanUseUnit(UnitData unit) => AllUnitsDatabase.Contains(unit) &&
+            IsAvailableToPlayer(unit, SaveManager.Instance?.CurrentData);
+
         private void Awake()
         {
             if (Instance == null)
@@ -69,6 +93,12 @@ namespace CheckmateRPG.Progression
                     AllNotationNodes.Add(node);
                 }
             }
+
+            // 수용량 기본 데이터 자동 등록 — Resources/SyncCapacity 에셋을 사용한다(에셋 부재 시 수용량 0 함정 방지).
+            if (DefaultSyncCapacity == null)
+            {
+                DefaultSyncCapacity = Resources.Load<SyncCapacityData>("SyncCapacity");
+            }
         }
 
         private void Start()
@@ -82,12 +112,13 @@ namespace CheckmateRPG.Progression
                 return;
 
             var savedDeck = SaveManager.Instance.CurrentData.CurrentDeck;
+            Array.Clear(CurrentDeck, 0, CurrentDeck.Length);
             
             // 만약 저장된 덱이 비어있다면, 초기 기본 덱 설정
             if (savedDeck.Count == 0 && AllUnitsDatabase.Count > 0)
             {
                 // Slot 0 is King
-                var king = AllUnitsDatabase.Find(u => u != null && u.PieceType == ChessPieceType.King);
+                var king = AllUnitsDatabase.Find(u => IsPlayerUnit(u) && u.PieceType == ChessPieceType.King);
                 if (king != null) {
                     CurrentDeck[0] = king;
                 }
@@ -96,7 +127,7 @@ namespace CheckmateRPG.Progression
                 int slot = 1;
                 for (int i = 0; i < AllUnitsDatabase.Count && slot < MAX_DECK_SIZE; i++)
                 {
-                    if (AllUnitsDatabase[i] != king)
+                    if (CanUseUnit(AllUnitsDatabase[i]) && AllUnitsDatabase[i].PieceType != ChessPieceType.King)
                     {
                         CurrentDeck[slot] = AllUnitsDatabase[i];
                         slot++;
@@ -111,7 +142,10 @@ namespace CheckmateRPG.Progression
                 {
                     if (i < savedDeck.Count && !string.IsNullOrEmpty(savedDeck[i]))
                     {
-                        CurrentDeck[i] = AllUnitsDatabase.Find(u => u != null && u.name == savedDeck[i]);
+                        var candidate = AllUnitsDatabase.Find(u => u != null && u.name == savedDeck[i]);
+                        bool correctSlot = candidate != null && ((i == 0) == (candidate.PieceType == ChessPieceType.King));
+                        bool duplicate = candidate != null && Array.IndexOf(CurrentDeck, candidate, 0, i) >= 0;
+                        CurrentDeck[i] = correctSlot && !duplicate && CanUseUnit(candidate) ? candidate : null;
                     }
                     else
                     {
@@ -122,7 +156,7 @@ namespace CheckmateRPG.Progression
                 // King Validation
                 if (CurrentDeck[0] == null || CurrentDeck[0].PieceType != ChessPieceType.King)
                 {
-                    var king = AllUnitsDatabase.Find(u => u != null && u.PieceType == ChessPieceType.King);
+                    var king = AllUnitsDatabase.Find(u => IsPlayerUnit(u) && u.PieceType == ChessPieceType.King);
                     if (king != null) CurrentDeck[0] = king;
                 }
             }
@@ -155,6 +189,7 @@ namespace CheckmateRPG.Progression
         public bool SetDeckSlot(int slotIndex, UnitData unit)
         {
             if (slotIndex < 0 || slotIndex >= MAX_DECK_SIZE) return false;
+            if (unit != null && !CanUseUnit(unit)) return false;
             
             // Slot 0 constraint
             if (slotIndex == 0)
@@ -201,6 +236,7 @@ namespace CheckmateRPG.Progression
             UnitData[] modifiedDeck = new UnitData[MAX_DECK_SIZE];
             for (int i = 0; i < MAX_DECK_SIZE; i++)
             {
+                if (CurrentDeck[i] != null && Array.IndexOf(CurrentDeck, CurrentDeck[i], 0, i) >= 0) continue;
                 modifiedDeck[i] = GetModifiedUnitData(i);
             }
             return modifiedDeck;
@@ -210,7 +246,8 @@ namespace CheckmateRPG.Progression
         {
             if (slotIndex < 0 || slotIndex >= MAX_DECK_SIZE) return null;
             var original = CurrentDeck[slotIndex];
-            if (original == null) return null;
+            if (original == null || !CanUseUnit(original) ||
+                ((slotIndex == 0) != (original.PieceType == ChessPieceType.King))) return null;
 
             if (SaveManager.Instance == null || SaveManager.Instance.CurrentData == null)
                 return original;
@@ -230,7 +267,7 @@ namespace CheckmateRPG.Progression
                     foreach (var id in kingSave.EquippedGeneralEdictIds)
                     {
                         var edict = AllEdicts.Find(e => e != null && e.name == id);
-                        if (edict != null) generals.Add(edict);
+                        generals.Add(edict);
                     }
                 }
                 loadout = MetaProgressionBuilder.BuildKingLoadout(kingSave, DefaultSyncCapacity, absolute, generals);

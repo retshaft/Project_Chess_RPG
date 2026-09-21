@@ -158,6 +158,7 @@ namespace CheckmateRPG.Progression
         public List<EdictData> ActiveEdicts = new();
         public SyncCapacityData SyncCapacity;
         [Min(0)] public int BonusSyncCapacity;
+        public bool EdictsValidated;
     }
 
     public static class MetaProgressionBuilder
@@ -196,35 +197,39 @@ namespace CheckmateRPG.Progression
             loadout.SyncCapacity = syncCapacity;
             
             int capacity = syncCapacity != null ? syncCapacity.BaseCapacity : 0;
-            PolarityType currentPolarity = syncCapacity != null ? syncCapacity.InnatePolarity : PolarityType.Neutral;
+            PolarityType currentPolarity = PolarityCalculator.GetSlotPolarity(saveData, 0,
+                syncCapacity != null ? syncCapacity.InnatePolarity : PolarityType.Neutral);
+            loadout.BonusSyncCapacity = PolarityCalculator.CalculateMaxSyncCapacity(capacity,
+                Mathf.Max(0, saveData.PlayTP), absoluteEdict, currentPolarity) - capacity;
+            loadout.EdictsValidated = true;
 
             if (absoluteEdict != null && absoluteEdict.Kind == EdictKind.Absolute)
             {
                 loadout.ActiveEdicts.Add(absoluteEdict);
                 
-                int absoluteBonus = absoluteEdict.SyncCost;
-                if (absoluteEdict.Polarity != PolarityType.Neutral && absoluteEdict.Polarity == currentPolarity)
-                {
-                    absoluteBonus *= 2; 
-                }
-                loadout.BonusSyncCapacity += absoluteBonus;
             }
 
             var syncState = new SyncCapacityState(capacity + loadout.BonusSyncCapacity, absoluteEdict);
             
             if (generalEdicts != null)
             {
-                foreach (var edict in generalEdicts)
+                int used = 0;
+                var seen = new HashSet<EdictData>();
+                for (int slot = 0; slot < generalEdicts.Count; slot++)
                 {
+                    var edict = generalEdicts[slot];
                     if (edict != null && edict.Kind == EdictKind.General)
                     {
-                        if (syncState.TryAssign(edict))
+                        int cost = PolarityCalculator.CalculateSlotCost(edict,
+                            PolarityCalculator.GetSlotPolarity(saveData, slot + 1, currentPolarity));
+                        if (seen.Add(edict) && used + cost <= syncState.Capacity)
                         {
+                            used += cost;
                             loadout.ActiveEdicts.Add(edict);
                         }
                         else
                         {
-                            Debug.LogWarning($"[MetaProgressionBuilder] Sync Capacity exceeded. Dropping Edict: {edict.EdictName}");
+                            Debug.LogWarning($"[MetaProgressionBuilder] Duplicate or over-capacity edict excluded: {edict.EdictName}");
                         }
                     }
                 }
@@ -251,6 +256,12 @@ namespace CheckmateRPG.Progression
 
         public static void SetSelectedSkillIndex(string unitId, int index)
         {
+            if (string.IsNullOrEmpty(unitId)) return;
+            var unit = DeckManager.Instance != null
+                ? DeckManager.Instance.AllUnitsDatabase.Find(u => u != null && u.name == unitId)
+                : Resources.Load<CheckmateRPG.Data.UnitData>($"Units/{unitId}");
+            if (unit == null || unit.SelectableActiveSkills == null || index < 0 || index >= unit.SelectableActiveSkills.Count)
+                return;
             var saveManager = SaveManager.EnsureInstance();
             if (saveManager != null && saveManager.CurrentData != null)
             {
@@ -261,6 +272,7 @@ namespace CheckmateRPG.Progression
                     saveManager.CurrentData.UnitProgressions.Add(unitSave);
                 }
                 unitSave.SelectedSkillIndex = index;
+                saveManager.SaveGame();
             }
         }
     }
