@@ -199,14 +199,31 @@ def prepare_task(task, agent, selected_model=None):
         )
     if agent not in task.get("eligible_agents", []):
         raise ValueError("Selected agent is not allowed by the task contract.")
-    result = subprocess.run(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(TEAM),
-         "-Action", "New", "-Agent", agent, "-Task", task["id"], "-Base", "HEAD"],
-        cwd=ROOT, capture_output=True, text=True,
-    )
-    if result.returncode:
-        raise RuntimeError((result.stderr or result.stdout).strip())
     worktree = ROOT / ".worktrees" / f"{agent}-{task['id']}"
+    expected_branch = f"codex/{agent}/{task['id']}"
+    if worktree.exists():
+        existing_branch = subprocess.run(
+            ["git", "-C", str(worktree), "branch", "--show-current"],
+            capture_output=True, text=True,
+        ).stdout.strip()
+        if existing_branch != expected_branch:
+            raise RuntimeError(
+                f"기존 작업 공간의 브랜치가 예상과 다릅니다: {existing_branch or '(없음)'}"
+            )
+        existing_status = subprocess.run(
+            ["git", "-C", str(worktree), "status", "--porcelain"],
+            capture_output=True, text=True,
+        )
+        if existing_status.returncode or existing_status.stdout.strip():
+            raise RuntimeError("기존 에이전트 작업 공간에 미커밋 변경이 있어 재사용할 수 없습니다.")
+    else:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(TEAM),
+             "-Action", "New", "-Agent", agent, "-Task", task["id"], "-Base", "HEAD"],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        if result.returncode:
+            raise RuntimeError((result.stderr or result.stdout).strip())
     base = subprocess.run(["git", "-C", str(worktree), "rev-parse", "HEAD"],
                           capture_output=True, text=True, check=True).stdout.strip()
     task_file = LOCAL / "tasks" / f"{task['id']}.json"
