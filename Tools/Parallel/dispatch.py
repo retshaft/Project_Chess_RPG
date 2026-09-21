@@ -134,7 +134,9 @@ def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24, mod
     if agent == 'antigravity':
         # This Antigravity build accepts the short print flag reliably; the parent
         # process enforces the timeout so the CLI's optional timeout flag is omitted.
-        return prefix + ['--model', model or config['model'], '--effort', config.get('effort', 'low'),
+        selected_model = model or config['model']
+        effort = 'high' if selected_model.endswith('-high') else config.get('effort', 'low')
+        return prefix + ['--model', selected_model, '--effort', effort,
                          '--dangerously-skip-permissions',
                          '--mode', 'plan' if mode == 'plan' else 'accept-edits',
                          '-p', prompt, '--output-format', 'json'], env, None

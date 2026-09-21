@@ -83,6 +83,15 @@ class DispatchTests(unittest.TestCase):
         self.assertIn('--dangerously-skip-permissions', args)
         self.assertIn('accept-edits', args)
 
+    def test_antigravity_high_model_uses_high_effort(self):
+        with patch.object(dispatch, 'executable', return_value=(['agy.exe'], {
+            'model': 'gemini-3.1-pro-high', 'effort': 'low'
+        })):
+            args, _, _ = dispatch.command(
+                'antigravity', 'task', 'edit', 60, Path('.'), model='gemini-3.1-pro-high'
+            )
+        self.assertEqual(args[args.index('--effort') + 1], 'high')
+
     def test_zcode_goal_and_turn_budget_are_forwarded(self):
         prompt = 'Implement the assigned task.'
         goal = 'Finish the task and write the handoff before stopping.'
