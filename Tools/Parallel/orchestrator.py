@@ -183,19 +183,32 @@ def route_planned_task():
     settings = config()
     decision = choose_route(tasks, repository_state(), settings["jev_model"])
     record_decision(decision)
-    if decision.task_id == "wait" or decision.agent == "hold":
+    autonomy_mode = settings.get("autonomy_mode", "guarded")
+    selected = next((item for item in tasks if item["id"] == decision.task_id), None)
+    invalid_choice = selected is None or decision.agent not in selected.get("eligible_agents", [])
+    needs_fallback = (
+        decision.task_id == "wait" or decision.agent == "hold"
+        or decision.confidence < float(settings["minimum_confidence"])
+        or invalid_choice
+    )
+    if needs_fallback and autonomy_mode == "full":
+        task, agent = fallback_route(tasks)
+        emit("status", "Jev 판단 자동 승격",
+             f"신뢰도 {decision.confidence:.2f}; {task['id']} → {agent}", serialize_decision(decision))
+    elif decision.task_id == "wait" or decision.agent == "hold":
         emit("attention", "자동 실행 보류", "Jev가 계획된 작업을 보류했습니다.", serialize_decision(decision))
         return "held"
-    if decision.confidence < float(settings["minimum_confidence"]):
+    elif decision.confidence < float(settings["minimum_confidence"]):
         emit("attention", "낮은 판단 신뢰도",
              f"{decision.task_id}: {decision.confidence:.2f}", serialize_decision(decision))
         return "low-confidence"
-    task = next((item for item in tasks if item["id"] == decision.task_id), None)
-    if task is None:
+    elif invalid_choice:
         return "rejected"
+    else:
+        task, agent = selected, decision.agent
     try:
-        prepare_task(task, decision.agent)
-        emit("status", "작업 공간 준비 완료", f"{task['id']} → {decision.agent}")
+        prepare_task(task, agent)
+        emit("status", "작업 공간 준비 완료", f"{task['id']} → {agent}")
         return "prepared"
     except Exception as exc:
         task["status"] = "Attention"
@@ -203,6 +216,15 @@ def route_planned_task():
         write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
         emit("attention", "작업 준비 실패", f"{task['id']}: {exc}")
         return "attention"
+
+
+def fallback_route(tasks):
+    task = tasks[0]
+    eligible = task.get("eligible_agents", [])
+    for agent in ("codex", "antigravity", "zcode"):
+        if agent in eligible:
+            return task, agent
+    raise ValueError(f"No eligible fallback agent for {task['id']}")
 
 
 def validate_task(task):
