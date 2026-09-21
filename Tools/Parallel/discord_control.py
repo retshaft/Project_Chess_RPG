@@ -323,7 +323,8 @@ class ControlClient(discord.Client):
             if channel:
                 data = event.get("data", {})
                 view = decision_view(data.get("item_id"), data.get("status"))
-                await channel.send(f"**{event['title']}**\n{event['body']}", view=view)
+                content = f"**{event['title']}**\n{event['body']}"
+                await channel.send(content[:1900], view=view)
                 self.sent_events.add(path.name)
                 event["sent_utc"] = orchestrator.utc_now()
                 orchestrator.write_json(path, event)
@@ -370,12 +371,13 @@ class ControlClient(discord.Client):
         waiting = sum(item["status"] in ("Planned", "Ready") for item in queued)
         model = task.get("model") or "Jev가 선택 중"
         files = ", ".join(task.get("allowed_files", [])[:3]) or "범위 확인 중"
-        await channel.send(
+        message = (
             f"**작업 진행 중**\n`{task_id}` · 담당 `{task.get('agent', '선정 중')}` · 모델 `{model}` · 경과 {elapsed}\n"
             f"목표: {task.get('goal', '')}\n대상: `{files}`\n"
             f"최근 로그: {log_tail}\n다음: 작업 종료 후 변경 범위와 검증 결과를 확인합니다.\n"
             f"남은 대기 작업: {waiting}개"
         )
+        await channel.send(message[:1900])
         self.last_progress_task = task_id
         self.last_progress_sent = now
         self.last_progress_signature = signature
@@ -398,10 +400,15 @@ class ControlClient(discord.Client):
         if channel is None:
             return
         lines = ["**처리가 멈춘 작업**", "아래에서 작업 내용을 확인하고 버튼을 누르세요."]
-        for task in tasks[:10]:
-            reason = str(task.get("last_failure") or "실행 결과 확인 필요").replace("\n", " ")[-180:]
-            lines.append(f"• **{task.get('goal', task['id'])}**\n  이유: {reason}")
-        await channel.send("\n".join(lines)[:1900], view=AttentionQueueView(tasks))
+        for offset in range(0, len(tasks), 5):
+            batch = tasks[offset:offset + 5]
+            batch_lines = lines if offset == 0 else ["**처리가 멈춘 작업 (계속)**"]
+            if offset == 0:
+                batch_lines = lines[:2]
+            for task in batch:
+                reason = str(task.get("last_failure") or "실행 결과 확인 필요").replace("\n", " ")[-180:]
+                batch_lines.append(f"• **{task.get('goal', task['id'])}**\n  이유: {reason}")
+            await channel.send("\n".join(batch_lines)[:1900], view=AttentionQueueView(batch))
         self.last_attention_signature = signature
 
 
