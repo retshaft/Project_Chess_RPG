@@ -67,7 +67,7 @@ def transition(record, new_status, **fields):
     allowed = {
         "Requested": {"Planning", "Rejected"},
         "Planning": {"Ready", "PlanReview", "Attention"},
-        "PlanReview": {"Ready", "Rejected"},
+        "PlanReview": {"Requested", "Ready", "Rejected"},
         "Ready": {"Running", "Rejected"},
         "Running": {"Review", "Attention"},
         "Review": {"IntegrationReady", "Attention", "Rejected"},

@@ -33,6 +33,21 @@ class PipelineStoreTests(unittest.TestCase):
         normalized = codex_planner.normalize_plan(plan)
         self.assertEqual(normalized["tasks"][0]["eligible_agents"], ["zcode", "codex"])
 
+    def test_user_questions_only_returns_unresolved_decisions(self):
+        plan = {"tasks": [
+            {"needs_user_decision": True, "user_question": "Which scope?"},
+            {"needs_user_decision": False, "user_question": None},
+        ]}
+        self.assertEqual(codex_planner.user_questions(plan), ["Which scope?"])
+
+    def test_plan_review_can_return_to_requested_for_user_decision(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(pipeline_store, "REQUESTS", Path(folder)):
+            record = pipeline_store.add_request("Plan the outgame loop completely.")
+            pipeline_store.transition(record, "Planning")
+            pipeline_store.transition(record, "PlanReview")
+            pipeline_store.transition(record, "Requested", user_decision="Focus on the core loop.")
+            self.assertEqual(record["status"], "Requested")
+
 
 if __name__ == "__main__":
     unittest.main()

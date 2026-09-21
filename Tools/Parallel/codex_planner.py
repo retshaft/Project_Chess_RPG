@@ -19,6 +19,14 @@ def normalize_plan(plan):
     return plan
 
 
+def user_questions(plan):
+    return [
+        task["user_question"]
+        for task in plan["tasks"]
+        if task.get("needs_user_decision") and task.get("user_question")
+    ]
+
+
 def plan_request(request, timeout=900):
     codex = shutil.which("codex.cmd") or shutil.which("codex")
     if not codex:

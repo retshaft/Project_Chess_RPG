@@ -11,6 +11,7 @@ from discord.ext import tasks
 
 import orchestrator
 import pipeline_store
+import codex_planner
 
 
 def required_env(name):
@@ -179,8 +180,8 @@ async def dev_detail(interaction: discord.Interaction, item_id: str):
 
 
 @client.tree.command(name="dev-approve", description="검토 중인 작업 계획을 승인합니다.", guild=GUILD)
-@app_commands.describe(request_id="승인할 요청 ID")
-async def dev_approve(interaction: discord.Interaction, request_id: str):
+@app_commands.describe(request_id="승인할 요청 ID", decision="계획 질문에 대한 답변(필요한 경우)")
+async def dev_approve(interaction: discord.Interaction, request_id: str, decision: str | None = None):
     if not await client.interaction_check(interaction):
         return
     request = next((item for item in pipeline_store.list_requests("PlanReview")
@@ -189,6 +190,24 @@ async def dev_approve(interaction: discord.Interaction, request_id: str):
         await interaction.response.send_message("승인 가능한 계획을 찾지 못했습니다.", ephemeral=True)
         return
     plan = pipeline_store.read_json(request["plan_path"])
+    questions = codex_planner.user_questions(plan)
+    if questions and not decision:
+        body = "\n".join(f"{index + 1}. {question}" for index, question in enumerate(questions))
+        await interaction.response.send_message(
+            "결정이 필요한 항목이 있습니다.\n" + body[:1400]
+            + f"\n답변: `/dev-approve request_id:{request_id} decision:<결정 내용>`",
+            ephemeral=True,
+        )
+        return
+    if questions:
+        decision = " ".join(decision.split())[:1000]
+        description = (request["description"] + "\n\n사용자 결정: " + decision)[:1500]
+        pipeline_store.transition(
+            request, "Requested", description=description, user_decision=decision,
+            plan_path=None, plan_summary=None,
+        )
+        await interaction.response.send_message("결정 내용을 반영해 작업 계획을 다시 만듭니다.", ephemeral=True)
+        return
     orchestrator.materialize_plan(request, plan)
     pipeline_store.transition(request, "Ready")
     await interaction.response.send_message("계획을 승인하고 작업 큐에 등록했습니다.", ephemeral=True)
