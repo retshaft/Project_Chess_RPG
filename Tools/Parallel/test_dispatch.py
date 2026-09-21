@@ -77,7 +77,8 @@ class DispatchTests(unittest.TestCase):
         prompt = 'Read "a file"; $(not-a-command)\n한글 테스트'
         with patch.object(dispatch, 'executable', return_value=(['agy.exe'], {'model': 'gemini-3.1-pro-high'})):
             args, _, stdin_text = dispatch.command('antigravity', prompt, 'edit', 60, Path('.'))
-        self.assertEqual(args[args.index('--print') + 1], prompt)
+        print_flag = '-p' if '-p' in args else '--print'
+        self.assertEqual(args[args.index(print_flag) + 1], prompt)
         self.assertIsNone(stdin_text)
         self.assertNotIn('--dangerously-skip-permissions', args)
         self.assertIn('accept-edits', args)

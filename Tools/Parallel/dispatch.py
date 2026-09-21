@@ -127,8 +127,10 @@ def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24, mod
     prefix, config = executable(agent)
     env = os.environ.copy()
     if agent == 'antigravity':
+        # This Antigravity build accepts the short print flag reliably; the parent
+        # process enforces the timeout so the CLI's optional timeout flag is omitted.
         return prefix + ['--model', model or config['model'], '--mode', 'plan' if mode == 'plan' else 'accept-edits',
-                         '--print', prompt, '--output-format', 'json', '--print-timeout', f'{timeout}s'], env, None
+                         '-p', prompt, '--output-format', 'json'], env, None
     if agent == 'codex':
         permissions = ['--sandbox', 'read-only'] if mode == 'plan' else ['--approve-for-me']
         return prefix + [
