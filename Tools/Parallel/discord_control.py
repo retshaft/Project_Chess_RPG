@@ -97,6 +97,24 @@ def run_log_tail(run_path):
     return discord.utils.escape_mentions(" ".join(lines[-4:])[-1400:])
 
 
+STATUS_LABELS = {
+    "Requested": "요청됨", "Planning": "계획 작성 중", "PlanReview": "계획 검토",
+    "Ready": "실행 대기", "Planned": "배정 대기", "Running": "작업 중",
+    "Review": "결과 검토 중", "IntegrationReady": "통합 대기", "VerificationPending": "Unity 확인 대기",
+    "Attention": "확인 필요", "Done": "완료", "Rejected": "중지됨",
+}
+
+
+def status_label(value):
+    return STATUS_LABELS.get(value, value or "알 수 없음")
+
+
+def task_summary(task):
+    agent = task.get("agent") or "미정"
+    model = task.get("model") or "Jev 선택 전"
+    return f"• `{task['id']}`  {status_label(task.get('status'))}\n  {task.get('goal', '')}\n  담당: {agent} · 모델: {model}"
+
+
 class PlanDecisionView(discord.ui.View):
     def __init__(self, request_id):
         super().__init__(timeout=None)
@@ -333,20 +351,20 @@ async def dev_status(interaction: discord.Interaction):
         {"id": item["id"], "status": item["status"], "agent": item.get("agent")}
         for item in sorted(queued, key=lambda item: item.get("started_utc", item.get("created_utc", "")), reverse=True)[:5]
     ]
-    data = {
-        "automation": "paused" if current.get("paused", True) else "running",
-        "autonomy_mode": orchestrator.config().get("autonomy_mode", "guarded"),
-        "current_task": current.get("running_task") or "none",
-        "last_cycle_utc": current.get("last_cycle_utc", "not recorded yet"),
-        "last_cycle_result": current.get("last_cycle_result", "not recorded yet"),
-        "requests": {status: sum(1 for item in requests if item["status"] == status)
-                     for status in sorted({item["status"] for item in requests})},
-        "tasks": {status: sum(1 for item in queued if item["status"] == status)
-                  for status in sorted({item["status"] for item in queued})},
-        "latest_requests": latest_requests,
-        "latest_tasks": latest_tasks,
-    }
-    await interaction.response.send_message(f"```json\n{json.dumps(data, ensure_ascii=False, indent=2)}\n```", ephemeral=True)
+    current_task = next((item for item in queued if item.get("id") == current.get("running_task")), None)
+    attention = sum(item.get("status") == "Attention" for item in queued)
+    waiting = sum(item.get("status") in ("Planned", "Ready") for item in queued)
+    lines = [
+        "**자동 개발 현황**",
+        f"상태: {'일시정지' if current.get('paused', True) else '자동 실행 중'}",
+        f"현재: {current_task.get('goal', current.get('running_task')) if current_task else '진행 중인 작업 없음'}",
+        f"대기: {waiting}개 · 확인 필요: {attention}개",
+    ]
+    if current_task:
+        lines.append(f"담당: {current_task.get('agent', '선정 중')} · 모델: {current_task.get('model', 'Jev 선택 중')}")
+    if attention:
+        lines.append("확인 필요 작업은 `dev-attention` 채널의 재시도 버튼을 눌러 처리합니다.")
+    await interaction.response.send_message("\n".join(lines), ephemeral=True)
 
 
 @client.tree.command(name="dev-start", description="새 개발 작업의 자동 배정을 시작합니다.", guild=GUILD)
@@ -369,10 +387,14 @@ async def dev_pause(interaction: discord.Interaction):
 async def dev_queue(interaction: discord.Interaction):
     if not await client.interaction_check(interaction):
         return
-    tasks = [{"id": task["id"], "status": task["status"], "goal": task["goal"],
-              "priority": task.get("priority", 100)} for task in orchestrator.queue_tasks()]
-    body = json.dumps(tasks, ensure_ascii=False, indent=2)
-    await interaction.response.send_message(f"```json\n{body[:1800]}\n```", ephemeral=True)
+    tasks = orchestrator.queue_tasks()
+    if not tasks:
+        await interaction.response.send_message("대기열이 비어 있습니다.", ephemeral=True)
+        return
+    body = "**작업 대기열**\n" + "\n".join(task_summary(task) for task in tasks[:8])
+    if len(tasks) > 8:
+        body += f"\n\n외 {len(tasks) - 8}개"
+    await interaction.response.send_message(body[:1900], ephemeral=True)
 
 
 @client.tree.command(name="dev-request", description="새 개발 요청을 등록합니다.", guild=GUILD)
@@ -402,10 +424,22 @@ async def dev_detail(interaction: discord.Interaction, item_id: str):
     if item is None:
         await interaction.response.send_message("해당 ID를 찾지 못했습니다.", ephemeral=True)
         return
-    visible = {key: value for key, value in item.items()
-               if key not in ("_path", "last_output", "last_failure")}
-    body = json.dumps(visible, ensure_ascii=False, indent=2, default=str)
-    await interaction.response.send_message(f"```json\n{body[:1800]}\n```", ephemeral=True)
+    if "goal" in item:
+        body = (
+            f"**작업 상세**\n{task_summary(item)}\n"
+            f"상태 설명: {status_label(item.get('status'))}\n"
+            f"대상 파일: {', '.join(item.get('allowed_files', [])) or '아직 정해지지 않음'}\n"
+            f"시도 횟수: {item.get('attempts', 0)}회"
+        )
+        if item.get("last_failure"):
+            body += f"\n최근 문제: {str(item['last_failure'])[-700:]}"
+    else:
+        body = (
+            f"**요청 상세**\n요청 ID: `{item['id']}`\n"
+            f"상태: {status_label(item.get('status'))}\n내용: {item.get('description', '')}\n"
+            f"계획: {item.get('plan_summary') or '계획 작성 전'}"
+        )
+    await interaction.response.send_message(body[:1900], ephemeral=True)
 
 
 @client.tree.command(name="dev-trace", description="실행 중인 작업의 최근 로그와 현재 단계를 확인합니다.", guild=GUILD)
