@@ -177,7 +177,14 @@ def repository_state():
     result = subprocess.run(["git", "status", "--short"], cwd=ROOT, capture_output=True, text=True)
     if result.returncode:
         raise RuntimeError(result.stderr.strip())
-    changed = [line[3:] for line in result.stdout.splitlines() if len(line) > 3]
+    changed = []
+    for line in result.stdout.splitlines():
+        if len(line) <= 3:
+            continue
+        path = line[3:]
+        if path.startswith('"') and path.endswith('"'):
+            path = path[1:-1].replace('\\"', '"').replace('\\\\', '\\')
+        changed.append(path)
     ignored = set(config().get("ignorable_root_changes", []))
     meaningful = [path for path in changed if path not in ignored]
     return {"root_dirty": bool(meaningful), "changed_files": meaningful[:100], "ignored_changes": [path for path in changed if path in ignored], "model_health": model_health()}
