@@ -1,6 +1,7 @@
 """Private Discord control surface for the local development orchestrator."""
 import asyncio
 import json
+import logging
 import os
 from pathlib import Path
 import threading
@@ -13,6 +14,18 @@ from discord.ext import tasks
 import orchestrator
 import pipeline_store
 import codex_planner
+
+
+LOG_PATH = orchestrator.LOCAL / "logs" / "discord-bot.log"
+LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    filename=LOG_PATH,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    encoding="utf-8",
+)
+logging.getLogger("discord").setLevel(logging.INFO)
+LOGGER = logging.getLogger("automation.discord")
 
 
 def acquire_instance_lock():
@@ -247,6 +260,7 @@ class ControlClient(discord.Client):
         self.last_attention_signature = None
 
     async def setup_hook(self):
+        LOGGER.info("Discord 봇 초기화 시작: guild=%s", GUILD_ID)
         try:
             await self.tree.sync(guild=GUILD)
         except discord.Forbidden as exc:
@@ -258,12 +272,25 @@ class ControlClient(discord.Client):
         self.worker.start()
         self.event_pump.start()
         self.progress_pump.start()
+        LOGGER.info("Discord 명령 동기화 및 자동화 루프 시작 완료")
         for request in pipeline_store.list_requests():
             view = decision_view(request["id"], request["status"])
             if view:
                 self.add_view(view)
         for task in orchestrator.queue_tasks("Attention"):
             self.add_view(AttentionDecisionView(task["id"]))
+
+    async def on_ready(self):
+        LOGGER.info("Discord 연결됨: user=%s guild=%s", self.user, GUILD_ID)
+
+    async def on_disconnect(self):
+        LOGGER.warning("Discord 연결 끊김")
+
+    async def on_resumed(self):
+        LOGGER.info("Discord 연결 재개됨")
+
+    async def on_error(self, event_method, *args, **kwargs):
+        LOGGER.exception("Discord 이벤트 오류: %s", event_method)
 
     async def close(self):
         self.stop_event.set()
