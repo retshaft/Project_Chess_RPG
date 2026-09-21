@@ -558,6 +558,8 @@ def _integrate_worker_commit(task):
     backup_ref = f"backup/integration/{task['id']}-{stamp}"
     subprocess.run(["git", "branch", backup_ref, head], cwd=ROOT, capture_output=True, text=True,
                    encoding="utf-8", errors="replace", check=True)
+    editor_log = Path(os.environ.get("LOCALAPPDATA", "")) / "Unity" / "Editor" / "Editor.log"
+    task["editor_log_offset"] = editor_log.stat().st_size if editor_log.is_file() else 0
     result = subprocess.run(["git", "cherry-pick", worker_commit], cwd=ROOT, capture_output=True,
                             text=True, encoding="utf-8", errors="replace")
     if result.returncode:
@@ -650,14 +652,23 @@ def check_integrated_compile(task):
             return "done"
         if time.time() - integrated_at > float(config().get("live_compile_timeout_seconds", 300)):
             editor_log = Path(os.environ.get("LOCALAPPDATA", "")) / "Unity" / "Editor" / "Editor.log"
-            tail = editor_log.read_text(encoding="utf-8", errors="replace")[-12000:] if editor_log.is_file() else ""
+            if editor_log.is_file():
+                with editor_log.open("rb") as stream:
+                    stream.seek(min(int(task.get("editor_log_offset", 0)), editor_log.stat().st_size))
+                    tail = stream.read().decode("utf-8", "replace")[-12000:]
+            else:
+                tail = ""
             errors = [line for line in tail.splitlines() if ": error CS" in line][-8:]
-            task["status"] = "Attention"
-            task["last_failure"] = "통합본 Unity 컴파일 시간 초과" + (("\n" + "\n".join(errors)) if errors else "")
+            if errors:
+                task["status"] = "Attention"
+                task["last_failure"] = "통합본 Unity 컴파일 오류\n" + "\n".join(errors)
+                write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+                emit("attention", "Unity 컴파일 오류", task["last_failure"],
+                     {"item_id": task["id"], "status": "Attention"})
+                return "compile-error"
+            task["verification_pending_reason"] = "Unity가 Play Mode 또는 작업 중입니다. 실행 큐를 점유하지 않고 계속 감시합니다."
             write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
-            emit("attention", "Unity 컴파일 확인 필요", task["last_failure"],
-                 {"item_id": task["id"], "status": "Attention"})
-            return "compile-timeout"
+            return "unity-busy"
         return "compile-waiting"
     integrated_task = dict(task)
     integrated_task["worktree"] = str(ROOT)
