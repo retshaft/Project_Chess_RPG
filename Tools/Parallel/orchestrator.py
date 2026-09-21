@@ -198,7 +198,12 @@ def route_planned_task():
         or invalid_choice
     )
     if needs_fallback and autonomy_mode == "full":
-        task, agent = fallback_route(tasks)
+        task = selected or tasks[0]
+        preferred = profile.get("agent")
+        if preferred in task.get("eligible_agents", []):
+            agent = preferred
+        else:
+            task, agent = fallback_route(tasks)
         emit("status", "Jev 판단 자동 승격",
              f"신뢰도 {decision.confidence:.2f}; {task['id']} → {agent}", serialize_decision(decision))
     elif decision.task_id == "wait" or decision.agent == "hold":
