@@ -48,6 +48,7 @@ namespace CheckmateRPG.Core
             Ended
         }
         private BattlePhase _currentPhase = BattlePhase.Deployment;
+        public BattlePhase CurrentPhase => _currentPhase;
 
         private readonly Dictionary<Team, List<UnitRecord>> _teams = new();
         private readonly List<UnitRecord> _allUnits = new();
@@ -77,6 +78,7 @@ namespace CheckmateRPG.Core
         private BattleDiagnosticsLogger _diagnosticsLogger;
         private UnitData _runtimeKingData;
         private Canvas _commandCanvas;
+        private CheckmateRPG.UI.BattleHudView _hudView;
         private GameObject _commandPanel;
         private Button _moveModeButton;
         private Button _attackModeButton;
@@ -243,6 +245,8 @@ namespace CheckmateRPG.Core
                 _selectionOverlay.enabled = true; // Re-enable overlay for playing phase
 
             _currentPhase = BattlePhase.Playing;
+            _hudView?.SetBattleActive(true);
+            FindFirstObjectByType<CheckmateRPG.UI.PlayerAPBar>()?.SetBattleVisible(true);
             Debug.Log("[BattleManager] Battle Started!");
             
             TickScheduler.EnsureExists().IsPaused = false; // Resume AI and Actions
@@ -454,7 +458,7 @@ namespace CheckmateRPG.Core
         {
             if (_deploymentCostText != null)
             {
-                _deploymentCostText.text = $"Cost Left: {_currentDeploymentCost}";
+                _deploymentCostText.text = $"배치 가능 COST  {_currentDeploymentCost}";
             }
         }
 
@@ -943,14 +947,11 @@ namespace CheckmateRPG.Core
 
         private void ShowGameOverPanel(string resultText)
         {
-            if (_gameOverPanel != null)
-            {
-                _gameOverPanel.SetActive(true);
-            }
-            if (_gameOverText != null)
-            {
-                _gameOverText.text = resultText;
-            }
+            // One result surface only; the legacy panel overlapped the reward screen.
+            _currentPhase = BattlePhase.Ended;
+            FindFirstObjectByType<CheckmateRPG.UI.PlayerAPBar>()?.SetBattleVisible(false);
+            if (_gameOverPanel != null) _gameOverPanel.SetActive(false);
+            if (_commandCanvas != null) _commandCanvas.gameObject.SetActive(false);
 
             bool isWin = resultText.Contains("Blue Victory");
             if (isWin)
@@ -1230,12 +1231,14 @@ namespace CheckmateRPG.Core
                 case InputMode.Attack:
                     if (!hasEnemyTarget)
                     {
+                        _hudView?.Hint("공격할 적 유닛을 선택하세요");
                         Debug.Log("[BattleManager][AttackMode] No enemy target on clicked cell.");
                         return;
                     }
 
                     if (_selectedUnit.Combat == null || !_selectedUnit.Combat.IsTargetInAttackRange(targetUnit.gameObject))
                     {
+                        _hudView?.Hint("사거리 밖입니다 · 이동으로 공격 위치를 확보하세요");
                         Debug.Log(
                             $"[BattleManager][AttackMode] Target out of range. " +
                             $"Attacker={_selectedUnit.name}, Target={targetUnit.name}, " +
@@ -1247,6 +1250,7 @@ namespace CheckmateRPG.Core
                 case InputMode.Skill:
                     if (!TryQueueSkillPlaceholder(_selectedUnit, targetUnit, cell))
                     {
+                        _hudView?.Hint("스킬을 사용할 수 없습니다 · SP와 대상을 확인하세요");
                         Debug.Log(
                             $"[BattleManager][SkillMode] Queue failed. Actor={_selectedUnit.name}, Cell={cell}");
                         return;
@@ -1267,6 +1271,7 @@ namespace CheckmateRPG.Core
 
             if (!queued)
             {
+                _hudView?.Hint("행동 불가 · AP, 이동 경로와 행동 상태를 확인하세요");
                 Debug.Log(
                     $"[BattleManager][InputQueue] Action queue failed. Mode={_currentInputMode}, " +
                     $"Actor={_selectedUnit.name}, Cell={cell}");
@@ -1286,6 +1291,7 @@ namespace CheckmateRPG.Core
         private void SetSelectedUnit(UnitBrain unit)
         {
             _selectedUnit = unit;
+            _hudView?.Select(unit);
             APDebugLogger.SetCurrentTurnUnit(unit);
             if (_commandPanel != null)
                 _commandPanel.SetActive(unit != null && !unit.IsDead);
@@ -1324,6 +1330,9 @@ namespace CheckmateRPG.Core
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             canvasObject.AddComponent<GraphicRaycaster>();
+            var hudObject = new GameObject("BattleHudView");
+            _hudView = hudObject.AddComponent<CheckmateRPG.UI.BattleHudView>();
+            _hudView.Build(canvasObject.transform);
 
             _commandPanel = new GameObject("CommandPanel");
             _commandPanel.transform.SetParent(canvasObject.transform, false);
@@ -1332,7 +1341,7 @@ namespace CheckmateRPG.Core
             panelRect.anchorMax = new Vector2(1f, 0f);
             panelRect.pivot = new Vector2(1f, 0f);
             panelRect.anchoredPosition = new Vector2(-24f, 24f);
-            panelRect.sizeDelta = new Vector2(380f, 80f);
+            panelRect.sizeDelta = new Vector2(440f, 92f);
 
             HorizontalLayoutGroup layout = _commandPanel.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12f;
@@ -1343,11 +1352,11 @@ namespace CheckmateRPG.Core
             layout.padding = new RectOffset(12, 12, 12, 12);
 
             Image panelBackground = _commandPanel.AddComponent<Image>();
-            panelBackground.color = new Color(0f, 0f, 0f, 0.45f);
+            panelBackground.color = CheckmateRPG.UI.BattleHudView.Surface;
 
-            _moveModeButton = CreateModeButton(_commandPanel.transform, "Move", new Color(0.2f, 0.55f, 0.95f, 0.92f), () => SetInputMode(InputMode.Move));
-            _attackModeButton = CreateModeButton(_commandPanel.transform, "Attack", new Color(0.92f, 0.2f, 0.2f, 0.92f), () => SetInputMode(InputMode.Attack));
-            _skillModeButton = CreateModeButton(_commandPanel.transform, "Skill", new Color(0.45f, 0.45f, 0.45f, 0.92f), () => SetInputMode(InputMode.Skill));
+            _moveModeButton = CreateModeButton(_commandPanel.transform, "이동 / MOVE", Color.white, () => SetInputMode(InputMode.Move));
+            _attackModeButton = CreateModeButton(_commandPanel.transform, "공격 / ATK", Color.white, () => SetInputMode(InputMode.Attack));
+            _skillModeButton = CreateModeButton(_commandPanel.transform, "스킬 / SKILL", Color.white, () => SetInputMode(InputMode.Skill));
 
             _commandPanel.SetActive(false);
             RefreshModeButtonVisuals();
@@ -1481,7 +1490,7 @@ namespace CheckmateRPG.Core
             _deploymentCostText.color = Color.cyan;
             _deploymentCostText.alignment = TextAnchor.MiddleCenter;
 
-            Button startBtn = CreateModeButton(statusGO.transform, "START BATTLE", new Color(0.8f, 0.2f, 0.2f), StartBattle);
+            Button startBtn = CreateModeButton(statusGO.transform, "전투 개시", new Color(0.12f, 0.5f, 0.58f), StartBattle);
             LayoutElement startLE = startBtn.gameObject.AddComponent<LayoutElement>();
             startLE.minHeight = 40f;
 
@@ -1524,6 +1533,7 @@ namespace CheckmateRPG.Core
         private void SetInputMode(InputMode mode)
         {
             _currentInputMode = mode;
+            _hudView?.Hint(mode == InputMode.Move ? "이동 · 강조된 칸을 선택하세요" : mode == InputMode.Attack ? "공격 · 사거리 안의 적을 선택하세요" : "스킬 · 사용할 대상을 선택하세요");
             RefreshModeButtonVisuals();
             SyncOverlayMode();
         }
@@ -1540,9 +1550,10 @@ namespace CheckmateRPG.Core
             if (button == null || button.targetGraphic == null)
                 return;
 
-            Color c = button.targetGraphic.color;
-            c.a = Mathf.Clamp01(alpha);
-            button.targetGraphic.color = c;
+            bool selected = alpha >= 1f;
+            button.targetGraphic.color = selected ? CheckmateRPG.UI.BattleHudView.Cyan : new Color(0.16f, 0.19f, 0.23f);
+            var label = button.GetComponentInChildren<Text>();
+            if (label != null) label.color = selected ? new Color(0.035f, 0.07f, 0.08f) : Color.white;
         }
 
         private void SyncOverlayMode()
@@ -1722,4 +1733,3 @@ namespace CheckmateRPG.Core
         }
     }
 }
-

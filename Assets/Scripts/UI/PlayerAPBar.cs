@@ -20,6 +20,15 @@ namespace CheckmateRPG.UI
         [SerializeField] private float _warningDuration = 1.5f;
 
         private Coroutine _warningRoutine;
+        private APManager _source;
+        private Text _previewText;
+        private float? _previewCost;
+        private GameObject _canvasRoot;
+
+        public void SetBattleVisible(bool visible)
+        {
+            if (_canvasRoot != null) _canvasRoot.SetActive(visible);
+        }
 
         private void Start()
         {
@@ -30,8 +39,9 @@ namespace CheckmateRPG.UI
 
             if (APManager.Instance != null)
             {
-                APManager.Instance.OnAPChanged += HandleAPChanged;
-                APManager.Instance.OnInsufficientAP += HandleInsufficientAP;
+                _source = APManager.Instance;
+                _source.OnAPChanged += HandleAPChanged;
+                _source.OnInsufficientAP += HandleInsufficientAP;
                 
                 // Init UI
                 HandleAPChanged(APManager.Instance.CurrentAP, APManager.Instance.MaxAP, 0f, APChangeReason.Initialization);
@@ -41,47 +51,56 @@ namespace CheckmateRPG.UI
             {
                 _warningText.gameObject.SetActive(false);
             }
+            var battle = FindFirstObjectByType<BattleManager>();
+            if (battle != null) SetBattleVisible(battle.CurrentPhase == BattleManager.BattlePhase.Playing);
         }
 
         private void CreateProgrammaticUI()
         {
             var canvasGo = new GameObject("PlayerAPBarCanvas");
+            _canvasRoot = canvasGo;
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasGo.AddComponent<CanvasScaler>();
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
             var bgGo = new GameObject("AP_BG");
             bgGo.transform.SetParent(canvasGo.transform, false);
             var bgImg = bgGo.AddComponent<Image>();
-            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+            bgImg.color = BattleHudView.Surface;
+            bgImg.raycastTarget = false;
             var bgRect = bgGo.GetComponent<RectTransform>();
             bgRect.anchorMin = new Vector2(0.5f, 0f);
             bgRect.anchorMax = new Vector2(0.5f, 0f);
             bgRect.pivot = new Vector2(0.5f, 0f);
-            bgRect.anchoredPosition = new Vector2(0f, 20f);
-            bgRect.sizeDelta = new Vector2(400f, 40f);
+            bgRect.anchoredPosition = new Vector2(0f, 24f);
+            bgRect.sizeDelta = new Vector2(460f, 92f);
 
             var fillGo = new GameObject("AP_Fill");
             fillGo.transform.SetParent(bgGo.transform, false);
             var fillImg = fillGo.AddComponent<Image>();
             fillImg.color = new Color(0f, 0.9f, 1f, 1f); // Accent_Cyan
+            fillImg.raycastTarget = false;
             var fillRect = fillGo.GetComponent<RectTransform>();
             fillRect.anchorMin = new Vector2(0f, 0f);
             fillRect.anchorMax = new Vector2(1f, 1f);
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
+            fillRect.offsetMin = new Vector2(16, 14);
+            fillRect.offsetMax = new Vector2(-16, -70);
             
             var ghostGo = new GameObject("AP_Ghost_Fill");
             ghostGo.transform.SetParent(bgGo.transform, false);
             var ghostImg = ghostGo.AddComponent<Image>();
             ghostImg.color = _ghostColor;
+            ghostImg.raycastTarget = false;
             var ghostRect = ghostGo.GetComponent<RectTransform>();
             ghostRect.anchorMin = new Vector2(0f, 0f);
             ghostRect.anchorMax = new Vector2(1f, 1f);
-            ghostRect.offsetMin = Vector2.zero;
-            ghostRect.offsetMax = Vector2.zero;
+            ghostRect.offsetMin = new Vector2(16, 14);
+            ghostRect.offsetMax = new Vector2(-16, -70);
             
             var ghostSliderGo = new GameObject("GhostSlider");
             ghostSliderGo.transform.SetParent(bgGo.transform, false);
@@ -111,13 +130,15 @@ namespace CheckmateRPG.UI
             _apText = textGo.AddComponent<Text>();
             _apText.alignment = TextAnchor.MiddleCenter;
             _apText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
-            _apText.fontSize = 20;
+            _apText.fontSize = 27;
+            _apText.raycastTarget = false;
             _apText.color = _normalTextColor;
             var textRect = textGo.GetComponent<RectTransform>();
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
+            textRect.offsetMin = new Vector2(16, 28);
+            textRect.offsetMax = new Vector2(-16, -8);
+            _previewText = BattleHudView.Label(bgGo.transform, "Preview", "TACTICAL RESOURCE / 행동력", new Vector2(16, -3), new Vector2(428, 22), 12, BattleHudView.Muted);
 
             var warningGo = new GameObject("AP_WarningText");
             warningGo.transform.SetParent(canvasGo.transform, false);
@@ -126,20 +147,21 @@ namespace CheckmateRPG.UI
             _warningText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             _warningText.fontSize = 24;
             _warningText.color = _warningTextColor;
+            _warningText.raycastTarget = false;
             var warningRect = warningGo.GetComponent<RectTransform>();
             warningRect.anchorMin = new Vector2(0.5f, 0f);
             warningRect.anchorMax = new Vector2(0.5f, 0f);
             warningRect.pivot = new Vector2(0.5f, 0f);
-            warningRect.anchoredPosition = new Vector2(0f, 70f); // Above the bar
-            warningRect.sizeDelta = new Vector2(400f, 40f);
+            warningRect.anchoredPosition = new Vector2(0f, 120f);
+            warningRect.sizeDelta = new Vector2(480f, 40f);
         }
 
         private void OnDestroy()
         {
-            if (APManager.Instance != null)
+            if (_source != null)
             {
-                APManager.Instance.OnAPChanged -= HandleAPChanged;
-                APManager.Instance.OnInsufficientAP -= HandleInsufficientAP;
+                _source.OnAPChanged -= HandleAPChanged;
+                _source.OnInsufficientAP -= HandleInsufficientAP;
             }
         }
 
@@ -156,10 +178,12 @@ namespace CheckmateRPG.UI
             {
                 _apText.text = $"AP {Mathf.FloorToInt(current)} / {Mathf.FloorToInt(max)}"; // Arknights style
             }
+            if (_previewCost.HasValue) ShowAPPreview(_previewCost.Value);
         }
 
         public void ShowAPPreview(float predictedCost)
         {
+            _previewCost = Mathf.Max(0, predictedCost);
             if (APManager.Instance == null || _ghostSlider == null || _apSlider == null) return;
             
             float max = APManager.Instance.MaxAP;
@@ -171,10 +195,13 @@ namespace CheckmateRPG.UI
             // The ghost bar shows where the AP will drop to.
             _ghostSlider.value = Mathf.Clamp01(current / max);
             _apSlider.value = Mathf.Clamp01(target / max); 
+            if (_previewText != null) _previewText.text = $"예상 소모 {predictedCost:0.#} AP   /   잔여 {target:0.#}";
         }
 
         public void ClearAPPreview()
         {
+            _previewCost = null;
+            if (_previewText != null) _previewText.text = "TACTICAL RESOURCE / 행동력";
             if (APManager.Instance == null) return;
             HandleAPChanged(APManager.Instance.CurrentAP, APManager.Instance.MaxAP, 0, APChangeReason.Initialization);
         }
@@ -184,13 +211,13 @@ namespace CheckmateRPG.UI
             if (_warningText == null) return;
 
             if (_warningRoutine != null) StopCoroutine(_warningRoutine);
+            _warningText.text = $"AP 부족 · 필요 {cost:0.#} / 부족 {missing:0.#}";
             _warningRoutine = StartCoroutine(ShowWarningRoutine());
         }
 
         private IEnumerator ShowWarningRoutine()
         {
             _warningText.gameObject.SetActive(true);
-            _warningText.text = "[INSUFFICIENT AP]";
             _warningText.color = _warningTextColor;
             _warningText.transform.localScale = Vector3.one * 1.5f;
 

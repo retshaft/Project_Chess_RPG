@@ -68,11 +68,9 @@ namespace CheckmateRPG.UI
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
-            // 캔버스를 300x75px로 잡고 0.01 스케일로 월드 3x0.75 유닛에 맞춘다.
-            // 과거에는 sizeDelta(2, 0.5) 캔버스에서 fontSize 2~3을 써서 1px = 1월드유닛이 되어
-            // 무게 라벨("W: N")이 타일 크기의 거대 글자로 렌더링되고 줄바꿈으로 찢어졌다.
+            // Compact world-space width keeps adjacent units' bars visually separate.
             canvasGo.GetComponent<RectTransform>().sizeDelta = new Vector2(300f, 75f);
-            canvasGo.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+            canvasGo.transform.localScale = Vector3.one * 0.004f;
 
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, Color.white);
@@ -83,9 +81,10 @@ namespace CheckmateRPG.UI
             bgGo.transform.SetParent(canvasGo.transform, false);
             var bgImg = bgGo.AddComponent<Image>();
             bgImg.color = Color.black;
+            bgImg.raycastTarget = false;
             bgImg.sprite = whiteSprite;
             var bgRect = bgGo.GetComponent<RectTransform>();
-            bgRect.sizeDelta = new Vector2(225f, 30f);
+            bgRect.sizeDelta = new Vector2(225f, 20f);
 
             var fillGo = new GameObject("HP_Fill");
             fillGo.transform.SetParent(bgGo.transform, false);
