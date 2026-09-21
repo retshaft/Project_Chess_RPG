@@ -107,6 +107,7 @@ async def dev_status(interaction: discord.Interaction):
     ]
     data = {
         "automation": "paused" if current.get("paused", True) else "running",
+        "autonomy_mode": orchestrator.config().get("autonomy_mode", "guarded"),
         "current_task": current.get("running_task") or "none",
         "last_cycle_utc": current.get("last_cycle_utc", "not recorded yet"),
         "last_cycle_result": current.get("last_cycle_result", "not recorded yet"),
@@ -154,7 +155,7 @@ async def dev_request(interaction: discord.Interaction, description: str):
     try:
         request = pipeline_store.add_request(description)
         current = orchestrator.state()
-        state_note = "작업 계획을 곧 시작합니다." if not current.get("paused", True) else "현재 일시정지 상태입니다. `/dev-start`를 실행하세요."
+        state_note = "계획부터 검증까지 자동으로 진행합니다." if not current.get("paused", True) else "현재 일시정지 상태입니다. `/dev-start`를 실행하세요."
         await interaction.response.send_message(
             f"요청을 등록했습니다: `{request['id']}`\n{state_note}\n진행 확인: `/dev-status` 또는 `/dev-detail item_id:{request['id']}`",
             ephemeral=True,

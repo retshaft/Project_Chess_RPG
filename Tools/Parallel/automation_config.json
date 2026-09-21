@@ -1,5 +1,6 @@
 {
   "poll_seconds": 30,
+  "autonomy_mode": "full",
   "jev_model": "jev-latest",
   "minimum_confidence": 0.85,
   "maximum_attempts": 2,

@@ -110,13 +110,20 @@ def process_request_once():
     emit("status", "요청 계획 시작", request["description"])
     try:
         plan, plan_path = codex_planner.plan_request(request)
-        review = codex_planner.needs_review(plan)
+        settings = config()
+        autonomy_mode = settings.get("autonomy_mode", "guarded")
+        review = codex_planner.needs_review(plan, autonomy_mode=autonomy_mode)
         next_status = "PlanReview" if review else "Ready"
-        pipeline_store.transition(request, next_status, plan_path=str(plan_path), plan_summary=plan["summary"])
-        if not review:
+        fields = {"plan_path": str(plan_path), "plan_summary": plan["summary"]}
+        if review and autonomy_mode == "full":
+            fields["error"] = "자동 판단으로 해결할 수 없는 정보가 필요합니다: " + " | ".join(codex_planner.user_questions(plan))
+            next_status = "Attention"
+        pipeline_store.transition(request, next_status, **fields)
+        if next_status == "Ready":
             materialize_plan(request, plan)
-        emit("attention" if review else "result",
-             "계획 검토 필요" if review else "작업 계획 완료",
+        title = ("작업 계획 완료" if next_status == "Ready" else
+                 "사용자 정보 필요" if next_status == "Attention" else "계획 검토 필요")
+        emit("attention" if next_status != "Ready" else "result", title,
              f"{request['id']}: {plan['summary']}")
         return next_status
     except Exception as exc:

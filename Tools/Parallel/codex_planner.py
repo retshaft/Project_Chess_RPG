@@ -39,6 +39,13 @@ they materially verify behavior. Mark game-rule choices and visual preferences a
 Avoid assigning scene, prefab, package, shared interface, or integration work to a cheap worker
 unless the scope is exceptionally clear. Return only the requested structured result.
 
+The Discord request itself authorizes reversible repository work within its stated scope. Resolve
+ordinary UI, visual, scope, and implementation choices from the existing project, milestones, and
+conservative defaults. Record those assumptions in expected_behavior instead of creating a
+planning-only task. Set needs_user_decision only for a true blocker such as a missing secret,
+irreversible publication or deletion, external spending, or contradictory requirements with no
+safe reversible choice. Do not ask the user to choose between reasonable implementation options.
+
 User request:
 {request['description']}
 """
@@ -63,7 +70,9 @@ User request:
         temporary_path.unlink(missing_ok=True)
 
 
-def needs_review(plan):
+def needs_review(plan, autonomy_mode="guarded"):
+    if autonomy_mode == "full":
+        return bool(user_questions(plan))
     protected_fragments = (".unity", ".prefab", "Packages/", "ProjectSettings/", "IBattleContext")
     for task in plan["tasks"]:
         if task["risk"] == "high" or task["needs_user_decision"]:

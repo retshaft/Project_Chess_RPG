@@ -25,7 +25,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Parallel/Start-Automat
 
 첫 실행만 전용 Python 환경과 공식 TypeSafe SDK, Discord 라이브러리를 설치한다. 봇이 접속하면 `/dev-status`로 연결을 확인한 뒤 `/dev-start`로 시작한다. `/dev-pause`는 현재 외부 프로세스를 강제 종료하지 않고 다음 작업 배정부터 멈춘다.
 
-일반 개발 요청은 `/dev-request description:<요청 내용>`으로 등록한다. Codex가 저장소를 읽어 구조화된 작업 계획을 만들며, 고위험 파일·게임 규칙·사용자 결정이 포함된 계획은 `/dev-approve request_id:<ID>` 전까지 실행하지 않는다. `/dev-detail`로 근거를 확인하고 실패한 항목은 `/dev-retry`, 불필요한 요청은 `/dev-reject`로 처리한다.
+일반 개발 요청은 `/dev-request description:<요청 내용>`으로 등록한다. 이 명령을 해당 범위의 가역적 저장소 작업에 대한 승인으로 간주하며, Codex 계획·Jev 배정·구현·검증·리뷰를 자동으로 진행한다. 합리적인 UI·시각·구현 선택은 기존 프로젝트와 보수적인 기본값으로 결정한다. 비밀키 누락, 외부 비용, 공개·배포, 대량 삭제처럼 자동으로 결정할 수 없는 경우만 `dev-attention`에 알린다. `/dev-detail`로 근거를 확인하고 실패한 항목은 `/dev-retry`, 불필요한 요청은 `/dev-reject`로 처리한다.
 
 ## 처리 흐름
 

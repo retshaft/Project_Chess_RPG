@@ -27,6 +27,11 @@ class PipelineStoreTests(unittest.TestCase):
                              "allowed_files": ["Assets/Scenes/Battle.unity"]}]}
         self.assertFalse(codex_planner.needs_review(ordinary))
         self.assertTrue(codex_planner.needs_review(scene))
+        self.assertFalse(codex_planner.needs_review(scene, autonomy_mode="full"))
+        blocked = {"tasks": [{"risk": "low", "needs_user_decision": True,
+                               "user_question": "Provide the publishing credential.",
+                               "allowed_files": ["Assets/Scripts/UI/View.cs"]}]}
+        self.assertTrue(codex_planner.needs_review(blocked, autonomy_mode="full"))
 
     def test_plan_agent_choices_are_deduplicated_after_structured_output(self):
         plan = {"tasks": [{"eligible_agents": ["zcode", "zcode", "codex"]}]}
