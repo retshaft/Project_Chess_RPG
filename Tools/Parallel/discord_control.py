@@ -14,6 +14,28 @@ import pipeline_store
 import codex_planner
 
 
+def acquire_instance_lock():
+    path = orchestrator.LOCAL / "discord-control.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+b")
+    handle.seek(0)
+    if path.stat().st_size == 0:
+        handle.write(b"0")
+        handle.flush()
+        handle.seek(0)
+    try:
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as exc:
+        handle.close()
+        raise RuntimeError("Discord 자동화 봇이 이미 실행 중입니다.") from exc
+    return handle
+
+
 def required_env(name):
     value = os.environ.get(name)
     if not value:
@@ -87,6 +109,7 @@ class ControlClient(discord.Client):
         await self.wait_until_ready()
 
 
+INSTANCE_LOCK = acquire_instance_lock()
 client = ControlClient()
 
 
