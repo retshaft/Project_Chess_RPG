@@ -141,7 +141,7 @@ def repository_state():
     return {"root_dirty": bool(changed), "changed_files": changed[:100]}
 
 
-def prepare_task(task, agent):
+def prepare_task(task, agent, selected_model=None):
     repo = repository_state()
     if repo["root_dirty"]:
         raise RuntimeError(
@@ -170,9 +170,12 @@ def prepare_task(task, agent):
     write_json(task_file, {
         "status": "Ready", "agent": agent, "base_commit": base, "mode": "edit",
         "allowed_files": task["allowed_files"], "goal": task["goal"], "prompt": prompt,
+        "model": selected_model,
     })
     task.update(status="Ready", agent=agent, worktree=str(worktree), task_file=str(task_file),
                 base_commit=base, prepared_utc=utc_now())
+    if selected_model:
+        task["model"] = selected_model
     write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
     return task
 
@@ -186,7 +189,9 @@ def route_planned_task():
     record_decision(decision)
     autonomy_mode = settings.get("autonomy_mode", "guarded")
     selected = next((item for item in tasks if item["id"] == decision.task_id), None)
-    invalid_choice = selected is None or decision.agent not in selected.get("eligible_agents", [])
+    profile = settings.get("models", {}).get(decision.model, {}) if decision.model else {}
+    chosen_agent = profile.get("agent") or decision.agent
+    invalid_choice = selected is None or chosen_agent not in selected.get("eligible_agents", [])
     needs_fallback = (
         decision.task_id == "wait" or decision.agent == "hold"
         or decision.confidence < float(settings["minimum_confidence"])
@@ -206,9 +211,9 @@ def route_planned_task():
     elif invalid_choice:
         return "rejected"
     else:
-        task, agent = selected, decision.agent
+        task, agent = selected, chosen_agent
     try:
-        prepare_task(task, agent)
+        prepare_task(task, agent, decision.model or None)
         emit("status", "작업 공간 준비 완료", f"{task['id']} → {agent}")
         return "prepared"
     except Exception as exc:

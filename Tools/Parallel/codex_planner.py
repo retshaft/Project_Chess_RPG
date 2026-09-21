@@ -54,7 +54,7 @@ User request:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temporary:
         temporary_path = Path(temporary.name)
     try:
-        cmd = [codex, "exec", "--cd", str(ROOT), "--sandbox", "read-only",
+        cmd = [codex, "exec", "--cd", str(ROOT), "--model", "gpt-5.6-luna", "--sandbox", "read-only",
                "--ephemeral", "--color", "never",
                "--output-schema", str(SCHEMA), "--output-last-message", str(temporary_path), "-"]
         result = subprocess.run(

@@ -4,6 +4,14 @@
   "show_agent_windows": true,
   "emergency_fallback_agent": "antigravity",
   "allow_emergency_fallback": true,
+  "models": {
+    "gpt-6-astra": {"agent": "codex", "tier": "premium", "purpose": "고위험 설계·복잡한 통합"},
+    "gpt-5.6-sol": {"agent": "codex", "tier": "standard", "purpose": "일반 기능 구현·리뷰"},
+    "gpt-5.6-luna": {"agent": "codex", "tier": "economy", "purpose": "반복 작업·단순 UI"},
+    "gemini-3.1-pro-high": {"agent": "antigravity", "tier": "standard", "purpose": "복합 UI·대체 구현"},
+    "gemini-3.8-flash": {"agent": "antigravity", "tier": "economy", "purpose": "빠른 UI·반복 작업"},
+    "GLM-5.3-Flash": {"agent": "zcode", "tier": "economy", "purpose": "저비용 단순 수정·문서화"}
+  },
   "autonomy_mode": "full",
   "jev_model": "jev-latest",
   "minimum_confidence": 0.85,

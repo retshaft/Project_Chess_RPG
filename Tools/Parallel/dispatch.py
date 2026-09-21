@@ -123,21 +123,21 @@ def executable(agent):
     return [str(binary)], config
 
 
-def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24):
+def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24, model=None):
     prefix, config = executable(agent)
     env = os.environ.copy()
     if agent == 'antigravity':
-        return prefix + ['--model', config['model'], '--mode', 'plan' if mode == 'plan' else 'accept-edits',
+        return prefix + ['--model', model or config['model'], '--mode', 'plan' if mode == 'plan' else 'accept-edits',
                          '--print', prompt, '--output-format', 'json', '--print-timeout', f'{timeout}s'], env, None
     if agent == 'codex':
         permissions = ['--sandbox', 'read-only'] if mode == 'plan' else ['--approve-for-me']
         return prefix + [
-            'exec', '--cd', str(worktree), '--model', config.get('model', 'gpt-5.6-luna'), *permissions,
+            'exec', '--cd', str(worktree), '--model', model or config.get('model', 'gpt-5.6-luna'), *permissions,
             '--ephemeral', '--color', 'never', '-'
         ], env, prompt
     # Installed 0.16.5 rejects advertised turn flags; use a bounded prompt run.
     # ZCODE_MODEL is supported by its actual environment parser.
-    env['ZCODE_MODEL'] = config['provider'] + '/' + config['model']
+    env['ZCODE_MODEL'] = config['provider'] + '/' + (model or config['model'])
     # This version drops the configured provider credential when ZCODE_MODEL overrides
     # model.main. Pass the credential created by official CLI login only to this child.
     # Never copy credentials into project files, command arguments, or result records.
@@ -224,13 +224,13 @@ def run(args):
         + json.dumps(task['allowed_files'], ensure_ascii=False) + '\n\n' + task['prompt'])
     goal = None if args.smoke else task.get('goal')
     cmd, env, stdin_text = command(args.agent, prompt, task['mode'], args.timeout, worktree,
-                                   goal=goal, max_turns=args.max_turns)
+                                   goal=goal, max_turns=args.max_turns, model=task.get('model'))
     run_id = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + uuid.uuid4().hex[:8]
     directory = LOCAL / 'runs' / run_id
     with leases(args.agent, worktree, run_id):
         directory.mkdir(parents=True)
         write_json(directory / 'task.json', task)
-        record = {'run_id': run_id, 'agent': args.agent, 'model': read_json(CONFIG)[args.agent]['model'],
+        record = {'run_id': run_id, 'agent': args.agent, 'model': task.get('model') or read_json(CONFIG)[args.agent]['model'],
                   'worktree': str(worktree), 'branch': branch, 'base_commit': base, 'status': 'Running',
                   'runner_pid': os.getpid(), 'started_utc': dt.datetime.now(dt.timezone.utc).isoformat()}
         write_json(directory / 'result.json', record)
