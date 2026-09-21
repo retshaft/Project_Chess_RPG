@@ -26,6 +26,7 @@ CONFIG_PATH = Path(__file__).with_name("automation_config.json")
 DISPATCH = Path(__file__).with_name("dispatch.py")
 LOCK = threading.Lock()
 ACTIVE_LOCK = threading.Lock()
+INTEGRATION_LOCK = threading.Lock()
 ACTIVE_WORKERS = {}
 TEAM = Path(__file__).with_name("Team.ps1")
 
@@ -525,6 +526,43 @@ def commit_worker_snapshot(task, changed_files):
     return commit, backup_ref
 
 
+def _integrate_worker_commit(task):
+    """Back up the integration head and cherry-pick one reviewed worker commit."""
+    branch = subprocess.run(["git", "branch", "--show-current"], cwd=ROOT, capture_output=True,
+                            text=True, encoding="utf-8", errors="replace", check=True).stdout.strip()
+    if branch != "codex/integration":
+        raise RuntimeError(f"자동 통합은 codex/integration에서만 가능합니다: {branch}")
+    repo = repository_state()
+    if repo["root_dirty"]:
+        raise RuntimeError("통합 브랜치에 별도 미커밋 변경이 있어 자동 통합을 보류합니다.")
+    worker_commit = task.get("worker_commit")
+    if not worker_commit:
+        raise RuntimeError("통합할 작업 커밋이 없습니다.")
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", check=True).stdout.strip()
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_ref = f"backup/integration/{task['id']}-{stamp}"
+    subprocess.run(["git", "branch", backup_ref, head], cwd=ROOT, capture_output=True, text=True,
+                   encoding="utf-8", errors="replace", check=True)
+    result = subprocess.run(["git", "cherry-pick", worker_commit], cwd=ROOT, capture_output=True,
+                            text=True, encoding="utf-8", errors="replace")
+    if result.returncode:
+        subprocess.run(["git", "cherry-pick", "--abort"], cwd=ROOT, capture_output=True)
+        raise RuntimeError("자동 통합 충돌: " + (result.stderr or result.stdout)[-1200:])
+    integrated_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+                                       text=True, encoding="utf-8", errors="replace",
+                                       check=True).stdout.strip()
+    task["integration_backup_ref"] = backup_ref
+    task["integration_commit"] = integrated_commit
+    task["integrated_utc"] = utc_now()
+    return integrated_commit
+
+
+def integrate_worker_commit(task):
+    with INTEGRATION_LOCK:
+        return _integrate_worker_commit(task)
+
+
 def verify_and_review_task(task):
     verification = verify_worker_result(task)
     task["verification_result"] = verification
@@ -535,21 +573,24 @@ def verify_and_review_task(task):
         task["status"] = "Attention"
     else:
         try:
-            review = codex_reviewer.review_task(task)
+            review = ({"verdict": "pass", "summary": "저위험 작업의 범위·diff 규칙 검사 통과"}
+                      if task.get("risk", "low") == "low" else codex_reviewer.review_task(task))
             task["review_result"] = review
             if review["verdict"] != "pass":
                 task["status"] = "Attention"
             else:
                 if not task.get("worker_commit"):
                     commit_worker_snapshot(task, checks["changed_files"])
+                if config().get("auto_integrate_results", True) and not task.get("integration_commit"):
+                    integrate_worker_commit(task)
                 if checks.get("manual_play_mode_required"):
                     task["status"] = "InGameCheckPending"
                     task["verification_pending_reason"] = "구현·리뷰·백업 완료; 인게임 확인만 별도 대기"
-                elif unity.get("deferred"):
-                    task["status"] = "VerificationPending"
-                    task["verification_pending_reason"] = unity.get("reason")
+                elif checks.get("unity_verification_required"):
+                    task["status"] = "IntegratedCompilePending"
+                    task["verification_pending_reason"] = "통합 완료; 열린 Unity 또는 배치 컴파일 확인 대기"
                 elif verification["passed"]:
-                    task["status"] = "IntegrationReady"
+                    task["status"] = "Done"
                     task.pop("verification_pending_reason", None)
                 else:
                     task["status"] = "Attention"
@@ -557,13 +598,14 @@ def verify_and_review_task(task):
             task["status"] = "Attention"
             task["review_error"] = str(exc)
     write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
-    kind = "result" if task["status"] == "IntegrationReady" else (
-        "status" if task["status"] in ("VerificationPending", "InGameCheckPending") else "attention"
+    kind = "result" if task["status"] in ("IntegrationReady", "Done") else (
+        "status" if task["status"] in ("VerificationPending", "IntegratedCompilePending", "InGameCheckPending") else "attention"
     )
     emit(kind, "작업 검토 완료" if kind == "result" else "작업 검증 대기" if kind == "status" else "작업 확인 필요",
          f"{task['id']} 상태: {task['status']}\n변경 파일: "
          + ", ".join(verification.get("checks", {}).get("changed_files", [])[:8])
          + ("\n다음: 인게임 확인 목록에 보관" if task["status"] == "InGameCheckPending" else
+            "\n다음: 통합본 Unity 컴파일 감시" if task["status"] == "IntegratedCompilePending" else
             "\n다음: Unity 컴파일 또는 통합 대기" if task["status"] == "VerificationPending" else "\n다음: 결과 확인"),
          {"item_id": task["id"], "status": task["status"]})
     return task["status"].lower()
@@ -577,6 +619,44 @@ def deferred_verification_tasks():
         if not task.get("worker_commit") or (unity.get("deferred") and not unity_running):
             result.append(task)
     return result
+
+
+def check_integrated_compile(task):
+    """Observe the integrated project without occupying a worker or execution queue slot."""
+    if unity_is_running():
+        assembly = ROOT / "Library" / "ScriptAssemblies" / "Assembly-CSharp.dll"
+        integrated_at = dt.datetime.fromisoformat(task["integrated_utc"]).timestamp()
+        if assembly.exists() and assembly.stat().st_mtime >= integrated_at:
+            task["status"] = "Done"
+            task["integrated_compile"] = {"passed": True, "mode": "open-editor", "checked_utc": utc_now()}
+            task.pop("verification_pending_reason", None)
+            write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+            emit("result", "통합본 Unity 컴파일 완료", f"{task['id']} · 열린 Unity에서 컴파일 완료",
+                 {"item_id": task["id"], "status": "Done"})
+            return "done"
+        if time.time() - integrated_at > float(config().get("live_compile_timeout_seconds", 300)):
+            editor_log = Path(os.environ.get("LOCALAPPDATA", "")) / "Unity" / "Editor" / "Editor.log"
+            tail = editor_log.read_text(encoding="utf-8", errors="replace")[-12000:] if editor_log.is_file() else ""
+            errors = [line for line in tail.splitlines() if ": error CS" in line][-8:]
+            task["status"] = "Attention"
+            task["last_failure"] = "통합본 Unity 컴파일 시간 초과" + (("\n" + "\n".join(errors)) if errors else "")
+            write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+            emit("attention", "Unity 컴파일 확인 필요", task["last_failure"],
+                 {"item_id": task["id"], "status": "Attention"})
+            return "compile-timeout"
+        return "compile-waiting"
+    integrated_task = dict(task)
+    integrated_task["worktree"] = str(ROOT)
+    result = run_unity_checks(integrated_task)
+    task["integrated_compile"] = result
+    task["status"] = "Done" if result.get("passed") else "Attention"
+    if not result.get("passed"):
+        task["last_failure"] = result.get("reason", "통합본 Unity 검증 실패")
+    write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
+    emit("result" if result.get("passed") else "attention",
+         "통합본 Unity 검증 완료" if result.get("passed") else "통합본 Unity 검증 실패",
+         f"{task['id']} 상태: {task['status']}", {"item_id": task["id"], "status": task["status"]})
+    return task["status"].lower()
 
 
 def tasks_conflict(left, right):
@@ -669,6 +749,9 @@ def run_once(background=False):
     current = state()
     if current.get("paused"):
         return "paused"
+    integrated = queue_tasks("IntegratedCompilePending")
+    if integrated and not ACTIVE_WORKERS:
+        return check_integrated_compile(integrated[0])
     pending = deferred_verification_tasks()
     if pending and not ACTIVE_WORKERS:
         return verify_and_review_task(pending[0])

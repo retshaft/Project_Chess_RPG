@@ -100,18 +100,20 @@ class OrchestratorTests(unittest.TestCase):
                 "checks": {
                     "diff_check": "passed", "changed_files": ["Assets/X.cs"],
                     "scope_violations": [], "manual_play_mode_required": False,
+                    "unity_verification_required": True,
                     "unity": {"passed": False, "deferred": True, "reason": "Unity is open."},
                 },
             }
             with patch.object(orchestrator, "verify_worker_result", return_value=verification), \
                  patch.object(orchestrator, "emit") as emit, \
                  patch.object(orchestrator.codex_reviewer, "review_task", return_value={"verdict": "pass"}) as review, \
-                 patch.object(orchestrator, "commit_worker_snapshot", return_value=("abc", "backup/x")) as commit:
+                 patch.object(orchestrator, "commit_worker_snapshot", return_value=("abc", "backup/x")) as commit, \
+                 patch.object(orchestrator, "integrate_worker_commit", return_value="def"):
                 status = orchestrator.verify_and_review_task(task)
 
-            self.assertEqual(status, "verificationpending")
-            self.assertEqual(task["status"], "VerificationPending")
-            review.assert_called_once()
+            self.assertEqual(status, "integratedcompilepending")
+            self.assertEqual(task["status"], "IntegratedCompilePending")
+            review.assert_not_called()
             commit.assert_called_once()
             self.assertEqual(emit.call_args.args[0], "status")
 
@@ -135,6 +137,7 @@ class OrchestratorTests(unittest.TestCase):
             with patch.object(orchestrator, "verify_worker_result", return_value=verification), \
                  patch.object(orchestrator.codex_reviewer, "review_task", return_value={"verdict": "pass"}), \
                  patch.object(orchestrator, "commit_worker_snapshot", return_value=("abc", "backup/x")), \
+                 patch.object(orchestrator, "integrate_worker_commit", return_value="def"), \
                  patch.object(orchestrator, "emit"):
                 orchestrator.verify_and_review_task(task)
             self.assertEqual(task["status"], "InGameCheckPending")

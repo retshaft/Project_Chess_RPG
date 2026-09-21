@@ -31,7 +31,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Parallel/Start-Automat
 
 ## 처리 흐름
 
-`Requested → Planning → PlanReview/Ready → Planned → Routing → Running → Review → IntegrationReady/VerificationPending/InGameCheckPending/Attention` 순서로 진행한다. `InGameCheckPending`은 구현·리뷰·백업이 끝나고 인게임 확인만 남은 보관 상태이며 실행 큐와 재시도 큐를 사용하지 않는다. 자동화는 main 병합과 원격 push를 수행하지 않는다.
+`Requested → Planning → PlanReview/Ready → Planned → Routing → Running → Review → IntegratedCompilePending/InGameCheckPending/Done/Attention` 순서로 진행한다. 저위험 작업은 파일 범위와 diff 검사를 통과하면 자동 커밋하고 복구 브랜치를 만든 뒤 `codex/integration`에 순차 반영한다. `IntegratedCompilePending`은 통합된 프로젝트의 Unity 컴파일을 감시하는 상태이고, `InGameCheckPending`은 구현·리뷰·백업·통합이 끝나 인게임 확인만 남은 보관 상태다. 두 상태 모두 실행 큐와 재시도 큐를 사용하지 않는다. 원격 push와 main 병합은 수행하지 않는다.
 
 ## 작업 큐 형식
 
