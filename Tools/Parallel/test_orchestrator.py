@@ -78,7 +78,7 @@ class OrchestratorTests(unittest.TestCase):
              patch.object(orchestrator, "config", return_value={"poll_seconds": 30}):
             orchestrator.serve(StopAfterWait())
 
-        update.assert_called_once()
+        self.assertEqual(update.call_count, 2)
         self.assertEqual(update.call_args.kwargs["last_cycle_result"], "idle")
         self.assertIsNone(update.call_args.kwargs["last_cycle_error"])
 
