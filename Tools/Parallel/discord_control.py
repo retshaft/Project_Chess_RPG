@@ -115,6 +115,7 @@ STATUS_LABELS = {
     "Ready": "실행 대기", "Planned": "배정 대기", "Running": "작업 중",
     "Review": "결과 검토 중", "IntegrationReady": "통합 대기", "VerificationPending": "Unity 컴파일 대기",
     "InGameCheckPending": "인게임 확인 목록",
+    "DeferredReview": "나중에 검토",
     "Attention": "확인 필요", "Done": "완료", "Rejected": "중지됨",
 }
 
@@ -169,32 +170,75 @@ class AttentionDecisionView(discord.ui.View):
     def __init__(self, item_id):
         super().__init__(timeout=None)
         self.item_id = item_id
-        retry = discord.ui.Button(label="재시도", style=discord.ButtonStyle.primary,
-                                  custom_id=f"automation:retry:{item_id}")
+        accept = discord.ui.Button(label="결과 채택", style=discord.ButtonStyle.success,
+                                   custom_id=f"automation:accept:{item_id}")
+        reroute = discord.ui.Button(label="다른 모델", style=discord.ButtonStyle.primary,
+                                    custom_id=f"automation:reroute:{item_id}")
+        defer = discord.ui.Button(label="나중에 검토", style=discord.ButtonStyle.secondary,
+                                  custom_id=f"automation:defer:{item_id}")
         stop = discord.ui.Button(label="중지", style=discord.ButtonStyle.danger,
                                  custom_id=f"automation:stop:{item_id}")
-        retry.callback = self.retry
+        accept.callback = self.accept
+        reroute.callback = self.reroute
+        defer.callback = self.defer
         stop.callback = self.stop
-        self.add_item(retry)
+        self.add_item(accept)
+        self.add_item(reroute)
+        self.add_item(defer)
         self.add_item(stop)
 
-    async def retry(self, interaction):
+    async def accept(self, interaction):
         if not await allowed_button(interaction):
+            return
+        task = find_task(self.item_id, "Attention")
+        if task and task.get("worker_commit") and task.get("review_result", {}).get("verdict") == "pass":
+            task["status"] = "IntegrationReady"
+            task["resolution"] = "Discord에서 검토 결과 채택"
+            orchestrator.write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
+            await interaction.response.send_message("검토된 결과를 채택해 통합 대기로 옮겼습니다.", ephemeral=True)
+            return
+        await interaction.response.send_message("리뷰와 백업 커밋이 끝난 작업만 바로 채택할 수 있습니다.", ephemeral=True)
+
+    async def reroute(self, interaction):
+        if not await allowed_button(interaction):
+            return
+        task = find_task(self.item_id, "Attention")
+        if task:
+            previous = task.get("agent")
+            eligible = [agent for agent in task.get("eligible_agents", []) if agent != previous]
+            if eligible:
+                task["eligible_agents"] = eligible
+            task["status"] = "Planned"
+            task["attempts"] = 0
+            task["last_failure"] = f"사용자가 {previous or '이전 모델'} 대신 다른 모델 재배정을 선택"
+            for key in ("agent", "worktree", "task_file", "base_commit", "prepared_utc", "started_utc", "model"):
+                task.pop(key, None)
+            orchestrator.write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
+            await interaction.response.send_message("Jev가 다른 모델로 다시 배정합니다.", ephemeral=True)
             return
         request = find_request(self.item_id, "Attention")
         if request:
             pipeline_store.transition(request, "Requested", error=None)
-            await interaction.response.send_message("요청 계획을 다시 시도합니다.", ephemeral=True)
+            await interaction.response.send_message("다른 계획 모델로 다시 작성합니다.", ephemeral=True)
+            return
+        await interaction.response.send_message("이미 처리되었거나 재배정할 수 없습니다.", ephemeral=True)
+
+    async def defer(self, interaction):
+        if not await allowed_button(interaction):
             return
         task = find_task(self.item_id, "Attention")
         if task:
-            task["status"] = "Ready" if task.get("worktree") and task.get("task_file") else "Planned"
-            task["attempts"] = 0
-            task.pop("last_failure", None)
+            task["status"] = "DeferredReview"
+            task["resolution"] = "Discord에서 나중에 검토 선택"
             orchestrator.write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
-            await interaction.response.send_message("작업을 다시 대기열에 넣었습니다.", ephemeral=True)
+            await interaction.response.send_message("실행 큐에서 빼고 나중에 검토 목록에 보관했습니다.", ephemeral=True)
             return
-        await interaction.response.send_message("이미 처리되었거나 재시도할 수 없습니다.", ephemeral=True)
+        request = find_request(self.item_id, "Attention")
+        if request:
+            pipeline_store.transition(request, "Rejected", rejection_reason="나중에 검토 목록으로 보관")
+            await interaction.response.send_message("요청을 실행 큐에서 제외했습니다.", ephemeral=True)
+            return
+        await interaction.response.send_message("이미 처리된 항목입니다.", ephemeral=True)
 
     async def stop(self, interaction):
         if not await allowed_button(interaction):
@@ -217,23 +261,37 @@ class AttentionQueueView(discord.ui.View):
     """A readable button list for all blocked tasks; no ID copying required."""
     def __init__(self, tasks):
         super().__init__(timeout=None)
-        for task in tasks[:10]:
+        for row, task in enumerate(tasks[:5]):
             item_id = task["id"]
-            label = task.get("goal", item_id).replace("\n", " ")[:48]
-            retry = discord.ui.Button(label=f"재시도 · {label}", style=discord.ButtonStyle.primary,
-                                      custom_id=f"automation:retry:list:{item_id}", row=len(self.children) // 2)
-            stop = discord.ui.Button(label=f"중지 · {label}", style=discord.ButtonStyle.danger,
-                                     custom_id=f"automation:stop:list:{item_id}", row=len(self.children) // 2)
+            short = task.get("goal", item_id).replace("\n", " ")[:18]
+            accept = discord.ui.Button(label=f"채택 · {short}", style=discord.ButtonStyle.success,
+                                       custom_id=f"automation:accept:list:{item_id}", row=row)
+            reroute = discord.ui.Button(label="다른 모델", style=discord.ButtonStyle.primary,
+                                        custom_id=f"automation:reroute:list:{item_id}", row=row)
+            defer = discord.ui.Button(label="나중에", style=discord.ButtonStyle.secondary,
+                                      custom_id=f"automation:defer:list:{item_id}", row=row)
+            stop = discord.ui.Button(label="종료", style=discord.ButtonStyle.danger,
+                                     custom_id=f"automation:stop:list:{item_id}", row=row)
 
-            async def retry_callback(interaction, target=item_id):
-                return await AttentionDecisionView(target).retry(interaction)
+            async def accept_callback(interaction, target=item_id):
+                return await AttentionDecisionView(target).accept(interaction)
+
+            async def reroute_callback(interaction, target=item_id):
+                return await AttentionDecisionView(target).reroute(interaction)
+
+            async def defer_callback(interaction, target=item_id):
+                return await AttentionDecisionView(target).defer(interaction)
 
             async def stop_callback(interaction, target=item_id):
                 return await AttentionDecisionView(target).stop(interaction)
 
-            retry.callback = retry_callback
+            accept.callback = accept_callback
+            reroute.callback = reroute_callback
+            defer.callback = defer_callback
             stop.callback = stop_callback
-            self.add_item(retry)
+            self.add_item(accept)
+            self.add_item(reroute)
+            self.add_item(defer)
             self.add_item(stop)
 
 
@@ -403,7 +461,7 @@ class ControlClient(discord.Client):
         channel = discord.utils.get(guild.text_channels, name=settings["discord"]["attention_channel"])
         if channel is None:
             return
-        lines = ["**처리가 멈춘 작업**", "아래에서 작업 내용을 확인하고 버튼을 누르세요."]
+        lines = ["**검토가 필요한 작업**", "채택, 다른 모델 배정, 나중에 검토, 종료 중에서 선택하세요."]
         for offset in range(0, len(tasks), 5):
             batch = tasks[offset:offset + 5]
             batch_lines = lines if offset == 0 else ["**처리가 멈춘 작업 (계속)**"]
@@ -440,18 +498,19 @@ async def dev_status(interaction: discord.Interaction):
     current_task = running_tasks[0] if running_tasks else None
     attention = sum(item.get("status") == "Attention" for item in queued)
     ingame = sum(item.get("status") == "InGameCheckPending" for item in queued)
+    deferred = sum(item.get("status") == "DeferredReview" for item in queued)
     attention_tasks = [item for item in queued if item.get("status") == "Attention"]
     waiting = sum(item.get("status") in ("Planned", "Ready") for item in queued)
     lines = [
         "**자동 개발 현황**",
         f"상태: {'일시정지' if current.get('paused', True) else '자동 실행 중'}",
         f"현재: {len(running_tasks)}개 병렬 작업 중" if running_tasks else "현재: 진행 중인 작업 없음",
-        f"실행 대기: {waiting}개 · 인게임 확인 목록: {ingame}개 · 문제 발생: {attention}개",
+        f"실행 대기: {waiting}개 · 인게임 확인: {ingame}개 · 나중에 검토: {deferred}개 · 문제: {attention}개",
     ]
     if current_task:
         lines.append(f"담당: {current_task.get('agent', '선정 중')} · 모델: {current_task.get('model', 'Jev 선택 중')}")
     if attention:
-        lines.append("확인 필요 작업은 `dev-attention` 채널의 재시도 버튼을 눌러 처리합니다.")
+        lines.append("`dev-attention`에서 결과 채택·다른 모델·나중에 검토·종료를 선택할 수 있습니다.")
     await interaction.response.send_message(
         "\n".join(lines), ephemeral=True,
         view=AttentionQueueView(attention_tasks[:5]) if attention_tasks else None,
