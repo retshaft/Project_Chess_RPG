@@ -228,6 +228,31 @@ def fallback_route(tasks):
     raise ValueError(f"No eligible fallback agent for {task['id']}")
 
 
+def requeue_after_provider_failure(task, result):
+    """Move a provider-limited Codex task back to routing for an alternate worker."""
+    settings = config()
+    if not settings.get("allow_emergency_fallback"):
+        return False
+    fallback = settings.get("emergency_fallback_agent")
+    if not fallback or fallback not in ("antigravity", "zcode"):
+        return False
+    output = ((result.stdout or "") + "\n" + (result.stderr or "")).lower()
+    markers = ("usage limit", "rate limit", "quota", "credits", "too many requests")
+    if not any(marker in output for marker in markers):
+        return False
+    eligible = list(task.get("eligible_agents", []))
+    if fallback not in eligible:
+        eligible.append(fallback)
+    task["eligible_agents"] = eligible
+    task["status"] = "Planned"
+    task["last_failure"] = "Codex 사용량 한도 도달; " + fallback + "로 자동 전환"
+    for key in ("agent", "worktree", "task_file", "base_commit", "prepared_utc", "started_utc"):
+        task.pop(key, None)
+    write_json(task["_path"], {key: value for key, value in task.items() if key != "_path"})
+    emit("status", "대체 에이전트로 전환", f"{task['id']} → {fallback}", {"item_id": task["id"], "status": "Planned"})
+    return True
+
+
 def validate_task(task):
     required = ("id", "goal", "worktree", "task_file", "allowed_files")
     missing = [key for key in required if not task.get(key)]
@@ -431,6 +456,8 @@ def run_once():
     emit("status", "작업 시작", f"{task['id']} → {selected_agent}")
     try:
         result = dispatch(task, selected_agent, int(task.get("timeout_seconds", settings["default_timeout_seconds"])))
+        if result.returncode != 0 and requeue_after_provider_failure(task, result):
+            return "rerouted"
         task["status"] = "Review" if result.returncode == 0 else "Attention"
         task["finished_utc"] = utc_now()
         task["last_exit_code"] = result.returncode

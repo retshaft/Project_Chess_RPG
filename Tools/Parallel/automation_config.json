@@ -2,6 +2,8 @@
   "poll_seconds": 30,
   "progress_update_seconds": 180,
   "show_agent_windows": true,
+  "emergency_fallback_agent": "antigravity",
+  "allow_emergency_fallback": true,
   "autonomy_mode": "full",
   "jev_model": "jev-latest",
   "minimum_confidence": 0.85,

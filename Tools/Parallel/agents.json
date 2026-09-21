@@ -9,7 +9,7 @@
     "cliRelativePath": "agy/bin/agy.exe"
   },
   "codex": {
-    "model": "configured-default",
+    "model": "gpt-5.6-luna",
     "cliRelativePath": "npm/codex.cmd"
   }
 }

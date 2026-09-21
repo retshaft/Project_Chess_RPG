@@ -132,7 +132,7 @@ def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24):
     if agent == 'codex':
         permissions = ['--sandbox', 'read-only'] if mode == 'plan' else ['--approve-for-me']
         return prefix + [
-            'exec', '--cd', str(worktree), *permissions,
+            'exec', '--cd', str(worktree), '--model', config.get('model', 'gpt-5.6-luna'), *permissions,
             '--ephemeral', '--color', 'never', '-'
         ], env, prompt
     # Installed 0.16.5 rejects advertised turn flags; use a bounded prompt run.
@@ -265,6 +265,7 @@ def run(args):
                     )
                     exit_code = proc.returncode
                     record.update(parse_result(args.agent, (directory / 'stdout.json').read_text(encoding='utf-8-sig', errors='replace'), exit_code))
+                    record['stderr_tail'] = (directory / 'stderr.log').read_text(encoding='utf-8', errors='replace')[-4000:]
                     record['exit_code'] = exit_code
                 except subprocess.TimeoutExpired:
                     stop_process(proc)
