@@ -2,6 +2,8 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Venv = Join-Path $Root '.parallel\automation-venv'
 $Python = Join-Path $Venv 'Scripts\python.exe'
+$env:PYTHONUTF8 = '1'
+$env:PYTHONIOENCODING = 'utf-8'
 
 foreach ($Name in @('DISCORD_BOT_TOKEN', 'DISCORD_GUILD_ID', 'DISCORD_OWNER_ID', 'TYPESAFE_API_KEY')) {
     if (-not [Environment]::GetEnvironmentVariable($Name, 'Process')) {
