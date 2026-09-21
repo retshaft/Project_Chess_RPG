@@ -1,6 +1,7 @@
 {
   "poll_seconds": 30,
   "max_parallel_tasks": 3,
+  "auto_commit_results": true,
   "progress_update_seconds": 60,
   "show_agent_windows": false,
   "emergency_fallback_agent": "antigravity",

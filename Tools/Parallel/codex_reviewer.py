@@ -13,7 +13,7 @@ def review_task(task, timeout=900):
     if not codex:
         raise RuntimeError("Codex CLI is not installed.")
     worktree = Path(task["worktree"]).resolve()
-    prompt = f"""Review the uncommitted changes for this delegated Checkmate RPG task.
+    prompt = f"""Review the changes since base commit {task['base_commit']} for this delegated Checkmate RPG task.
 Read AGENTS.md and the relevant code. Inspect the actual git diff and untracked files.
 Report only actionable correctness, regression, scope, serialization, prediction/replay consistency,
 or missing-verification problems. Do not edit files. Do not reject merely for style.

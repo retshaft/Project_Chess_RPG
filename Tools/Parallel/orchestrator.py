@@ -500,27 +500,58 @@ def verify_worker_result(task):
     }
 
 
+def commit_worker_snapshot(task, changed_files):
+    """Commit only reviewed task-owned files and create a durable recovery ref."""
+    worktree = Path(task["worktree"])
+    if not changed_files:
+        raise RuntimeError("커밋할 작업 변경이 없습니다.")
+    subprocess.run(["git", "-C", str(worktree), "add", "--", *changed_files],
+                   capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+    staged = subprocess.run(["git", "-C", str(worktree), "diff", "--cached", "--quiet"])
+    if staged.returncode != 0:
+        message = f"feat(auto): {task['id']} {task.get('goal', '')}"[:180]
+        subprocess.run(["git", "-C", str(worktree), "commit", "-m", message],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+    commit = subprocess.run(["git", "-C", str(worktree), "rev-parse", "HEAD"],
+                            capture_output=True, text=True, encoding="utf-8", errors="replace",
+                            check=True).stdout.strip()
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_ref = f"backup/automation/{task['id']}-{stamp}"
+    subprocess.run(["git", "-C", str(worktree), "branch", backup_ref, commit],
+                   capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+    task["worker_commit"] = commit
+    task["backup_ref"] = backup_ref
+    task["committed_utc"] = utc_now()
+    return commit, backup_ref
+
+
 def verify_and_review_task(task):
     verification = verify_worker_result(task)
     task["verification_result"] = verification
     unity = verification.get("checks", {}).get("unity", {})
-    if unity.get("deferred"):
-        task["status"] = "VerificationPending"
-        task["verification_pending_reason"] = unity.get("reason")
-    elif not verification["passed"]:
+    checks = verification.get("checks", {})
+    static_ok = bool(checks.get("changed_files")) and not checks.get("scope_violations") and checks.get("diff_check") == "passed"
+    if not static_ok:
         task["status"] = "Attention"
     else:
-        task.pop("verification_pending_reason", None)
         try:
             review = codex_reviewer.review_task(task)
             task["review_result"] = review
-            if review["verdict"] == "pass" and not verification["checks"]["manual_play_mode_required"]:
-                task["status"] = "IntegrationReady"
-            elif review["verdict"] == "pass":
-                task["status"] = "VerificationPending"
-                task["verification_pending_reason"] = "Play Mode interaction verification is required."
-            else:
+            if review["verdict"] != "pass":
                 task["status"] = "Attention"
+            else:
+                if not task.get("worker_commit"):
+                    commit_worker_snapshot(task, checks["changed_files"])
+                if unity.get("deferred") or checks.get("manual_play_mode_required"):
+                    task["status"] = "VerificationPending"
+                    task["verification_pending_reason"] = (
+                        unity.get("reason") or "Play Mode interaction verification is required."
+                    )
+                elif verification["passed"]:
+                    task["status"] = "IntegrationReady"
+                    task.pop("verification_pending_reason", None)
+                else:
+                    task["status"] = "Attention"
         except Exception as exc:
             task["status"] = "Attention"
             task["review_error"] = str(exc)
