@@ -42,7 +42,9 @@ User request:
         cmd = [codex, "exec", "--cd", str(ROOT), "--sandbox", "read-only",
                "--ephemeral", "--color", "never",
                "--output-schema", str(SCHEMA), "--output-last-message", str(temporary_path), prompt]
-        result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(
+            cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout
+        )
         if result.returncode:
             raise RuntimeError((result.stderr or result.stdout)[-3000:])
         plan = normalize_plan(json.loads(temporary_path.read_text(encoding="utf-8-sig")))
