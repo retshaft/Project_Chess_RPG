@@ -32,7 +32,7 @@ User request:
         temporary_path = Path(temporary.name)
     try:
         cmd = [codex, "exec", "--cd", str(ROOT), "--sandbox", "read-only",
-               "--ask-for-approval", "never", "--ephemeral", "--color", "never",
+               "--ephemeral", "--color", "never",
                "--output-schema", str(SCHEMA), "--output-last-message", str(temporary_path), prompt]
         result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=timeout)
         if result.returncode:
@@ -52,4 +52,3 @@ def needs_review(plan):
         if any(fragment in path for path in task["allowed_files"] for fragment in protected_fragments):
             return True
     return False
-

@@ -27,7 +27,7 @@ Required verification: {json.dumps(task.get('verification', []), ensure_ascii=Fa
         output = Path(temporary.name)
     try:
         cmd = [codex, "exec", "--cd", str(worktree), "--sandbox", "read-only",
-               "--ask-for-approval", "never", "--ephemeral", "--color", "never",
+               "--ephemeral", "--color", "never",
                "--output-schema", str(SCHEMA), "--output-last-message", str(output), prompt]
         result = subprocess.run(cmd, cwd=worktree, capture_output=True, text=True, timeout=timeout)
         if result.returncode:
@@ -35,4 +35,3 @@ Required verification: {json.dumps(task.get('verification', []), ensure_ascii=Fa
         return json.loads(output.read_text(encoding="utf-8-sig"))
     finally:
         output.unlink(missing_ok=True)
-

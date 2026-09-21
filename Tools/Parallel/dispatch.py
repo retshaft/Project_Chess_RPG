@@ -128,7 +128,8 @@ def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24):
     if agent == 'codex':
         return prefix + [
             'exec', '--cd', str(worktree), '--sandbox', 'read-only' if mode == 'plan' else 'workspace-write',
-            '--ask-for-approval', 'never', '--ephemeral', '--color', 'never', prompt
+            *([] if mode == 'plan' else ['--approve-for-me']),
+            '--ephemeral', '--color', 'never', prompt
         ], env
     # Installed 0.16.5 rejects advertised turn flags; use a bounded prompt run.
     # ZCODE_MODEL is supported by its actual environment parser.

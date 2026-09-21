@@ -62,7 +62,8 @@ class DispatchTests(unittest.TestCase):
         with patch.object(dispatch, 'executable', return_value=(['codex.cmd'], {'model': 'configured-default'})):
             args, _ = dispatch.command('codex', 'task', 'edit', 60, Path('C:/work'))
         self.assertIn('workspace-write', args)
-        self.assertIn('never', args)
+        self.assertIn('--approve-for-me', args)
+        self.assertNotIn('--ask-for-approval', args)
         self.assertNotIn('--dangerously-bypass-approvals-and-sandbox', args)
 
     def test_invalid_output_and_process_failure(self):
