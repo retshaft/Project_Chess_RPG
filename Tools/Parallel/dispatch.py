@@ -124,13 +124,13 @@ def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24):
     env = os.environ.copy()
     if agent == 'antigravity':
         return prefix + ['--model', config['model'], '--mode', 'plan' if mode == 'plan' else 'accept-edits',
-                         '--print', prompt, '--output-format', 'json', '--print-timeout', f'{timeout}s'], env
+                         '--print', prompt, '--output-format', 'json', '--print-timeout', f'{timeout}s'], env, None
     if agent == 'codex':
         return prefix + [
             'exec', '--cd', str(worktree), '--sandbox', 'read-only' if mode == 'plan' else 'workspace-write',
             *([] if mode == 'plan' else ['--approve-for-me']),
-            '--ephemeral', '--color', 'never', prompt
-        ], env
+            '--ephemeral', '--color', 'never', '-'
+        ], env, prompt
     # Installed 0.16.5 rejects advertised turn flags; use a bounded prompt run.
     # ZCODE_MODEL is supported by its actual environment parser.
     env['ZCODE_MODEL'] = config['provider'] + '/' + config['model']
@@ -152,7 +152,7 @@ def command(agent, prompt, mode, timeout, worktree, goal=None, max_turns=24):
     return prefix + [
         '--cwd', str(worktree), '--mode', mode, '--json',
         '--prompt', 'Task objective: ' + target + '\n\n' + prompt
-    ], env
+    ], env, None
 
 
 def parse_result(agent, output, exit_code):
@@ -216,8 +216,8 @@ def run(args):
         'Your final response is the handoff. Only these exact files may change: '
         + json.dumps(task['allowed_files'], ensure_ascii=False) + '\n\n' + task['prompt'])
     goal = None if args.smoke else task.get('goal')
-    cmd, env = command(args.agent, prompt, task['mode'], args.timeout, worktree,
-                       goal=goal, max_turns=args.max_turns)
+    cmd, env, stdin_text = command(args.agent, prompt, task['mode'], args.timeout, worktree,
+                                   goal=goal, max_turns=args.max_turns)
     run_id = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + uuid.uuid4().hex[:8]
     directory = LOCAL / 'runs' / run_id
     with leases(args.agent, worktree, run_id):
@@ -232,13 +232,18 @@ def run(args):
         started = time.monotonic()
         try:
             with (directory / 'stdout.json').open('wb') as out, (directory / 'stderr.log').open('wb') as err:
-                proc = subprocess.Popen(cmd, cwd=worktree, env=env, stdin=subprocess.DEVNULL,
+                proc = subprocess.Popen(cmd, cwd=worktree, env=env,
+                                        stdin=subprocess.PIPE if stdin_text is not None else subprocess.DEVNULL,
                                         stdout=out, stderr=err,
                                         creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
                 record['agent_pid'] = proc.pid
                 write_json(directory / 'result.json', record)
                 try:
-                    exit_code = proc.wait(timeout=args.timeout + 15)
+                    proc.communicate(
+                        input=stdin_text.encode('utf-8') if stdin_text is not None else None,
+                        timeout=args.timeout + 15,
+                    )
+                    exit_code = proc.returncode
                     record.update(parse_result(args.agent, (directory / 'stdout.json').read_text(encoding='utf-8-sig', errors='replace'), exit_code))
                     record['exit_code'] = exit_code
                 except subprocess.TimeoutExpired:

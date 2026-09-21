@@ -60,11 +60,13 @@ class DispatchTests(unittest.TestCase):
 
     def test_codex_uses_bounded_workspace_mode(self):
         with patch.object(dispatch, 'executable', return_value=(['codex.cmd'], {'model': 'configured-default'})):
-            args, _ = dispatch.command('codex', 'task', 'edit', 60, Path('C:/work'))
+            args, _, stdin_text = dispatch.command('codex', 'task', 'edit', 60, Path('C:/work'))
         self.assertIn('workspace-write', args)
         self.assertIn('--approve-for-me', args)
         self.assertNotIn('--ask-for-approval', args)
         self.assertNotIn('--dangerously-bypass-approvals-and-sandbox', args)
+        self.assertEqual(args[-1], '-')
+        self.assertEqual(stdin_text, 'task')
 
     def test_invalid_output_and_process_failure(self):
         for output in ('not json', '[]', '{}'):
@@ -74,8 +76,9 @@ class DispatchTests(unittest.TestCase):
     def test_prompt_is_one_argument_and_permissions_not_bypassed(self):
         prompt = 'Read "a file"; $(not-a-command)\n한글 테스트'
         with patch.object(dispatch, 'executable', return_value=(['agy.exe'], {'model': 'gemini-3.1-pro-high'})):
-            args, _ = dispatch.command('antigravity', prompt, 'edit', 60, Path('.'))
+            args, _, stdin_text = dispatch.command('antigravity', prompt, 'edit', 60, Path('.'))
         self.assertEqual(args[args.index('--print') + 1], prompt)
+        self.assertIsNone(stdin_text)
         self.assertNotIn('--dangerously-skip-permissions', args)
         self.assertIn('accept-edits', args)
 
@@ -87,12 +90,13 @@ class DispatchTests(unittest.TestCase):
         })), patch.object(dispatch, 'read_json', return_value={
             'provider': {'zai': {'options': {'apiKey': 'key', 'baseURL': 'https://example.invalid'}}}
         }):
-            args, _ = dispatch.command('zcode', prompt, 'edit', 60, Path('.'),
-                                       goal=goal, max_turns=18)
+            args, _, stdin_text = dispatch.command('zcode', prompt, 'edit', 60, Path('.'),
+                                                   goal=goal, max_turns=18)
         self.assertNotIn('--target', args)
         self.assertNotIn('--max-turns', args)
         self.assertEqual(args[args.index('--prompt') + 1], 'Task objective: ' + goal + '\n\n' + prompt)
         self.assertNotIn('--dangerously-skip-permissions', args)
+        self.assertIsNone(stdin_text)
 
 
 if __name__ == '__main__':

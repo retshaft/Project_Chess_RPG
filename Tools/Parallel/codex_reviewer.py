@@ -28,9 +28,10 @@ Required verification: {json.dumps(task.get('verification', []), ensure_ascii=Fa
     try:
         cmd = [codex, "exec", "--cd", str(worktree), "--sandbox", "read-only",
                "--ephemeral", "--color", "never",
-               "--output-schema", str(SCHEMA), "--output-last-message", str(output), prompt]
+               "--output-schema", str(SCHEMA), "--output-last-message", str(output), "-"]
         result = subprocess.run(
-            cmd, cwd=worktree, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout
+            cmd, cwd=worktree, input=prompt, capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=timeout
         )
         if result.returncode:
             raise RuntimeError((result.stderr or result.stdout)[-3000:])
