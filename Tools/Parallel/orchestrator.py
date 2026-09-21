@@ -178,7 +178,9 @@ def repository_state():
     if result.returncode:
         raise RuntimeError(result.stderr.strip())
     changed = [line[3:] for line in result.stdout.splitlines() if len(line) > 3]
-    return {"root_dirty": bool(changed), "changed_files": changed[:100], "model_health": model_health()}
+    ignored = set(config().get("ignorable_root_changes", []))
+    meaningful = [path for path in changed if path not in ignored]
+    return {"root_dirty": bool(meaningful), "changed_files": meaningful[:100], "ignored_changes": [path for path in changed if path in ignored], "model_health": model_health()}
 
 
 def prepare_task(task, agent, selected_model=None):
