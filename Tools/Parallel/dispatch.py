@@ -237,8 +237,21 @@ def run(args):
         print(json.dumps({'run_id': run_id, 'status': 'Running', 'result': str(directory / 'result.json')}), flush=True)
         proc = None
         started = time.monotonic()
+        monitor = None
         try:
             with (directory / 'stdout.json').open('wb') as out, (directory / 'stderr.log').open('wb') as err:
+                show_window = bool(read_json(Path(__file__).with_name('automation_config.json')).get('show_agent_windows', False))
+                if show_window and os.name == 'nt':
+                    monitor_title = f"Agent {args.agent} - {task.get('id', run_id)}"
+                    monitor_cmd = (
+                        f"$host.UI.RawUI.WindowTitle='{monitor_title}'; "
+                        f"Write-Host '실행 로그: {directory}'; "
+                        f"Get-Content -LiteralPath '{directory / 'stdout.json'}' -Wait"
+                    )
+                    monitor = subprocess.Popen(
+                        ['powershell.exe', '-NoProfile', '-NoExit', '-Command', monitor_cmd],
+                        creationflags=subprocess.CREATE_NEW_CONSOLE,
+                    )
                 proc = subprocess.Popen(cmd, cwd=worktree, env=env,
                                         stdin=subprocess.PIPE if stdin_text is not None else subprocess.DEVNULL,
                                         stdout=out, stderr=err,
@@ -261,6 +274,9 @@ def run(args):
                 stop_process(proc)
             record.update(status='Failed', reason=str(exc))
         finally:
+            if monitor and monitor.poll() is None:
+                # Keep the window open so the user can inspect the completed run.
+                pass
             try:
                 record['changed_files'] = changed_files(worktree, base)
                 record['head_after'] = git(worktree, 'rev-parse', 'HEAD')

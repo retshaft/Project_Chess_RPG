@@ -27,6 +27,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Parallel/Start-Automat
 
 일반 개발 요청은 `/dev-request description:<요청 내용>`으로 등록한다. 이 명령을 해당 범위의 가역적 저장소 작업에 대한 승인으로 간주하며, Codex 계획·Jev 배정·구현·검증·리뷰를 자동으로 진행한다. 합리적인 UI·시각·구현 선택은 기존 프로젝트와 보수적인 기본값으로 결정한다. 비밀키 누락, 외부 비용, 공개·배포, 대량 삭제처럼 자동으로 결정할 수 없는 경우만 `dev-attention`에 알린다. `/dev-detail`로 근거를 확인하고 실패한 항목은 `/dev-retry`, 불필요한 요청은 `/dev-reject`로 처리한다.
 
+작업이 배정되면 담당 AI의 실행 로그 창을 자동으로 연다. 창 제목에 `codex`, `antigravity`, `zcode`와 작업 ID가 표시되며, 작업이 끝난 뒤에도 결과를 확인할 수 있다. 창을 열지 않으려면 `Tools/Parallel/automation_config.json`의 `show_agent_windows`를 `false`로 바꾼다.
+
 ## 처리 흐름
 
 `Requested → Planning → PlanReview/Ready → Planned → Routing → Running → Review → IntegrationReady/VerificationPending/Attention` 순서로 진행한다. Unity 씬이나 프리팹 변경은 자동 배치 검증을 통과해도 Play Mode 확인 전까지 `VerificationPending`에 남는다. 자동화는 main 병합과 원격 push를 수행하지 않는다.
