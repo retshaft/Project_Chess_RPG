@@ -48,7 +48,12 @@ def validate_worktree(path, agent, allowed_files=None):
     branch = git(path, 'branch', '--show-current')
     if not branch.startswith(f'codex/{agent}/'):
         raise ValueError('The branch does not belong to the selected agent.')
-    dirty = git(path, 'status', '--porcelain')
+    # Preserve the two-column porcelain prefix; stripping it turns the first
+    # path into "ssets/..." and falsely reports a scope violation.
+    dirty_result = subprocess.run(['git', '-C', str(path), 'status', '--porcelain'], capture_output=True)
+    if dirty_result.returncode:
+        raise RuntimeError(dirty_result.stderr.decode('utf-8', 'replace').strip())
+    dirty = dirty_result.stdout.decode('utf-8', 'replace').rstrip('\r\n')
     if dirty:
         changed = [line[3:] for line in dirty.splitlines() if len(line) > 3]
         violations = sorted(set(changed) - set(allowed_files or []))
