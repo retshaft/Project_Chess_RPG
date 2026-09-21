@@ -542,11 +542,12 @@ def verify_and_review_task(task):
             else:
                 if not task.get("worker_commit"):
                     commit_worker_snapshot(task, checks["changed_files"])
-                if unity.get("deferred") or checks.get("manual_play_mode_required"):
+                if checks.get("manual_play_mode_required"):
+                    task["status"] = "InGameCheckPending"
+                    task["verification_pending_reason"] = "구현·리뷰·백업 완료; 인게임 확인만 별도 대기"
+                elif unity.get("deferred"):
                     task["status"] = "VerificationPending"
-                    task["verification_pending_reason"] = (
-                        unity.get("reason") or "Play Mode interaction verification is required."
-                    )
+                    task["verification_pending_reason"] = unity.get("reason")
                 elif verification["passed"]:
                     task["status"] = "IntegrationReady"
                     task.pop("verification_pending_reason", None)
@@ -557,12 +558,13 @@ def verify_and_review_task(task):
             task["review_error"] = str(exc)
     write_json(task["_path"], {k: v for k, v in task.items() if k != "_path"})
     kind = "result" if task["status"] == "IntegrationReady" else (
-        "status" if task["status"] == "VerificationPending" else "attention"
+        "status" if task["status"] in ("VerificationPending", "InGameCheckPending") else "attention"
     )
     emit(kind, "작업 검토 완료" if kind == "result" else "작업 검증 대기" if kind == "status" else "작업 확인 필요",
          f"{task['id']} 상태: {task['status']}\n변경 파일: "
          + ", ".join(verification.get("checks", {}).get("changed_files", [])[:8])
-         + ("\n다음: Unity 검증 또는 통합 대기" if task["status"] == "VerificationPending" else "\n다음: 결과 확인"),
+         + ("\n다음: 인게임 확인 목록에 보관" if task["status"] == "InGameCheckPending" else
+            "\n다음: Unity 컴파일 또는 통합 대기" if task["status"] == "VerificationPending" else "\n다음: 결과 확인"),
          {"item_id": task["id"], "status": task["status"]})
     return task["status"].lower()
 

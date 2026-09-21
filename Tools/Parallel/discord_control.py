@@ -113,7 +113,8 @@ def run_log_tail(run_path):
 STATUS_LABELS = {
     "Requested": "요청됨", "Planning": "계획 작성 중", "PlanReview": "계획 검토",
     "Ready": "실행 대기", "Planned": "배정 대기", "Running": "작업 중",
-    "Review": "결과 검토 중", "IntegrationReady": "통합 대기", "VerificationPending": "Unity 확인 대기",
+    "Review": "결과 검토 중", "IntegrationReady": "통합 대기", "VerificationPending": "Unity 컴파일 대기",
+    "InGameCheckPending": "인게임 확인 목록",
     "Attention": "확인 필요", "Done": "완료", "Rejected": "중지됨",
 }
 
@@ -438,13 +439,14 @@ async def dev_status(interaction: discord.Interaction):
     running_tasks = [item for item in queued if item.get("id") in running_ids]
     current_task = running_tasks[0] if running_tasks else None
     attention = sum(item.get("status") == "Attention" for item in queued)
+    ingame = sum(item.get("status") == "InGameCheckPending" for item in queued)
     attention_tasks = [item for item in queued if item.get("status") == "Attention"]
     waiting = sum(item.get("status") in ("Planned", "Ready") for item in queued)
     lines = [
         "**자동 개발 현황**",
         f"상태: {'일시정지' if current.get('paused', True) else '자동 실행 중'}",
         f"현재: {len(running_tasks)}개 병렬 작업 중" if running_tasks else "현재: 진행 중인 작업 없음",
-        f"대기: {waiting}개 · 확인 필요: {attention}개",
+        f"실행 대기: {waiting}개 · 인게임 확인 목록: {ingame}개 · 문제 발생: {attention}개",
     ]
     if current_task:
         lines.append(f"담당: {current_task.get('agent', '선정 중')} · 모델: {current_task.get('model', 'Jev 선택 중')}")

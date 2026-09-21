@@ -121,6 +121,24 @@ class OrchestratorTests(unittest.TestCase):
              }]]), patch.object(orchestrator, "unity_is_running", return_value=True):
             self.assertEqual(len(orchestrator.deferred_verification_tasks()), 1)
 
+    def test_play_mode_check_moves_to_non_scheduling_state(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "task.json"
+            task = {"id": "x", "status": "Review", "_path": str(path)}
+            verification = {
+                "passed": True,
+                "checks": {
+                    "diff_check": "passed", "changed_files": ["Assets/X.prefab"],
+                    "scope_violations": [], "manual_play_mode_required": True,
+                },
+            }
+            with patch.object(orchestrator, "verify_worker_result", return_value=verification), \
+                 patch.object(orchestrator.codex_reviewer, "review_task", return_value={"verdict": "pass"}), \
+                 patch.object(orchestrator, "commit_worker_snapshot", return_value=("abc", "backup/x")), \
+                 patch.object(orchestrator, "emit"):
+                orchestrator.verify_and_review_task(task)
+            self.assertEqual(task["status"], "InGameCheckPending")
+
     def test_parallel_scheduler_blocks_overlapping_files(self):
         left = {"allowed_files": ["Assets/Scripts/UI/Menu.cs", "Assets/A.cs"]}
         same = {"allowed_files": ["Assets/Scripts/UI/Menu.cs"]}

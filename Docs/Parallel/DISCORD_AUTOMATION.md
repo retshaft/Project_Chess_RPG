@@ -31,7 +31,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Parallel/Start-Automat
 
 ## 처리 흐름
 
-`Requested → Planning → PlanReview/Ready → Planned → Routing → Running → Review → IntegrationReady/VerificationPending/Attention` 순서로 진행한다. Unity 씬이나 프리팹 변경은 자동 배치 검증을 통과해도 Play Mode 확인 전까지 `VerificationPending`에 남는다. 자동화는 main 병합과 원격 push를 수행하지 않는다.
+`Requested → Planning → PlanReview/Ready → Planned → Routing → Running → Review → IntegrationReady/VerificationPending/InGameCheckPending/Attention` 순서로 진행한다. `InGameCheckPending`은 구현·리뷰·백업이 끝나고 인게임 확인만 남은 보관 상태이며 실행 큐와 재시도 큐를 사용하지 않는다. 자동화는 main 병합과 원격 push를 수행하지 않는다.
 
 ## 작업 큐 형식
 
