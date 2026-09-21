@@ -693,8 +693,10 @@ $RECYCLE.BIN/
 /ArtSource/
 /Assets/_Recovery/
 /Assets/Plugins/Roslyn/
+/Assets/Plugins/Roslyn.meta
 /Assets/Plugins.meta
 /editmode-results.xml
+/Docs/새 폴더/
 # Unity package definitions must accompany every worktree.
 !/Packages/manifest.json
 !/Packages/packages-lock.json
