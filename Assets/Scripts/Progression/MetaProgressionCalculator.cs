@@ -29,8 +29,7 @@ namespace CheckmateRPG.Progression
             AddResonanceModifiers(loadout.ResonanceProfile, loadout.ResonanceStage, modifiers);
             AddEdictModifiers(loadout, modifiers);
             ApplyModifiers(result, modifiers);
-            // 공명 단계 효과(초기 SP 등)는 사용자 결정(2026-09-11)에 따라 미구현 유지 —
-            // 단계별 내용이 부정확하다는 지적으로, 정확한 기획이 확정될 때까지 연결하지 않는다.
+            ApplyResonanceStageEffects(result, loadout.ResonanceStage);
 
             return result;
         }
@@ -133,6 +132,7 @@ namespace CheckmateRPG.Progression
                 MetaStatType.AttackCostAP => data.AttackCostAP,
                 MetaStatType.ActionSpeed => data.ActionSpeed,
                 MetaStatType.MaxSP => data.MaxSP,
+                MetaStatType.SupportPower => data.SupportPower,
                 _ => 0f
             };
         }
@@ -148,7 +148,7 @@ namespace CheckmateRPG.Progression
                     data.AttackDamage = Mathf.Max(0f, value);
                     break;
                 case MetaStatType.Defense:
-                    data.Defense = Mathf.Clamp01(value);
+                    data.Defense = Mathf.Max(0f, value);
                     break;
                 case MetaStatType.Resistance:
                     data.Resistance = Mathf.Clamp01(value);
@@ -171,8 +171,54 @@ namespace CheckmateRPG.Progression
                 case MetaStatType.MaxSP:
                     data.MaxSP = Mathf.Max(0f, value);
                     break;
+                case MetaStatType.SupportPower:
+                    data.SupportPower = Mathf.Max(0f, value);
+                    break;
             }
         }
 
+        /// <summary>
+        /// 공명(Resonance) 1~2단계 효과를 유닛 데이터 복제본에 적용합니다.
+        /// 1단계: 역할군별 스탯 강화 (공격형 ATK +10%, 수비형 MaxHP +10%, 지원형 SupportPower +10%)
+        /// 2단계: 초기 SP 보너스 (공격형 +10, 수비형 +5 및 방어력 +15%, 지원형 +15)
+        /// (3단계는 DefaultActionCostPolicy에서 런타임 AP 할인 적용)
+        /// </summary>
+        private static void ApplyResonanceStageEffects(UnitData data, int stage)
+        {
+            if (data == null || stage < 1)
+                return;
+
+            // 1단계: 역할군별 1단계 고유 실전 강화
+            switch (data.ResonanceRole)
+            {
+                case ResonanceRoleType.Offensive:
+                    data.AttackDamage *= 1.10f;
+                    break;
+                case ResonanceRoleType.Defensive:
+                    data.MaxHealth *= 1.10f;
+                    break;
+                case ResonanceRoleType.Support:
+                    data.SupportPower *= 1.10f;
+                    break;
+            }
+
+            // 2단계: 전술 선제권 (초기 SP 지급 및 수비형 방어력 보너스)
+            if (stage >= 2)
+            {
+                switch (data.ResonanceRole)
+                {
+                    case ResonanceRoleType.Offensive:
+                        data.InitSP = Mathf.Min(data.MaxSP, data.InitSP + 10f);
+                        break;
+                    case ResonanceRoleType.Defensive:
+                        data.InitSP = Mathf.Min(data.MaxSP, data.InitSP + 5f);
+                        data.Defense *= 1.15f;
+                        break;
+                    case ResonanceRoleType.Support:
+                        data.InitSP = Mathf.Min(data.MaxSP, data.InitSP + 15f);
+                        break;
+                }
+            }
+        }
     }
 }

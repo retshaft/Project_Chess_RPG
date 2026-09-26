@@ -15,7 +15,8 @@ namespace CheckmateRPG.Progression
         MoveCostAP,
         AttackCostAP,
         ActionSpeed,
-        MaxSP
+        MaxSP,
+        SupportPower
     }
 
     public enum EdictKind

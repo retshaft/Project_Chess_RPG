@@ -260,14 +260,29 @@ namespace CheckmateRPG.Core
             Guid sourceId = runtimeEffect.SourceId != Guid.Empty
                 ? runtimeEffect.SourceId
                 : request.Action.ActorId;
-            int amount = Mathf.Max(0, Mathf.RoundToInt(runtimeEffect.Magnitude));
+
+            UnitBrain sourceBrain = request.Actor;
+            if (sourceId != request.Action.ActorId && request.UnitsById != null && request.UnitsById.TryGetValue(sourceId, out var foundBrain))
+            {
+                sourceBrain = foundBrain;
+            }
+
+            float supportPower = sourceBrain != null && sourceBrain.UnitData != null
+                ? sourceBrain.UnitData.SupportPower
+                : 1f;
+
+            EffectType effectType = ResolveEffectType(runtimeEffect.EffectId);
+            float effectiveMagnitude = (effectType == EffectType.Heal || effectType == EffectType.Buff)
+                ? runtimeEffect.Magnitude * supportPower
+                : runtimeEffect.Magnitude;
+            int amount = Mathf.Max(0, Mathf.RoundToInt(effectiveMagnitude));
+
             MutationContext context = new(
                 request.Action.ResolveTick,
                 request.Action.ActionId,
                 targetActorId,
                 nameof(AbilityActionCommand));
 
-            EffectType effectType = ResolveEffectType(runtimeEffect.EffectId);
             switch (effectType)
             {
                 case EffectType.Damage:
@@ -298,7 +313,7 @@ namespace CheckmateRPG.Core
                         runtimeEffect.TickInterval,
                         runtimeEffect.NextTickIn,
                         runtimeEffect.StackCount,
-                        runtimeEffect.Magnitude,
+                        effectiveMagnitude,
                         runtimeEffect.StackPolicy,
                         runtimeEffect.MaxStackCap,
                         runtimeEffect.TimingPhase,

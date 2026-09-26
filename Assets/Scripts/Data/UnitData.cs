@@ -102,6 +102,9 @@ namespace CheckmateRPG.Data
         [Tooltip("전투 스타일 (근접/원거리 모션 구분용)")]
         public CombatStyle Style = CombatStyle.Melee;
 
+        [Tooltip("지원 계수 (치유량 및 버프 효과 배율. 기본 1.0 = 100%)")]
+        [Min(0f)] public float SupportPower = 1f;
+
         [Tooltip("기본 공격 시의 타격 횟수")]
         [Min(1)] public int AttackCount = 1;
 

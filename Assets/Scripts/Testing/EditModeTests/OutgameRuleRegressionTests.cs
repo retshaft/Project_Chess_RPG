@@ -168,9 +168,130 @@ namespace CheckmateRPG.Tests
             UnityEngine.Object.DestroyImmediate(modified);
         }
 
+        // ── 공명(Resonance) 단계 효과 검증 ──
+
+        [Test]
+        public void CreateModifiedUnitData_AppliesResonanceStage1_RoleBonuses()
+        {
+            var offSource = MakeUnit("OffensiveHero", ChessPieceType.Knight);
+            offSource.ResonanceRole = ResonanceRoleType.Offensive;
+            offSource.AttackDamage = 100f;
+
+            var defSource = MakeUnit("DefensiveHero", ChessPieceType.Rook);
+            defSource.ResonanceRole = ResonanceRoleType.Defensive;
+            defSource.MaxHealth = 500f;
+
+            var supSource = MakeUnit("SupportHero", ChessPieceType.Bishop);
+            supSource.ResonanceRole = ResonanceRoleType.Support;
+            supSource.SupportPower = 1.0f;
+
+            var loadout = new MetaProgressionLoadout { ResonanceStage = 1 };
+
+            var offMod = MetaProgressionCalculator.CreateModifiedUnitData(offSource, loadout);
+            var defMod = MetaProgressionCalculator.CreateModifiedUnitData(defSource, loadout);
+            var supMod = MetaProgressionCalculator.CreateModifiedUnitData(supSource, loadout);
+
+            Assert.AreEqual(110f, offMod.AttackDamage, 0.01f, "공격형 1단계는 공격력 10% 증가");
+            Assert.AreEqual(550f, defMod.MaxHealth, 0.01f, "수비형 1단계는 최대체력 10% 증가");
+            Assert.AreEqual(1.10f, supMod.SupportPower, 0.01f, "지원형 1단계는 지원 계수(치유/버프) 10% 증가");
+
+            UnityEngine.Object.DestroyImmediate(offSource);
+            UnityEngine.Object.DestroyImmediate(defSource);
+            UnityEngine.Object.DestroyImmediate(supSource);
+            UnityEngine.Object.DestroyImmediate(offMod);
+            UnityEngine.Object.DestroyImmediate(defMod);
+            UnityEngine.Object.DestroyImmediate(supMod);
+        }
+
+        [Test]
+        public void CreateModifiedUnitData_AppliesResonanceStage2_InitSPAndDefense()
+        {
+            var offSource = MakeUnit("OffensiveHero", ChessPieceType.Knight);
+            offSource.ResonanceRole = ResonanceRoleType.Offensive;
+            offSource.MaxSP = 50f;
+            offSource.InitSP = 0f;
+
+            var defSource = MakeUnit("DefensiveHero", ChessPieceType.Rook);
+            defSource.ResonanceRole = ResonanceRoleType.Defensive;
+            defSource.MaxSP = 50f;
+            defSource.InitSP = 0f;
+            defSource.Defense = 20f;
+
+            var supSource = MakeUnit("SupportHero", ChessPieceType.Bishop);
+            supSource.ResonanceRole = ResonanceRoleType.Support;
+            supSource.MaxSP = 50f;
+            supSource.InitSP = 0f;
+
+            var loadout = new MetaProgressionLoadout { ResonanceStage = 2 };
+
+            var offMod = MetaProgressionCalculator.CreateModifiedUnitData(offSource, loadout);
+            var defMod = MetaProgressionCalculator.CreateModifiedUnitData(defSource, loadout);
+            var supMod = MetaProgressionCalculator.CreateModifiedUnitData(supSource, loadout);
+
+            Assert.AreEqual(10f, offMod.InitSP, 0.01f, "공격형 2단계는 초기 SP +10");
+            Assert.AreEqual(5f, defMod.InitSP, 0.01f, "수비형 2단계는 초기 SP +5");
+            Assert.AreEqual(23f, defMod.Defense, 0.01f, "수비형 2단계는 방어력 15% 증가 (20 -> 23)");
+            Assert.AreEqual(15f, supMod.InitSP, 0.01f, "지원형 2단계는 초기 SP +15");
+
+            UnityEngine.Object.DestroyImmediate(offSource);
+            UnityEngine.Object.DestroyImmediate(defSource);
+            UnityEngine.Object.DestroyImmediate(supSource);
+            UnityEngine.Object.DestroyImmediate(offMod);
+            UnityEngine.Object.DestroyImmediate(defMod);
+            UnityEngine.Object.DestroyImmediate(supMod);
+        }
+
+        [Test]
+        public void AbilityExecutionPipeline_ScalesHealAndBuff_BySupportPower()
+        {
+            var actorObj = new GameObject("Actor");
+            var actorBrain = actorObj.AddComponent<CheckmateRPG.Units.UnitBrain>();
+            typeof(CheckmateRPG.Units.UnitBrain)
+                .GetMethod("Awake", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.Invoke(actorBrain, null);
+
+            var data = ScriptableObject.CreateInstance<UnitData>();
+            data.SupportPower = 1.30f; // 30% 지원 계수
+            actorBrain.UnitData = data;
+
+            var action = new CheckmateRPG.Core.Actions.AbilityActionCommand(
+                actorBrain.ActorId,
+                "HealSkill",
+                Array.Empty<Guid>(),
+                startTick: 0,
+                speedTier: CheckmateRPG.Core.ActionSpeedTier.Normal);
+
+            var req = new CheckmateRPG.Core.AbilityResolveRequest(
+                Action: action,
+                Actor: actorBrain,
+                Definition: default,
+                RuntimeState: null,
+                UnitsById: null,
+                CurrentTick: 0);
+
+            var healEffect = new CheckmateRPG.Core.Effects.EffectRuntimeState(
+                effectId: "Ability:Heal",
+                sourceId: actorBrain.ActorId,
+                targetId: Guid.Empty,
+                remainingTick: 1,
+                stackCount: 1,
+                magnitude: 100f,
+                timingPhase: CheckmateRPG.Core.Effects.EffectTimingPhase.OnResolve);
+
+            var targetId = Guid.NewGuid();
+            var translateMethod = typeof(CheckmateRPG.Core.AbilityExecutionPipeline)
+                .GetMethod("TranslateRuntimeEffectToMutation", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(translateMethod);
+
+            var mutation = translateMethod.Invoke(null, new object[] { req, healEffect, targetId }) as CheckmateRPG.Core.Runtime.Mutations.HealMutation?;
+            Assert.IsTrue(mutation.HasValue);
+            Assert.AreEqual(130, mutation.Value.Amount, "힐량 100에 SupportPower 1.3이 곱해져 130이 되어야 한다.");
+
+            UnityEngine.Object.DestroyImmediate(data);
+            UnityEngine.Object.DestroyImmediate(actorObj);
+        }
+
         // ── 칙령 화면 런타임 자기 구성(P0 — 씬 참조가 비어도 스스로 구성된다) ──
-        // 비고: 공명 단계 효과(초기 SP 등)는 사용자 결정(2026-09-11)에 따라 미구현 유지 —
-        // 단계별 내용이 부정확하다는 지적으로, 정확한 기획 확정 전까지 연결하지 않는다.
 
         [Test]
         public void SynchroBoardUI_SelfConfigures_WhenSceneReferencesMissing()
