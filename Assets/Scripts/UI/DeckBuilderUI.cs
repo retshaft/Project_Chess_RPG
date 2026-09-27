@@ -66,6 +66,70 @@ namespace CheckmateRPG.UI
             {
                 _inventoryPanel.SetActive(false); // Hide inventory by default
             }
+
+            EnsureDeckBuilderUI();
+        }
+
+        public override void Show()
+        {
+            base.Show();
+            EnsureDeckBuilderUI();
+            RefreshUI();
+        }
+
+        private void EnsureDeckBuilderUI()
+        {
+            if (_startBattleButton != null)
+            {
+                OutgameStyle.ApplyCombatButtonStyle(_startBattleButton, _startBattleButton.GetComponentInChildren<TextMeshProUGUI>());
+            }
+
+            if (_backToMapButton != null)
+            {
+                OutgameStyle.ApplyPrimaryButtonStyle(_backToMapButton, _backToMapButton.GetComponentInChildren<TextMeshProUGUI>());
+            }
+
+            if (_closeInventoryButton != null)
+            {
+                OutgameStyle.ApplyPrimaryButtonStyle(_closeInventoryButton, _closeInventoryButton.GetComponentInChildren<TextMeshProUGUI>());
+            }
+
+            if (_squadPowerText == null)
+            {
+                var bannerGo = new GameObject("SquadRatingBanner", typeof(RectTransform));
+                bannerGo.transform.SetParent(transform, false);
+                var bRt = (RectTransform)bannerGo.transform;
+                bRt.anchorMin = new Vector2(0.5f, 0.5f);
+                bRt.anchorMax = new Vector2(0.5f, 0.5f);
+                bRt.pivot = new Vector2(0.5f, 0.5f);
+                bRt.anchoredPosition = new Vector2(0f, 150f);
+                bRt.sizeDelta = new Vector2(1200f, 60f);
+
+                var powerGo = new GameObject("SquadPowerText", typeof(RectTransform), typeof(TextMeshProUGUI));
+                powerGo.transform.SetParent(bannerGo.transform, false);
+                var pRt = (RectTransform)powerGo.transform;
+                pRt.anchorMin = new Vector2(0f, 0f);
+                pRt.anchorMax = new Vector2(0.5f, 1f);
+                pRt.sizeDelta = Vector2.zero;
+                _squadPowerText = powerGo.GetComponent<TextMeshProUGUI>();
+                _squadPowerText.font = UiFontProvider.GetTmpFont();
+                _squadPowerText.fontSize = 24;
+                _squadPowerText.fontStyle = FontStyles.Bold;
+                _squadPowerText.alignment = TextAlignmentOptions.MidlineLeft;
+                _squadPowerText.color = OutgameStyle.TextWhite;
+
+                var synchroGo = new GameObject("ActiveSynchroText", typeof(RectTransform), typeof(TextMeshProUGUI));
+                synchroGo.transform.SetParent(bannerGo.transform, false);
+                var sRt = (RectTransform)synchroGo.transform;
+                sRt.anchorMin = new Vector2(0.5f, 0f);
+                sRt.anchorMax = new Vector2(1f, 1f);
+                sRt.sizeDelta = Vector2.zero;
+                _activeSynchroText = synchroGo.GetComponent<TextMeshProUGUI>();
+                _activeSynchroText.font = UiFontProvider.GetTmpFont();
+                _activeSynchroText.fontSize = 20;
+                _activeSynchroText.alignment = TextAlignmentOptions.MidlineRight;
+                _activeSynchroText.color = OutgameStyle.AccentGold;
+            }
         }
 
         private void OnBackToMapClicked()
@@ -190,6 +254,7 @@ namespace CheckmateRPG.UI
             if (_inventoryPanel != null)
             {
                 _inventoryPanel.SetActive(true);
+                OutgameUIManager.Instance?.RegisterModalCloseAction(CloseInventory);
             }
 
             // Filter inventory slots based on the selected slot index
@@ -218,6 +283,7 @@ namespace CheckmateRPG.UI
             {
                 _inventoryPanel.SetActive(false);
             }
+            OutgameUIManager.Instance?.UnregisterModalCloseAction(CloseInventory);
             _selectedSlotIndex = -1;
         }
 

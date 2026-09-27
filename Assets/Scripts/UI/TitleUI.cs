@@ -7,18 +7,25 @@ namespace CheckmateRPG.UI
     {
         [SerializeField] private Button startButton;
 
-        private void Awake()
+        private void Start()
         {
             if (startButton != null)
             {
                 startButton.onClick.AddListener(OnStartClicked);
+                OutgameStyle.ApplyPrimaryButtonStyle(startButton);
+            }
+            
+            var image = GetComponent<Image>();
+            if (image != null)
+            {
+                OutgameStyle.ApplySurfaceStyle(image);
             }
         }
 
         private void OnStartClicked()
         {
             // 인증, 리소스 체크(페이크) 연출 후 로비로 이동
-            OutgameUIManager.Instance.ChangeView(OutgameViewType.MainLobby);
+            OutgameUIManager.Instance.ChangeView(OutgameViewType.MainLobby, true);
         }
     }
 }

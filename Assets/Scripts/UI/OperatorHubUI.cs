@@ -186,7 +186,7 @@ namespace CheckmateRPG.UI
         }
         private static string StatName(MetaStatType stat)=>stat switch
         {
-            MetaStatType.MaxHealth=>"체력",MetaStatType.AttackDamage=>"공격력",MetaStatType.Defense=>"방어력",MetaStatType.Resistance=>"마법 저항",MetaStatType.MoveRange=>"이동 범위",MetaStatType.AttackRange=>"공격 범위",MetaStatType.MoveCostAP=>"이동 AP",MetaStatType.AttackCostAP=>"공격 AP",MetaStatType.MaxSP=>"최대 SP",_=>"행동 속도"
+            MetaStatType.MaxHealth=>"체력",MetaStatType.AttackDamage=>"공격력",MetaStatType.Defense=>"방어력",MetaStatType.Resistance=>"마법 저항",MetaStatType.MoveRange=>"이동 범위",MetaStatType.AttackRange=>"공격 범위",MetaStatType.MoveCostAP=>"이동 AP",MetaStatType.AttackCostAP=>"공격 AP",MetaStatType.MaxSP=>"최대 SP",MetaStatType.SupportPower=>"지원 계수",_=>"행동 속도"
         };
         private static RectTransform Panel(Transform parent,string name,Color color)
         {

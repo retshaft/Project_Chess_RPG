@@ -136,6 +136,19 @@ namespace CheckmateRPG.UI
                     }
                     btnObj.SetActive(true);
 
+                    // 버튼 높이 및 레이아웃 제어 (텍스트 겹침 완전 방지)
+                    var le = btnObj.GetComponent<LayoutElement>();
+                    if (le == null) le = btnObj.AddComponent<LayoutElement>();
+                    le.preferredHeight = 84f;
+                    le.minHeight = 80f;
+                    le.flexibleWidth = 1f;
+
+                    var btnRt = btnObj.GetComponent<RectTransform>();
+                    if (btnRt != null)
+                    {
+                        btnRt.sizeDelta = new Vector2(880f, 84f);
+                    }
+
                     var btn = btnObj.GetComponent<Button>();
                     if (btn == null)
                     {
@@ -146,8 +159,8 @@ namespace CheckmateRPG.UI
                     bool isCleared = saveData != null && saveData.ClearedStages != null &&
                                      (saveData.ClearedStages.Contains(stageKey) || saveData.ClearedStages.Contains(stage.name));
 
-                    string clearBadge = isCleared ? "<color=#00FFCC>[클리어 완료]</color> " : "<color=#FFD700>[작전 가능]</color> ";
-                    string levelBadge = stage.RecommendedLevel > 0 ? $"<size=80%><color=#AAAAAA>Lv.{stage.RecommendedLevel}</color></size> " : "";
+                    string clearBadge = isCleared ? "<color=#00E5FF>[클리어 완료]</color> " : "<color=#FFB300>[작전 가능]</color> ";
+                    string levelBadge = stage.RecommendedLevel > 0 ? $"<size=80%><color=#8A94A6>Lv.{stage.RecommendedLevel}</color></size> " : "";
                     string titleText = $"{clearBadge}{levelBadge}<b>{stage.StageID}</b> : {stage.StageName}";
 
                     var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
@@ -155,6 +168,13 @@ namespace CheckmateRPG.UI
                     {
                         tmp.text = titleText;
                         tmp.font = UiFontProvider.GetTmpFont();
+                        tmp.fontSize = 20;
+                        tmp.alignment = TextAlignmentOptions.MidlineLeft;
+                        var tRt = tmp.rectTransform;
+                        tRt.anchorMin = Vector2.zero;
+                        tRt.anchorMax = Vector2.one;
+                        tRt.offsetMin = new Vector2(24f, 0f);
+                        tRt.offsetMax = new Vector2(-24f, 0f);
                     }
 
                     var capturedStage = stage;
@@ -164,6 +184,15 @@ namespace CheckmateRPG.UI
                     _stageButtons[stage] = btn;
                     UpdateStageButtonVisual(btn, stage == _selectedStage);
                 }
+            }
+
+            var containerVlg = _stageListContainer.GetComponent<VerticalLayoutGroup>();
+            if (containerVlg != null)
+            {
+                containerVlg.childControlHeight = true;
+                containerVlg.childControlWidth = true;
+                containerVlg.childForceExpandHeight = false;
+                containerVlg.spacing = 14f;
             }
 
             if (validStageCount == 0)
@@ -208,6 +237,7 @@ namespace CheckmateRPG.UI
             {
                 _briefingModalPanel.SetActive(true);
                 UpdateBriefingContent(stage);
+                OutgameUIManager.Instance?.RegisterModalCloseAction(CloseBriefingModal);
             }
             else
             {
@@ -346,6 +376,7 @@ namespace CheckmateRPG.UI
             {
                 _briefingModalPanel.SetActive(false);
             }
+            OutgameUIManager.Instance?.UnregisterModalCloseAction(CloseBriefingModal);
         }
 
         private void OnConfirmSortieClicked()

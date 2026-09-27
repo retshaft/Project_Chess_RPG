@@ -66,7 +66,7 @@ namespace CheckmateRPG.Editor
             // 5. Build Views
             // --- Title View ---
             var titleView = CreatePanel<TitleUI>(canvasObj, "TitleView", OutgameViewType.Title);
-            CreateDarkGlassBackground(titleView.gameObject, "Checkmate RPG", 120);
+            CreateDarkGlassBackground(titleView.gameObject, "CHECKMATE RPG", 120);
             var startBtn = CreateButton(titleView.gameObject, "StartButton", "SYSTEM START", new Vector2(0, -200), new Vector2(400, 100));
             typeof(TitleUI).GetField("startButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(titleView, startBtn);
             viewsList.Add(titleView);
@@ -74,28 +74,53 @@ namespace CheckmateRPG.Editor
             // --- Main Lobby View ---
             var lobbyView = CreatePanel<MainLobbyUI>(canvasObj, "MainLobbyView", OutgameViewType.MainLobby);
             CreateDarkGlassBackground(lobbyView.gameObject, "A R K : C H E C K M A T E", 80);
-            
-            // Lobby Sub-components
-            var stageSelectBtn = CreateButton(lobbyView.gameObject, "Btn_Combat", "COMBAT", new Vector2(600, -50), new Vector2(400, 120), new Color(1f, 0.4f, 0.2f));
-            var rosterBtn = CreateButton(lobbyView.gameObject, "Btn_Roster", "OPERATORS", new Vector2(600, -200), new Vector2(400, 90));
-            var synchroBtn = CreateButton(lobbyView.gameObject, "Btn_Synchro", "KING'S SYNCHRO", new Vector2(600, -320), new Vector2(400, 90));
-            var recruitBtn = CreateButton(lobbyView.gameObject, "Btn_Recruit", "HEADHUNTING", new Vector2(600, -440), new Vector2(400, 90));
-            var operatorHubBtn = CreateButton(lobbyView.gameObject, "Btn_OperatorHub", "OPERATOR HUB", new Vector2(150, -200), new Vector2(400, 90));
-            var kingSuitBayBtn = CreateButton(lobbyView.gameObject, "Btn_KingSuitBay", "KING SUIT BAY", new Vector2(150, -320), new Vector2(400, 90));
-            var archiveBtn = CreateButton(lobbyView.gameObject, "Btn_Archive", "ARCHIVE", new Vector2(150, -440), new Vector2(400, 90));
-            
-            // Secretary
-            var secretaryArea = CreateButton(lobbyView.gameObject, "SecretaryArea", "", new Vector2(-200, -100), new Vector2(600, 800));
-            secretaryArea.GetComponent<Image>().color = new Color(0,0,0,0); // Invisible touch area
-            
-            var speechPanel = new GameObject("SpeechBubblePanel");
+
+            // Lobby Menu Buttons (Arknights Cybernetic Layout)
+            var stageSelectBtn = CreateButton(lobbyView.gameObject, "Btn_Combat", "02 // OPERATIONS\n<size=70%>작전 출격</size>", new Vector2(620, 100), new Vector2(420, 130), new Color(1f, 0.4f, 0.2f));
+            var operatorHubBtn = CreateButton(lobbyView.gameObject, "Btn_OperatorHub", "03 // OPERATOR HUB\n<size=70%>오퍼레이터 관리</size>", new Vector2(620, -20), new Vector2(420, 85));
+            var synchroBtn = CreateButton(lobbyView.gameObject, "Btn_Synchro", "04 // SYNCHRO MODDING\n<size=70%>킹 칙령 보드</size>", new Vector2(620, -120), new Vector2(420, 85));
+            var rosterBtn = CreateButton(lobbyView.gameObject, "Btn_Roster", "05 // FORMATION\n<size=70%>부대 편성 현황</size>", new Vector2(620, -220), new Vector2(420, 85));
+            var recruitBtn = CreateButton(lobbyView.gameObject, "Btn_Recruit", "08 // HEADHUNTING\n<size=70%>인재 채용</size>", new Vector2(620, -320), new Vector2(420, 85));
+            var kingSuitBayBtn = CreateButton(lobbyView.gameObject, "Btn_KingSuitBay", "09 // KING'S SUIT\n<size=70%>슈트 격납고</size>", new Vector2(170, -220), new Vector2(380, 85));
+            var archiveBtn = CreateButton(lobbyView.gameObject, "Btn_Archive", "10 // ARCHIVE\n<size=70%>작전 기록소</size>", new Vector2(170, -320), new Vector2(380, 85));
+
+            // Assistant Operator Visual Frame & Dialogue Bubble
+            var assistantCard = new GameObject("AssistantCard", typeof(RectTransform), typeof(Image));
+            assistantCard.transform.SetParent(lobbyView.transform, false);
+            var aRt = (RectTransform)assistantCard.transform;
+            aRt.anchoredPosition = new Vector2(-280, -60);
+            aRt.sizeDelta = new Vector2(460, 720);
+            assistantCard.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.16f, 0.5f);
+
+            var aBadge = CreateText(assistantCard, "AssistantBadge", "<color=#8A94A6>ASSISTANT OPERATOR</color>\n<b><color=#00E5FF>PRTS TACTICAL LIAISON</color></b>", 20, new Vector2(0, 310), TextAlignmentOptions.Center);
+            aBadge.rectTransform.sizeDelta = new Vector2(420, 60);
+
+            var secretaryArea = CreateButton(assistantCard, "SecretaryTouchArea", "<color=#4A5262>[ TOUCH TO COMMUNICATE ]</color>", new Vector2(0, -280), new Vector2(400, 50));
+            secretaryArea.GetComponent<Image>().color = new Color(0, 0, 0, 0);
+
+            var speechPanel = new GameObject("SpeechBubblePanel", typeof(RectTransform), typeof(Image));
             speechPanel.transform.SetParent(lobbyView.transform, false);
-            var speechImg = speechPanel.AddComponent<Image>();
-            speechImg.color = new Color(0.1f, 0.1f, 0.15f, 0.9f);
-            speechPanel.GetComponent<RectTransform>().sizeDelta = new Vector2(600, 150);
-            speechPanel.GetComponent<RectTransform>().anchoredPosition = new Vector2(-200, 200);
-            
-            var speechText = CreateText(speechPanel, "SpeechText", "Welcome, Commander.", 36);
+            var spRt = (RectTransform)speechPanel.transform;
+            spRt.sizeDelta = new Vector2(640, 140);
+            spRt.anchoredPosition = new Vector2(-280, 220);
+            speechPanel.GetComponent<Image>().color = OutgameStyle.SurfaceCard;
+
+            var speechText = CreateText(speechPanel, "SpeechText", "지휘관님, 킹의 체스판 위에 모든 기물이 준비되었습니다.", 22, Vector2.zero, TextAlignmentOptions.Center);
+            speechText.rectTransform.sizeDelta = new Vector2(600, 100);
+
+            // Terminal Status Card (Left-side Profile Summary)
+            var statusCard = new GameObject("TerminalStatusCard", typeof(RectTransform), typeof(Image));
+            statusCard.transform.SetParent(lobbyView.transform, false);
+            var scRt = (RectTransform)statusCard.transform;
+            scRt.anchoredPosition = new Vector2(-680, 360);
+            scRt.sizeDelta = new Vector2(380, 130);
+            statusCard.GetComponent<Image>().color = new Color(0.08f, 0.1f, 0.13f, 0.85f);
+
+            var kingLv = CreateText(statusCard, "KingLevelText", "지휘관 슈트 Lv.1", 22, new Vector2(0, 24), TextAlignmentOptions.Center);
+            kingLv.rectTransform.sizeDelta = new Vector2(350, 40);
+
+            var apText = CreateText(statusCard, "ClearedStagesText", "작전 완수: 0 구역", 20, new Vector2(0, -24), TextAlignmentOptions.Center);
+            apText.rectTransform.sizeDelta = new Vector2(350, 40);
 
             var lobbyType = typeof(MainLobbyUI);
             lobbyType.GetField("stageSelectButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(lobbyView, stageSelectBtn);
@@ -108,9 +133,6 @@ namespace CheckmateRPG.Editor
             lobbyType.GetField("secretaryTouchArea", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(lobbyView, secretaryArea);
             lobbyType.GetField("speechBubblePanel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(lobbyView, speechPanel);
             lobbyType.GetField("speechBubbleText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(lobbyView, speechText);
-            
-            var kingLv = CreateText(lobbyView.gameObject, "KingLevelText", "King Lv. 1", 36, new Vector2(-700, 450), TextAlignmentOptions.TopLeft);
-            var apText = CreateText(lobbyView.gameObject, "APText", "AP: 100", 36, new Vector2(-700, 400), TextAlignmentOptions.TopLeft);
             lobbyType.GetField("kingLevelText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(lobbyView, kingLv);
             lobbyType.GetField("tacticalPointsText", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(lobbyView, apText);
             viewsList.Add(lobbyView);
@@ -118,15 +140,12 @@ namespace CheckmateRPG.Editor
             // --- Roster View ---
             var rosterView = CreatePanel<RosterUI>(canvasObj, "RosterView", OutgameViewType.Roster);
             CreateDarkGlassBackground(rosterView.gameObject, "R O S T E R", 60);
-            var rBackBtn = CreateButton(rosterView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(RosterUI).GetField("backToLobbyButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(rosterView, rBackBtn);
 
-            // Fix Missing References
             var unitContainer = new GameObject("UnitListContainer");
             unitContainer.transform.SetParent(rosterView.transform, false);
             var unitRt = unitContainer.AddComponent<RectTransform>();
-            unitRt.anchoredPosition = new Vector2(0, -100);
-            unitRt.sizeDelta = new Vector2(1400, 600);
+            unitRt.anchoredPosition = new Vector2(0, -60);
+            unitRt.sizeDelta = new Vector2(1400, 640);
             var unitGrid = unitContainer.AddComponent<UnityEngine.UI.GridLayoutGroup>();
             unitGrid.cellSize = new Vector2(300, 60);
             unitGrid.spacing = new Vector2(20, 20);
@@ -136,21 +155,16 @@ namespace CheckmateRPG.Editor
             dummyUnitPrefab.gameObject.SetActive(false);
             typeof(RosterUI).GetField("unitListContainer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(rosterView, unitContainer.transform);
             typeof(RosterUI).GetField("unitSlotButtonPrefab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(rosterView, dummyUnitPrefab);
-
             viewsList.Add(rosterView);
 
             // --- Synchro Board View ---
             var synchroView = CreatePanel<SynchroBoardUI>(canvasObj, "SynchroBoardView", OutgameViewType.SynchroBoard);
             CreateDarkGlassBackground(synchroView.gameObject, "S Y N C H R O  M O D D I N G", 60);
-            var sBackBtn = CreateButton(synchroView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(SynchroBoardUI).GetField("backToLobbyButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(synchroView, sBackBtn);
             viewsList.Add(synchroView);
 
             // --- Deck Builder View ---
             var deckView = CreatePanel<DeckBuilderUI>(canvasObj, "DeckBuilderView", OutgameViewType.DeckBuilder);
             CreateDarkGlassBackground(deckView.gameObject, "D E C K   B U I L D I N G", 60);
-            var dbBackBtn = CreateButton(deckView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(DeckBuilderUI).GetField("_backToMapButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(deckView, dbBackBtn);
             
             var rosterGrid = new GameObject("RosterGrid");
             rosterGrid.transform.SetParent(deckView.transform, false);
@@ -165,7 +179,7 @@ namespace CheckmateRPG.Editor
             
             var slotBtn = dummyRosterSlot.gameObject.GetComponent<Button>();
             var slotTxt = dummyRosterSlot.gameObject.GetComponentInChildren<TextMeshProUGUI>();
-            slotTxt.fontSize = 40; // Default + size
+            slotTxt.fontSize = 40;
             
             // Icon
             var slotIconGo = new GameObject("Icon");
@@ -182,14 +196,14 @@ namespace CheckmateRPG.Editor
             dummyRosterSlot.gameObject.SetActive(false);
             typeof(DeckBuilderUI).GetField("_rosterSlotPrefab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(deckView, slotComp);
             
-            var startBattleBtn = CreateButton(deckView.gameObject, "StartBattleBtn", "START BATTLE", new Vector2(700, -400), new Vector2(300, 80), new Color(0.8f, 0.4f, 0.1f, 0.9f));
+            var startBattleBtn = CreateButton(deckView.gameObject, "StartBattleBtn", "START BATTLE", new Vector2(700, -400), new Vector2(300, 80), new Color(1f, 0.4f, 0.1f, 0.95f));
             typeof(DeckBuilderUI).GetField("_startBattleButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(deckView, startBattleBtn);
 
             var inventoryPanel = new GameObject("InventoryPanel");
             inventoryPanel.transform.SetParent(deckView.transform, false);
             var invRt = inventoryPanel.AddComponent<RectTransform>();
             invRt.anchorMin = Vector2.zero; invRt.anchorMax = Vector2.one; invRt.sizeDelta = Vector2.zero;
-            var invImg = inventoryPanel.AddComponent<Image>(); invImg.color = new Color(0,0,0,0.9f);
+            var invImg = inventoryPanel.AddComponent<Image>(); invImg.color = new Color(0,0,0,0.92f);
             inventoryPanel.SetActive(false);
             typeof(DeckBuilderUI).GetField("_inventoryPanel", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(deckView, inventoryPanel);
 
@@ -210,65 +224,66 @@ namespace CheckmateRPG.Editor
             // --- Stage Select View ---
             var stageView = CreatePanel<StageSelectUI>(canvasObj, "StageSelectView", OutgameViewType.StageSelect);
             CreateDarkGlassBackground(stageView.gameObject, "O P E R A T I O N S", 60);
-            var stBackBtn = CreateButton(stageView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(StageSelectUI).GetField("_backToLobbyButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(stageView, stBackBtn);
             
-            // Fix Missing References
             var stageContainer = new GameObject("StageListContainer");
             stageContainer.transform.SetParent(stageView.transform, false);
             var stageRt = stageContainer.AddComponent<RectTransform>();
-            stageRt.anchoredPosition = new Vector2(0, -100);
-            stageRt.sizeDelta = new Vector2(1000, 600);
+            stageRt.anchoredPosition = new Vector2(0, -60);
+            stageRt.sizeDelta = new Vector2(1000, 680);
             var stageVl = stageContainer.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
-            stageVl.spacing = 20;
+            stageVl.spacing = 14f;
             stageVl.childAlignment = TextAnchor.UpperCenter;
-            stageVl.childControlHeight = false;
+            stageVl.childControlHeight = true;
+            stageVl.childControlWidth = true;
             stageVl.childForceExpandHeight = false;
             
-            var dummyStagePrefab = CreateButton(stageView.gameObject, "DummyStagePrefab", "StageSlot", Vector2.zero, new Vector2(400, 80));
+            var dummyStagePrefab = CreateButton(stageView.gameObject, "DummyStagePrefab", "StageSlot", Vector2.zero, new Vector2(880, 84));
             dummyStagePrefab.gameObject.SetActive(false);
+            var dummyLe = dummyStagePrefab.gameObject.AddComponent<LayoutElement>();
+            dummyLe.preferredHeight = 84f;
+            dummyLe.minHeight = 80f;
+            dummyLe.flexibleWidth = 1f;
+
             typeof(StageSelectUI).GetField("_stageListContainer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(stageView, stageContainer.transform);
             typeof(StageSelectUI).GetField("_stageButtonPrefab", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(stageView, dummyStagePrefab.gameObject);
-
             viewsList.Add(stageView);
 
             // --- Operator Hub View ---
             var operatorView = CreatePanel<OperatorHubUI>(canvasObj, "OperatorHubView", OutgameViewType.OperatorHub);
             CreateDarkGlassBackground(operatorView.gameObject, "O P E R A T O R   H U B", 60);
-            var opBackBtn = CreateButton(operatorView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(OperatorHubUI).GetField("_backButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(operatorView, opBackBtn);
             viewsList.Add(operatorView);
 
             // --- Recruit Hub View ---
             var recruitView = CreatePanel<RecruitHubUI>(canvasObj, "RecruitHubView", OutgameViewType.Recruit);
             CreateDarkGlassBackground(recruitView.gameObject, "R E C R U I T M E N T", 60);
-            var reBackBtn = CreateButton(recruitView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(RecruitHubUI).GetField("_backButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(recruitView, reBackBtn);
             viewsList.Add(recruitView);
 
             // --- Archive View ---
             var archiveView = CreatePanel<ArchiveUI>(canvasObj, "ArchiveView", OutgameViewType.Archive);
             CreateDarkGlassBackground(archiveView.gameObject, "A R C H I V E", 60);
-            var arBackBtn = CreateButton(archiveView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(ArchiveUI).GetField("_backButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(archiveView, arBackBtn);
             viewsList.Add(archiveView);
 
             // --- King Suit Bay View ---
             var kingSuitView = CreatePanel<KingSuitBayUI>(canvasObj, "KingSuitBayView", OutgameViewType.KingSuitBay);
             CreateDarkGlassBackground(kingSuitView.gameObject, "K I N G ' S   S U I T", 60);
-            var ksBackBtn = CreateButton(kingSuitView.gameObject, "BackBtn", "< BACK", new Vector2(-800, 450), new Vector2(200, 80));
-            typeof(KingSuitBayUI).GetField("_backButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).SetValue(kingSuitView, ksBackBtn);
             viewsList.Add(kingSuitView);
 
             // Inject views list to manager
             viewsField.SetValue(uiManager, viewsList);
+
+            // --- Unified Top Navigation Header (Arknights Style) ---
+            var headerObj = new GameObject("HeaderPanel");
+            headerObj.transform.SetParent(canvasObj.transform, false);
+            var headerUI = headerObj.AddComponent<OutgameHeaderUI>();
+            headerUI.EnsureHeaderUI();
+            headerObj.transform.SetAsLastSibling();
 
             // Save Scene
             string targetPath = "Assets/Scenes/OutgameScene.unity";
             if (!AssetDatabase.IsValidFolder("Assets/Scenes")) AssetDatabase.CreateFolder("Assets", "Scenes");
             EditorSceneManager.SaveScene(scene, targetPath);
             
-            Debug.Log($"✅ [Phase 13] Premium Outgame Hub Scene baked successfully at {targetPath}!");
+            Debug.Log($"✅ [Phase 13] Premium Arknights Outgame Hub Scene baked successfully at {targetPath}!");
         }
 
         private static T CreatePanel<T>(GameObject parent, string name, OutgameViewType type) where T : OutgameViewBase
@@ -283,7 +298,7 @@ namespace CheckmateRPG.Editor
             T comp = go.AddComponent<T>();
             comp.ViewType = type;
             
-            CanvasGroup cg = go.AddComponent<CanvasGroup>();
+            go.AddComponent<CanvasGroup>();
             return comp;
         }
 
@@ -322,7 +337,7 @@ namespace CheckmateRPG.Editor
             img.color = col ?? new Color(0.12f, 0.13f, 0.17f, 0.9f); // BG_Dark_Surface
             
             Button btn = go.AddComponent<Button>();
-            go.AddComponent<ButtonFeedback>(); // Arknights style interaction
+            go.AddComponent<ButtonFeedback>();
 
             GameObject txtGo = new GameObject("Text");
             txtGo.transform.SetParent(go.transform, false);
@@ -331,7 +346,7 @@ namespace CheckmateRPG.Editor
             
             TextMeshProUGUI tmp = txtGo.AddComponent<TextMeshProUGUI>();
             tmp.text = text;
-            tmp.fontSize = 32;
+            tmp.fontSize = 24;
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.fontStyle = FontStyles.Bold;

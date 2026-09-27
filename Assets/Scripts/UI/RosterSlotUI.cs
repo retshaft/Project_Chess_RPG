@@ -41,8 +41,10 @@ namespace CheckmateRPG.UI
             {
                 if (_unitNameText != null) 
                 {
-                    _unitNameText.text = unit.UnitName;
+                    string roleTag = SlotIndex == 0 ? "<color=#FFB300>[KING]</color>" : $"<color=#00E5FF>[{unit.PieceType}]</color>";
+                    _unitNameText.text = $"{roleTag}\n<b>{unit.UnitName}</b>";
                     _unitNameText.fontSize = 16;
+                    _unitNameText.alignment = TextAlignmentOptions.Center;
                 }
                 if (_unitIcon != null) 
                 {
@@ -55,8 +57,9 @@ namespace CheckmateRPG.UI
             {
                 if (_unitNameText != null) 
                 {
-                    _unitNameText.text = "+"; // Arknights style empty indicator
-                    _unitNameText.fontSize = 40; // Make + larger
+                    _unitNameText.text = "<color=#4A5262>+</color>";
+                    _unitNameText.fontSize = 40;
+                    _unitNameText.alignment = TextAlignmentOptions.Center;
                 }
                 if (_unitIcon != null) 
                 {
@@ -66,7 +69,17 @@ namespace CheckmateRPG.UI
             }
             
             // Action button must always be active to allow clicking empty slots
-            if (_actionButton != null) _actionButton.gameObject.SetActive(true);
+            if (_actionButton != null)
+            {
+                _actionButton.gameObject.SetActive(true);
+                var btnImg = _actionButton.GetComponent<Image>();
+                if (btnImg != null)
+                {
+                    btnImg.color = unit != null 
+                        ? (SlotIndex == 0 ? new Color(0.18f, 0.16f, 0.12f, 1f) : OutgameStyle.SurfaceCard) 
+                        : OutgameStyle.SurfaceDark;
+                }
+            }
         }
 
         public void OnPointerEnter(PointerEventData eventData)

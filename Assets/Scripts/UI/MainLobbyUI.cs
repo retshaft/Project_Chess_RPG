@@ -48,6 +48,30 @@ namespace CheckmateRPG.UI
             
             if (secretaryTouchArea) secretaryTouchArea.onClick.AddListener(TriggerSecretaryQuote);
             if (speechBubblePanel) speechBubblePanel.SetActive(false);
+            
+            ApplyStyles();
+        }
+
+        private void ApplyStyles()
+        {
+            var image = GetComponent<Image>();
+            if (image != null) OutgameStyle.ApplySurfaceStyle(image);
+
+            // 핵심 작전 출격 버튼에 택티컬 오렌지 강조 적용
+            OutgameStyle.ApplyCombatButtonStyle(stageSelectButton, stageSelectButton?.GetComponentInChildren<TextMeshProUGUI>());
+
+            OutgameStyle.ApplyPrimaryButtonStyle(rosterButton, rosterButton?.GetComponentInChildren<TextMeshProUGUI>());
+            OutgameStyle.ApplyPrimaryButtonStyle(synchroBoardButton, synchroBoardButton?.GetComponentInChildren<TextMeshProUGUI>());
+            OutgameStyle.ApplyPrimaryButtonStyle(recruitButton, recruitButton?.GetComponentInChildren<TextMeshProUGUI>());
+            OutgameStyle.ApplyPrimaryButtonStyle(operatorHubButton, operatorHubButton?.GetComponentInChildren<TextMeshProUGUI>());
+            OutgameStyle.ApplyPrimaryButtonStyle(archiveButton, archiveButton?.GetComponentInChildren<TextMeshProUGUI>());
+            OutgameStyle.ApplyPrimaryButtonStyle(kingSuitBayButton, kingSuitBayButton?.GetComponentInChildren<TextMeshProUGUI>());
+
+            if (speechBubblePanel != null)
+            {
+                var speechImg = speechBubblePanel.GetComponent<Image>();
+                if (speechImg != null) OutgameStyle.ApplyCardStyle(speechImg);
+            }
         }
 
         public void TriggerSecretaryQuote()
@@ -75,7 +99,6 @@ namespace CheckmateRPG.UI
         public override void Show()
         {
             base.Show();
-            // TODO: 플레이어 프로필 재화 및 정보 바인딩
             RefreshLobbyData();
         }
 
@@ -86,11 +109,12 @@ namespace CheckmateRPG.UI
                 var data = SaveManager.Instance.CurrentData;
                 if (kingLevelText != null)
                 {
-                    kingLevelText.text = $"King Lv. {data.KingProgression.SuitLevel}";
+                    kingLevelText.text = $"<color=#8A94A6>지휘관 슈트</color> <b><color=#00E5FF>Lv.{data.KingProgression.SuitLevel}</color></b>";
                 }
                 if (tacticalPointsText != null)
                 {
-                    tacticalPointsText.text = $"보유 TP: {data.TacticalPoints}";
+                    int clearedCount = data.ClearedStages != null ? data.ClearedStages.Count : 0;
+                    tacticalPointsText.text = $"<color=#8A94A6>작전 완수:</color> <color=#00E5FF>{clearedCount} 구역</color>";
                 }
             }
         }
