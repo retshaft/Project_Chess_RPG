@@ -59,6 +59,9 @@ namespace CheckmateRPG.Data
         [Tooltip("Display name of the unit archetype (e.g. Knight, Archer).")]
         public string UnitName = "Unit";
 
+        [Tooltip("정규 소집 성급 (3~5). 킹과 적 기물은 0으로 둡니다.")]
+        [Range(0, 5)] public int Rarity = 3;
+
         [Tooltip("2D Portrait/Icon for UI display.")]
         public Sprite Icon;
 

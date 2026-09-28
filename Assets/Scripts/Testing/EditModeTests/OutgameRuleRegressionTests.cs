@@ -334,7 +334,7 @@ namespace CheckmateRPG.Tests
                 typeof(SynchroBoardUI).GetMethod("UpdateBoardDisplay", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(board, null);
             }, "세이브가 없어도 칙령 화면 표시는 안전해야 한다.");
 
-            var meter = go.GetComponentInChildren<TextMeshProUGUI>(true);
+            var meter = go.transform.Find("CapacityMeter")?.GetComponent<TextMeshProUGUI>();
             Assert.IsNotNull(meter, "수용량 미터가 자동 생성된다.");
             Assert.IsTrue(meter.text.Contains("수용량"), "수용량 미터가 표시된다.");
 

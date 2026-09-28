@@ -7,9 +7,14 @@ namespace CheckmateRPG.Progression
     public class UnitProgressionSaveData
     {
         public string UnitId;
-        public int ResonanceStage = 1;
+        public int ResonanceStage = 0;
         public List<string> UnlockedNodeIds = new List<string>();
         public int SelectedSkillIndex = 0;
+        public int Level = 1;
+        public int CurrentExp;
+        public int OperatorCertificates;
+        public int MasteryTP;
+        public int LegacyNotationTP;
     }
 
     [Serializable]
@@ -25,6 +30,28 @@ namespace CheckmateRPG.Progression
     [Serializable]
     public class SaveData
     {
+        public int EconomyVersion = 1;
+        public int Sanity = 120;
+        public int MaxSanity = 120;
+        public long LastSanityRecoverTimeTicks = DateTime.UtcNow.Ticks;
+        public long AetherCredit = 50000;
+        public int ResonanceCrystals = 1500;
+        public int PaidOriginCores;
+        public int StandardPermits = 5;
+        public int SpecialPermits;
+        public int HeadhuntingMileage;
+        public int StandardHeadhuntingMileage;
+        public int PityCounter;
+        public string MileageBannerId = "";
+        public int GeneralExchangeCertificates;
+        public int SanityRationsSmall, SanityRationsMedium, SanityRationsLarge;
+        public string RechargeUtcDate = "";
+        public int DailyRechargeCount;
+        public int ExperienceChips, CommanderProtocolChips;
+        public int RecordChip_T1, RecordChip_T2, RecordChip_T3, RecordChip_T4;
+        public string ActiveSortieId = "", ActiveSortieStageId = "", LastRewardedSortieId = "";
+        public int ActiveSortieCost;
+        // Legacy values are retained for save compatibility, never used as account money.
         public int TacticalPoints;
         
         // 보유 기물 목록 (UnitData의 Asset Name 기준)

@@ -9,6 +9,14 @@ namespace CheckmateRPG.Progression
         public static SaveManager Instance { get; private set; }
 
         public SaveData CurrentData { get; private set; }
+        public event Action OnDataChanged;
+
+        private void Start() => InvokeRepeating(nameof(RecoverSanity), 1f, 30f);
+        private void RecoverSanity()
+        {
+            if (CurrentData != null && EconomyService.Recover(CurrentData, DateTime.UtcNow)) SaveGame();
+        }
+        private void OnApplicationFocus(bool focused) { if (focused) RecoverSanity(); }
 
         private string SavePath => Path.Combine(Application.persistentDataPath, "saveData.json");
 
@@ -54,12 +62,18 @@ namespace CheckmateRPG.Progression
         {
             CurrentData = LoadSaveWithRecovery(SavePath, BackupPath);
             if (CurrentData != null)
+            {
+                // A battle cannot resume across a process restart. Its entry cost remains spent.
+                EconomyService.EndSortie(CurrentData);
+                SaveGame();
                 return;
+            }
 
             // 파일이 없거나 본체·백업이 모두 복구 불가인 경우에만 신규 데이터다.
             // 본체가 손상됐다면 LoadSaveWithRecovery가 이미 .corrupt로 보존했으므로 덮어써도 안전하다.
             Debug.Log("[SaveManager] No recoverable save data. Creating new.");
             CurrentData = new SaveData();
+            EconomyService.Migrate(CurrentData, DateTime.UtcNow);
             SaveGame();
         }
 
@@ -70,6 +84,7 @@ namespace CheckmateRPG.Progression
             try
             {
                 WriteSaveAtomic(SavePath, BackupPath, TempPath, CurrentData);
+                OnDataChanged?.Invoke();
                 Debug.Log($"[SaveManager] Saved data to {SavePath}");
             }
             catch (Exception e)
@@ -82,6 +97,7 @@ namespace CheckmateRPG.Progression
         public void ResetSave()
         {
             CurrentData = new SaveData();
+            EconomyService.Migrate(CurrentData, DateTime.UtcNow);
             SaveGame();
             Debug.Log("[SaveManager] Save data reset.");
         }
@@ -167,6 +183,11 @@ namespace CheckmateRPG.Progression
                     Debug.LogWarning($"[SaveManager] Save file has unusable content: {Path.GetFileName(path)}");
                     return null;
                 }
+                // An economy-v1 save already contains real player balances. New fields are
+                // additive, so only files without an economy marker use the prototype reset path.
+                bool legacy = !json.Contains("\"EconomyVersion\"");
+                if (legacy && !File.Exists(path + ".economy-v0.bak")) File.Copy(path, path + ".economy-v0.bak");
+                EconomyService.Migrate(data, DateTime.UtcNow, legacy);
                 return data;
             }
             catch (Exception e)

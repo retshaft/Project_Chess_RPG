@@ -27,7 +27,7 @@ namespace CheckmateRPG.Progression
 
         public static NotationProgressState CreateForUnit(string unitId, NotationTreeData tree, int? overrideResonanceStage = null)
         {
-            int baseTP = tree != null ? tree.BaseNotationTP : 10;
+            int baseTP = 0;
             int stage = 1;
 
             UnitProgressionSaveData unitSave = null;
@@ -48,7 +48,8 @@ namespace CheckmateRPG.Progression
                 stage = overrideResonanceStage.Value;
             }
 
-            int bonusTP = ResonanceSystem.GetNotationTP(stage);
+            int bonusTP = EconomyService.ResonanceTP(stage);
+            baseTP = unitSave != null ? Math.Max(0,unitSave.LegacyNotationTP) + Math.Max(1,unitSave.Level)/5 + Math.Clamp(unitSave.MasteryTP,0,5) : 0;
             var state = new NotationProgressState(baseTP + bonusTP);
             state.ResonanceBonusTP = bonusTP;
             state.BoundUnitId = unitId;

@@ -74,6 +74,11 @@ namespace CheckmateRPG.Progression
                 }
             }
 
+            // The official 40-person roster is metadata-driven so new operators remain usable
+            // before portrait/prefab production is complete.
+            foreach (var unit in RecruitRosterCatalog.GetAllUnits())
+                if (unit != null && !AllUnitsDatabase.Contains(unit)) AllUnitsDatabase.Add(unit);
+
             // Automatically register any Edicts placed in Resources/Edicts so the designer doesn't have to manually bind them
             var resourceEdicts = Resources.LoadAll<EdictData>("Edicts");
             foreach (var edict in resourceEdicts)

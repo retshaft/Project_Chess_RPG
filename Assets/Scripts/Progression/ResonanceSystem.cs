@@ -164,51 +164,21 @@ namespace CheckmateRPG.Progression
             return GetResonanceStage(unit) >= 5; // 공통 5단계: 제2재능 최종 강화
         }
 
-        public static int GetNotationTP(int resonanceStage)
-        {
-            // 중복 획득(돌파 2단계 이상)부터 단계별 기보 퍼즐용 TP +2 지급
-            int validStage = Mathf.Clamp(resonanceStage, 1, 5);
-            return (validStage - 1) * 2;
-        }
+        public static int GetNotationTP(int resonanceStage) => EconomyService.ResonanceTP(resonanceStage);
 
-        /// <summary>
-        /// Handles the logic for pulling a unit from the Recruit (Gacha) system.
-        /// Unlocks the unit or increases its resonance stage if already owned.
-        /// </summary>
+        // Compatibility entry point: only configured rarity can grant duplicate certificates.
         public static void AddUnitResonance(string unitId)
         {
-            if (SaveManager.Instance == null || SaveManager.Instance.CurrentData == null) return;
-            var data = SaveManager.Instance.CurrentData;
-
-            // Check if already unlocked
-            if (!data.UnlockedUnits.Contains(unitId))
+            var manager=SaveManager.Instance;
+            if(manager?.CurrentData==null || string.IsNullOrEmpty(unitId))return;
+            foreach(var banner in Resources.LoadAll<RecruitBannerData>("RecruitBanners"))
             {
-                data.UnlockedUnits.Add(unitId);
-                Debug.Log($"[ResonanceSystem] New Unit Unlocked: {unitId}");
+                if(banner.Entries==null)continue;
+                foreach(var entry in banner.Entries)
+                    if(entry?.Unit!=null&&entry.Unit.name==unitId&&entry.Stars>=3&&entry.Stars<=5)
+                    { RecruitmentService.GrantUnit(manager.CurrentData,unitId,entry.Stars);manager.SaveGame();return; }
             }
-            
-            // Check or Create Progression Data
-            var prog = data.UnitProgressions.Find(u => u.UnitId == unitId);
-            if (prog == null)
-            {
-                prog = new UnitProgressionSaveData { UnitId = unitId, ResonanceStage = 1 };
-                data.UnitProgressions.Add(prog);
-            }
-            else
-            {
-                // Cap resonance stage at max (e.g. 5) if needed, otherwise just increment
-                if (prog.ResonanceStage < 5)
-                {
-                    prog.ResonanceStage++;
-                    Debug.Log($"[ResonanceSystem] {unitId} Resonance Increased to Stage {prog.ResonanceStage}");
-                }
-                else
-                {
-                    Debug.Log($"[ResonanceSystem] {unitId} Resonance is already Maxed out. Providing alternative currency.");
-                }
-            }
-
-            SaveManager.Instance.SaveGame();
+            Debug.LogWarning("[ResonanceSystem] 대원 등급 설정이 없어 획득을 처리하지 않았습니다: "+unitId);
         }
     }
 }
