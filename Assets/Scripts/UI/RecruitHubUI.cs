@@ -37,6 +37,8 @@ namespace CheckmateRPG.UI
 
         private void EnsureUI()
         {
+            TacticalLayout.Label(transform,"RecruitTitle","인재 채용",44,OutgameStyle.TextWhite,.05f,.77f,.7f,.08f);
+            TacticalLayout.Label(transform,"RecruitCode","08 / HEADHUNTING  —  인재 통신망",16,OutgameStyle.TextMuted,.052f,.845f,.7f,.035f);
             var panel = transform.Find("RecruitContainer");
             if (panel != null) return;
 
@@ -45,17 +47,17 @@ namespace CheckmateRPG.UI
             var pRt = (RectTransform)panelGo.transform;
             pRt.anchorMin = new Vector2(0.5f, 0.5f);
             pRt.anchorMax = new Vector2(0.5f, 0.5f);
-            pRt.sizeDelta = new Vector2(1400f, 620f);
+            TacticalLayout.Place(pRt,.05f,.2f,.9f,.5f);
 
             // 1. Featured Pickup Banner (Left Card)
             CreateBannerCard(
                 panelGo.transform,
                 "PickupBannerCard",
-                new Vector2(-360f, 40f),
-                new Vector2(640f, 480f),
-                "<color=#FFB300><b>01 // FEATURED PICKUP</b></color>",
-                "<b>기동 타격대 // KNIGHT TACTICAL</b>",
-                "체스판의 지형과 적 기물을 도약하여 전장을 유린하는\n나이트(Knight) 계열 오퍼레이터의 소집 확률이 대폭 상승합니다.",
+                new Vector2(-400f, 0f),
+                new Vector2(760f, 510f),
+                "<color=#D7BB79><b>01 // FEATURED PICKUP</b></color>",
+                "<b>정예 오퍼레이터 픽업 소집</b>",
+                "체스판의 지형과 적 기물을 도약하여 전장을 유린하는\n나이트(Knight) 계열 오퍼레이터를 소개하는 시험 통신입니다.",
                 "헤드헌팅 기밀 통신 가동 중\n• 대상: 체스 기동 전술 타격 부대",
                 "1회 소집 가동",
                 "10회 연속 소집",
@@ -68,12 +70,12 @@ namespace CheckmateRPG.UI
             CreateBannerCard(
                 panelGo.transform,
                 "StandardBannerCard",
-                new Vector2(360f, 40f),
-                new Vector2(640f, 480f),
-                "<color=#00E5FF><b>02 // STANDARD HEADHUNTING</b></color>",
+                new Vector2(400f, 0f),
+                new Vector2(760f, 510f),
+                "<color=#C9D4D0><b>02 // STANDARD HEADHUNTING</b></color>",
                 "<b>체스 정예 요원 상시 소집</b>",
                 "폰(Pawn), 룩(Rook), 비숍(Bishop) 등 전열 돌파 및 원거리 지원\n핵심 기보를 보유한 작전 대원을 통상 채널로 영입합니다.",
-                "PRTS 상시 통신망 대역폭: 정상 (99.8%)\n• 전 기물 직군 표준 확률 적용",
+                "PRTS 상시 통신망 / 채널 미리보기\n• 시험 통신 / 실제 대원 지급 미연결",
                 "상시 채용 통신",
                 "10회 상시 채용",
                 out _banner2DescText,
@@ -81,6 +83,14 @@ namespace CheckmateRPG.UI
                 () => ExecuteRecruit(10, "상시 인재 풀")
             );
 
+            CreateCardButton(panelGo.transform,"ExchangePickup","픽업 증명서 300 · 확정 교환",new Vector2(-400,-220),new Vector2(600,42),()=>
+            {
+                var manager=SaveManager.EnsureInstance();
+                var banner=System.Array.Find(Resources.LoadAll<RecruitBannerData>("RecruitBanners"),x=>x.IsPickup) ?? RecruitRosterCatalog.GetPickupBanner();
+                bool ok=RecruitmentService.TryExchangePickup(manager.CurrentData,banner,System.DateTime.UtcNow,out string reason);
+                if(ok)manager.SaveGame();
+                _statusFeedbackText.text=ok?"픽업 대원을 영입했습니다.":reason;RefreshBannerBalances();
+            },false);
             // 3. Bottom Status Feedback Console
             var statusGo = new GameObject("StatusConsole", typeof(RectTransform), typeof(Image));
             statusGo.transform.SetParent(panelGo.transform, false);
@@ -104,7 +114,7 @@ namespace CheckmateRPG.UI
             _statusFeedbackText.fontSize = 19;
             _statusFeedbackText.alignment = TextAlignmentOptions.MidlineLeft;
             _statusFeedbackText.color = OutgameStyle.AccentCyan;
-            _statusFeedbackText.text = "● PRTS HEADHUNTING PROTOCOL // 암호화 통신 대기 중. 지휘관의 채용 승인을 기다립니다.";
+            _statusFeedbackText.text = "HEADHUNTING / 40인 정규 소집 풀 준비 완료";
         }
 
         private void CreateBannerCard(
@@ -137,7 +147,7 @@ namespace CheckmateRPG.UI
             hRt.anchorMax = new Vector2(1f, 1f);
             hRt.pivot = new Vector2(0.5f, 1f);
             hRt.anchoredPosition = new Vector2(0f, -20f);
-            hRt.sizeDelta = new Vector2(size.x - 48f, 70f);
+            hRt.sizeDelta = new Vector2(-48f, 80f);
             var hTmp = headerGo.GetComponent<TextMeshProUGUI>();
             hTmp.font = UiFontProvider.GetTmpFont();
             hTmp.text = $"{tag}\n<size=120%>{title}</size>";
@@ -152,10 +162,10 @@ namespace CheckmateRPG.UI
             dRt.anchorMax = new Vector2(1f, 0.5f);
             dRt.pivot = new Vector2(0.5f, 0.5f);
             dRt.anchoredPosition = new Vector2(0f, 10f);
-            dRt.sizeDelta = new Vector2(size.x - 48f, 180f);
+            dRt.sizeDelta = new Vector2(-48f, 200f);
             descRef = descGo.GetComponent<TextMeshProUGUI>();
             descRef.font = UiFontProvider.GetTmpFont();
-            descRef.text = $"{desc}\n\n<color=#8A94A6><size=85%>{details}</size></color>";
+            descRef.text = $"{desc}\n\n<color=#B1B7B4><size=85%>{details}</size></color>";
             descRef.fontSize = 18;
             descRef.color = OutgameStyle.TextWhite;
 
@@ -167,7 +177,7 @@ namespace CheckmateRPG.UI
             bRt.anchorMax = new Vector2(1f, 0f);
             bRt.pivot = new Vector2(0.5f, 0f);
             bRt.anchoredPosition = new Vector2(0f, 24f);
-            bRt.sizeDelta = new Vector2(size.x - 48f, 54f);
+            bRt.sizeDelta = new Vector2(-48f, 54f);
 
             var b1 = CreateCardButton(btnContainer.transform, "Btn1", btn1Label, new Vector2(-140f, 0f), new Vector2(260f, 50f), onBtn1, false);
             var b2 = CreateCardButton(btnContainer.transform, "Btn2", btn2Label, new Vector2(140f, 0f), new Vector2(260f, 50f), onBtn2, true);
@@ -201,7 +211,7 @@ namespace CheckmateRPG.UI
             }
             else
             {
-                OutgameStyle.ApplyPrimaryButtonStyle(btn, tmp);
+                OutgameStyle.ApplyLightButtonStyle(btn, tmp);
             }
 
             if (onClick != null) btn.onClick.AddListener(onClick);
@@ -212,19 +222,36 @@ namespace CheckmateRPG.UI
         {
             if (_statusFeedbackText == null) return;
 
-            string[] sampleOperators = new string[] { "Knight_A", "Pawn_Vanguard", "Rook_Defender", "Bishop_Tactician", "Queen_Executor" };
-            string recruited = sampleOperators[Random.Range(0, sampleOperators.Length)];
-
-            _statusFeedbackText.text = count == 1
-                ? $"<color=#00E5FF>● [채용 통신 수신]</color> <color=#FFB300>{bannerName}</color> 채널에서 <b>[{recruited}]</b> 대원의 입사 계약서가 도착했습니다!"
-                : $"<color=#00E5FF>● [10연속 채용 완료]</color> <color=#FFB300>{bannerName}</color> 정예 인재 10명의 통신 계약이 사령부 로스터에 등록되었습니다.";
+            var save=SaveManager.EnsureInstance();
+            var banners=Resources.LoadAll<RecruitBannerData>("RecruitBanners");
+            bool pickup=bannerName!="상시 인재 풀";
+            var banner=System.Array.Find(banners,x=>x.IsPickup==pickup);
+            if (banner==null) banner=pickup?RecruitRosterCatalog.GetPickupBanner():RecruitRosterCatalog.GetStandardBanner();
+            foreach(var item in banners) RecruitmentService.SettleExpiredBanner(save.CurrentData,item,System.DateTime.UtcNow);
+            if (!RecruitmentService.TryRecruit(save.CurrentData,banner,count,System.DateTime.UtcNow,()=> (double)Random.Range(0,int.MaxValue)/int.MaxValue,out var results,out string reason))
+            { _statusFeedbackText.text=reason; return; }
+            save.SaveGame();
+            var names=new List<string>();foreach(var result in results)names.Add($"{result.Stars}★ {result.Unit.UnitName}");
+            _statusFeedbackText.text=string.Join(" / ",names);
+            RefreshBannerBalances();
         }
 
+        private void RefreshBannerBalances()
+        {
+            var s=SaveManager.EnsureInstance().CurrentData;
+            _banner1DescText.text=$"정예 허가증 {s.SpecialPermits} · 공명석 {s.ResonanceCrystals:N0}\n1회: 허가증 1장 또는 공명석 150\n10회: 허가증 우선 사용, 부족분 1회당 150\n5★ 2% / 4★ 8% / 3★ 90%\n51회부터 확률 증가 · 80회 5★ 확정\n천장 누적 {s.PityCounter} · 픽업 증명서 {s.HeadhuntingMileage}/300";
+            _banner2DescText.text=$"일반 허가증 {s.StandardPermits} · 공명석 {s.ResonanceCrystals:N0}\n1회: 허가증 1장 또는 공명석 150\n10회: 4★ 이상 1명 보장\n중복: 3★ 증표 1 / 4★ 5 / 5★ 15\n증표는 해당 대원의 공명 돌파에 사용합니다.\n상시 증명서 {s.StandardHeadhuntingMileage:N0}";
+        }
         private void RefreshData()
         {
+            var manager=SaveManager.EnsureInstance();bool settled=false;
+            foreach(var banner in Resources.LoadAll<RecruitBannerData>("RecruitBanners"))settled |= RecruitmentService.SettleExpiredBanner(manager.CurrentData,banner,System.DateTime.UtcNow);
+            RecruitRosterCatalog.GetStandardBanner(); RecruitRosterCatalog.GetPickupBanner();
+            if(settled)manager.SaveGame();
+            RefreshBannerBalances();
             if (_statusFeedbackText != null)
             {
-                _statusFeedbackText.text = "● PRTS HEADHUNTING PROTOCOL // 암호화 통신 대기 중. 지휘관의 채용 승인을 기다립니다.";
+                _statusFeedbackText.text = "HEADHUNTING / 40인 정규 소집 풀 준비 완료";
             }
         }
     }

@@ -27,6 +27,7 @@ namespace CheckmateRPG.UI
         private List<RosterSlotUI> _inventorySlots = new List<RosterSlotUI>();
 
         private int _selectedSlotIndex = -1;
+        private UnityEngine.UI.Button _removeUnitButton;
 
         private void Start()
         {
@@ -79,6 +80,15 @@ namespace CheckmateRPG.UI
 
         private void EnsureDeckBuilderUI()
         {
+            TacticalLayout.Label(transform,"FormationTitle","작전 부대 편성",44,OutgameStyle.TextWhite,.05f,.77f,.7f,.08f);
+            TacticalLayout.Label(transform,"FormationCode","05 / FORMATION  —  출전 엔트리",16,OutgameStyle.TextMuted,.052f,.845f,.7f,.035f);
+            TacticalLayout.Label(transform,"FormationHelp","슬롯을 선택해 대원을 교체하세요.  킹은 부대에 반드시 포함됩니다.",20,OutgameStyle.TextMuted,.05f,.19f,.7f,.045f);
+            TacticalLayout.Place(_rosterContainer,.05f,.28f,.90f,.36f);
+            var layout = _rosterContainer ? _rosterContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>() : null;
+            if (layout) { layout.spacing = 14; layout.childControlWidth = true; layout.childControlHeight = true; layout.childForceExpandWidth = true; layout.childForceExpandHeight = true; }
+            if (_startBattleButton) { TacticalLayout.Place(_startBattleButton.transform,.76f,.085f,.19f,.075f); _startBattleButton.GetComponentInChildren<TextMeshProUGUI>().text = "출격 확정  /  SORTIE"; }
+            if (_closeInventoryButton) OutgameStyle.ApplyLightButtonStyle(_closeInventoryButton);
+
             if (_startBattleButton != null)
             {
                 OutgameStyle.ApplyCombatButtonStyle(_startBattleButton, _startBattleButton.GetComponentInChildren<TextMeshProUGUI>());
@@ -102,7 +112,7 @@ namespace CheckmateRPG.UI
                 bRt.anchorMin = new Vector2(0.5f, 0.5f);
                 bRt.anchorMax = new Vector2(0.5f, 0.5f);
                 bRt.pivot = new Vector2(0.5f, 0.5f);
-                bRt.anchoredPosition = new Vector2(0f, 150f);
+                bRt.anchoredPosition = new Vector2(0f, 205f);
                 bRt.sizeDelta = new Vector2(1200f, 60f);
 
                 var powerGo = new GameObject("SquadPowerText", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -130,6 +140,38 @@ namespace CheckmateRPG.UI
                 _activeSynchroText.alignment = TextAlignmentOptions.MidlineRight;
                 _activeSynchroText.color = OutgameStyle.AccentGold;
             }
+            TacticalLayout.Place(transform.Find("SquadRatingBanner"),.05f,.675f,.90f,.05f);
+            EnsureInventoryLayout();
+            if (_inventoryPanel) _inventoryPanel.transform.SetAsLastSibling();
+        }
+
+        private void EnsureInventoryLayout()
+        {
+            if (!_inventoryPanel || !_inventoryContainer) return;
+            if (_inventoryPanel.TryGetComponent<UnityEngine.UI.Image>(out var background)) background.color = OutgameStyle.BackgroundBase;
+            TacticalLayout.Place(_closeInventoryButton ? _closeInventoryButton.transform : null, .76f, .07f, .16f, .065f);
+            if (_closeInventoryButton) _closeInventoryButton.GetComponentInChildren<TextMeshProUGUI>().text = "닫기";
+            if (_inventoryPanel.transform.Find("CandidateScroll")) return;
+            var viewport = TacticalLayout.Panel(_inventoryPanel.transform, "CandidateScroll", OutgameStyle.SurfaceDark, .08f, .19f, .84f, .57f);
+            viewport.raycastTarget = true;
+            viewport.gameObject.AddComponent<UnityEngine.UI.RectMask2D>();
+            var scroll = viewport.gameObject.AddComponent<UnityEngine.UI.ScrollRect>();
+            _inventoryContainer.SetParent(viewport.transform, false);
+            var content = (RectTransform)_inventoryContainer;
+            content.anchorMin = new Vector2(0, 1); content.anchorMax = Vector2.one;
+            content.pivot = new Vector2(.5f, 1); content.anchoredPosition = Vector2.zero; content.sizeDelta = Vector2.zero;
+            var grid = _inventoryContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
+            if (grid)
+            {
+                grid.cellSize = new Vector2(220, 300); grid.spacing = new Vector2(18, 18);
+                grid.constraint = UnityEngine.UI.GridLayoutGroup.Constraint.FixedColumnCount; grid.constraintCount = 6;
+                grid.childAlignment = TextAnchor.UpperLeft; grid.padding = new RectOffset(18, 18, 18, 18);
+            }
+            var fit = _inventoryContainer.gameObject.AddComponent<UnityEngine.UI.ContentSizeFitter>();
+            fit.verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = content; scroll.viewport = viewport.rectTransform;
+            scroll.horizontal = false; scroll.vertical = true; scroll.scrollSensitivity = 36;
+            scroll.movementType = UnityEngine.UI.ScrollRect.MovementType.Clamped;
         }
 
         private void OnBackToMapClicked()
@@ -139,6 +181,13 @@ namespace CheckmateRPG.UI
 
         private void OnStartBattleClicked()
         {
+            var save=SaveManager.EnsureInstance();
+            var stage=StageManager.Instance?.CurrentStage;
+            if (stage == null) { EconomyDialog.Open(false, "작전 지도에서 출격할 작전을 먼저 선택하세요."); return; }
+            if (!stage.TryGetReadiness(out string readiness)) { EconomyDialog.Open(false, readiness); return; }
+            if(!EconomyService.TryBeginSortie(save.CurrentData,stage,System.DateTime.UtcNow,out string reason))
+            { EconomyDialog.Open(false,reason); return; }
+            save.SaveGame();
             // 전투 준비가 완료되었으므로 BattleScene 로드
             UnityEngine.SceneManagement.SceneManager.LoadScene("BattleScene");
         }
@@ -204,6 +253,17 @@ namespace CheckmateRPG.UI
         private void RefreshUI()
         {
             var currentDeck = DeckManager.Instance.CurrentDeck;
+            int formationCost = 0;
+            int memberCount = 0;
+            foreach (var unit in currentDeck)
+            {
+                if (unit == null) continue;
+                formationCost += unit.DeploymentCost;
+                memberCount++;
+            }
+            TacticalLayout.Label(transform, "FormationCost",
+                $"편성 코스트  <b>{formationCost}</b>     /     편성 인원  {memberCount} / {DeckManager.MAX_DECK_SIZE}",
+                22, OutgameStyle.TextWhite, .05f, .73f, .90f, .035f);
             
             for (int i = 0; i < _rosterSlots.Count; i++)
             {
@@ -228,7 +288,7 @@ namespace CheckmateRPG.UI
 
             if (_squadPowerText != null)
             {
-                _squadPowerText.text = $"SQUAD COMBAT RATING: <color=#00FFCC>{totalPower:N0}</color>";
+                _squadPowerText.text = $"SQUAD COMBAT RATING: <color=#B8D1BC>{totalPower:N0}</color>";
             }
 
             if (_activeSynchroText != null)
@@ -239,7 +299,7 @@ namespace CheckmateRPG.UI
                     var kProg = SaveManager.Instance.CurrentData.KingProgression;
                     synchroStatus = $"Suit Lv.{kProg.SuitLevel} | Aura: {(string.IsNullOrEmpty(kProg.EquippedAbsoluteEdictId) ? "None" : kProg.EquippedAbsoluteEdictId)}";
                 }
-                _activeSynchroText.text = $"• KING SYNCHRO: <color=#FFD700>{synchroStatus}</color>";
+                _activeSynchroText.text = $"• KING SYNCHRO: <color=#D7BB79>{synchroStatus}</color>";
             }
         }
 
@@ -255,6 +315,23 @@ namespace CheckmateRPG.UI
             {
                 _inventoryPanel.SetActive(true);
                 OutgameUIManager.Instance?.RegisterModalCloseAction(CloseInventory);
+                TacticalLayout.Label(_inventoryPanel.transform, "SelectionContext",
+                    slotIndex == 0 ? "지휘관 슬롯  /  킹은 편성에서 제외할 수 없습니다." : $"슬롯 {slotIndex + 1:00}  /  편성 중인 대원을 선택하면 이 슬롯으로 이동합니다.",
+                    20, OutgameStyle.TextWhite, .08f, .82f, .84f, .05f);
+                if (_removeUnitButton == null)
+                {
+                    var panel = TacticalLayout.Panel(_inventoryPanel.transform, "RemoveUnit", OutgameStyle.SurfaceCard, .08f, .07f, .23f, .065f);
+                    panel.raycastTarget = true;
+                    _removeUnitButton = panel.gameObject.AddComponent<UnityEngine.UI.Button>();
+                    _removeUnitButton.targetGraphic = panel;
+                    TacticalLayout.Label(panel.transform, "Text", "편성 해제", 22, OutgameStyle.TextWhite, .08f, .1f, .84f, .8f).alignment = TextAlignmentOptions.Center;
+                    _removeUnitButton.onClick.AddListener(() =>
+                    {
+                        if (DeckManager.Instance.RemoveFromDeck(_selectedSlotIndex)) CloseInventory();
+                    });
+                }
+                _removeUnitButton.gameObject.SetActive(slotIndex > 0);
+                _removeUnitButton.interactable = slotIndex > 0 && DeckManager.Instance.CurrentDeck[slotIndex] != null;
             }
 
             // Filter inventory slots based on the selected slot index

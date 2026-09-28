@@ -83,7 +83,7 @@ namespace CheckmateRPG.UI
             var fillGo = new GameObject("AP_Fill");
             fillGo.transform.SetParent(bgGo.transform, false);
             var fillImg = fillGo.AddComponent<Image>();
-            fillImg.color = new Color(0f, 0.9f, 1f, 1f); // Accent_Cyan
+            fillImg.color = OutgameStyle.AccentCyan; // Accent_Cyan
             fillImg.raycastTarget = false;
             var fillRect = fillGo.GetComponent<RectTransform>();
             fillRect.anchorMin = new Vector2(0f, 0f);

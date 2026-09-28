@@ -44,6 +44,8 @@ namespace CheckmateRPG.UI
             }
         }
 
+        private TextMeshProUGUI _sanityText, _creditText, _crystalText;
+        private SaveManager _save;
         private void Start()
         {
             if (OutgameUIManager.Instance != null)
@@ -55,6 +57,7 @@ namespace CheckmateRPG.UI
 
         private void OnDestroy()
         {
+            if (_save != null) _save.OnDataChanged -= RefreshProfileInfo;
             if (OutgameUIManager.Instance != null)
             {
                 OutgameUIManager.Instance.OnViewChanged -= HandleViewChanged;
@@ -64,6 +67,7 @@ namespace CheckmateRPG.UI
         public void HandleViewChanged(OutgameViewType viewType)
         {
             EnsureHeaderUI();
+            EnsureCurrencyWidgets();
 
             // 타이틀 화면에서는 헤더를 숨깁니다.
             if (viewType == OutgameViewType.Title)
@@ -91,11 +95,23 @@ namespace CheckmateRPG.UI
                 _viewTitleText.text = GetViewTitle(viewType);
             }
 
+            TacticalLayout.Place(_viewTitleText.transform,isLobby ? .035f : .16f,.12f,isLobby ? .43f : .33f,.76f);
+            _viewTitleText.fontSize = 22;
+            _viewTitleText.textWrappingMode = TextWrappingModes.NoWrap;
+            _viewTitleText.overflowMode = TextOverflowModes.Ellipsis;
+            TacticalLayout.Place(_commanderInfoText.transform,.64f,.01f,.2f,.3f);
+            TacticalLayout.Place(_networkBadgeText.transform,.85f,.01f,.13f,.3f);
+            _commanderInfoText.fontSize = 12;
+            _networkBadgeText.fontSize = 12;
+            GetComponent<Image>().color = OutgameStyle.Ink;
+            OutgameStyle.ApplyPrimaryButtonStyle(_backButton);
+            OutgameStyle.ApplyPrimaryButtonStyle(_homeButton);
             RefreshProfileInfo();
         }
 
         public void RefreshProfileInfo()
         {
+            RefreshCurrency();
             int suitLevel = 1;
             if (SaveManager.Instance != null && SaveManager.Instance.CurrentData != null)
             {
@@ -104,35 +120,63 @@ namespace CheckmateRPG.UI
 
             if (_commanderInfoText != null)
             {
-                _commanderInfoText.text = $"<color=#8A94A6>COMMANDER</color>  <b><color=#00E5FF>SUIT LV.{suitLevel}</color></b>";
+                _commanderInfoText.text = $"<color=#B1B7B4>COMMANDER</color>  <b><color=#F3F2EC>SUIT LV.{suitLevel}</color></b>";
             }
 
             if (_networkBadgeText != null)
             {
-                _networkBadgeText.text = "<color=#00E5FF>●</color> <color=#F5F6F8>PRTS</color> <color=#8A94A6>// ONLINE</color>";
+                _networkBadgeText.text = "<color=#F3F2EC>●</color> <color=#F5F6F8>PRTS</color> <color=#B1B7B4>// ONLINE</color>";
             }
         }
 
+        private void EnsureCurrencyWidgets()
+        {
+            if (_sanityText) return;
+            _save=SaveManager.EnsureInstance();_save.OnDataChanged+=RefreshProfileInfo;
+            _sanityText=Currency("Sanity",.53f,true,false);
+            _creditText=Currency("Credit",.69f,false,false);
+            _crystalText=Currency("Crystal",.85f,true,true);
+        }
+        private TextMeshProUGUI Currency(string name,float x,bool add,bool cores)
+        {
+            var panel=TacticalLayout.Panel(transform,name,OutgameStyle.SurfaceCard,x,.35f,.145f,.56f);
+            var label=TacticalLayout.Label(panel.transform,"Value","",18,OutgameStyle.TextWhite,.04f,0,add?.77f:.94f,1);
+            if(add)
+            {
+                var plus=TacticalLayout.Panel(panel.transform,"Plus",OutgameStyle.Paper,.82f,0,.18f,1);plus.raycastTarget=true;
+                var button=plus.gameObject.AddComponent<Button>();button.targetGraphic=plus;button.onClick.AddListener(()=>EconomyDialog.Open(cores));
+                var t=TacticalLayout.Label(plus.transform,"Label","+",23,OutgameStyle.Ink,0,0,1,1);t.alignment=TextAlignmentOptions.Center;
+            }
+            return label;
+        }
+        private void RefreshCurrency()
+        {
+            if(!_sanityText||_save?.CurrentData==null)return;
+            var s=_save.CurrentData;
+            _sanityText.text=$"전력 {s.Sanity}/{s.MaxSanity}";
+            _creditText.text=$"크레딧 {s.AetherCredit:N0}";
+            _crystalText.text=$"공명석 {s.ResonanceCrystals:N0}";
+        }
         private string GetViewTitle(OutgameViewType viewType)
         {
             switch (viewType)
             {
                 case OutgameViewType.MainLobby:
-                    return "<color=#00E5FF>ARK: CHECKMATE</color> <color=#4A5262>//</color> <color=#F5F6F8>COMMAND CENTER</color>";
+                    return "<color=#F3F2EC>CHECKMATE</color> <color=#7D8583>//</color> <color=#F5F6F8>COMMAND CENTER</color>";
                 case OutgameViewType.StageSelect:
-                    return "<color=#00E5FF>02</color> <color=#4A5262>//</color> <color=#F5F6F8>OPERATIONS</color> <size=70%><color=#8A94A6>작전 출격</color></size>";
+                    return "<color=#F3F2EC>02</color> <color=#7D8583>//</color> <color=#F5F6F8>OPERATIONS</color> <size=70%><color=#B1B7B4>작전 출격</color></size>";
                 case OutgameViewType.OperatorHub:
-                    return "<color=#00E5FF>03</color> <color=#4A5262>//</color> <color=#F5F6F8>OPERATOR HUB</color> <size=70%><color=#8A94A6>오퍼레이터 관리</color></size>";
+                    return "<color=#F3F2EC>03</color> <color=#7D8583>//</color> <color=#F5F6F8>OPERATOR HUB</color> <size=70%><color=#B1B7B4>오퍼레이터 관리</color></size>";
                 case OutgameViewType.SynchroBoard:
-                    return "<color=#00E5FF>04</color> <color=#4A5262>//</color> <color=#F5F6F8>SYNCHRO MODDING</color> <size=70%><color=#8A94A6>킹 칙령 보드</color></size>";
+                    return "<color=#F3F2EC>04</color> <color=#7D8583>//</color> <color=#F5F6F8>SYNCHRO MODDING</color> <size=70%><color=#B1B7B4>킹 칙령 보드</color></size>";
                 case OutgameViewType.DeckBuilder:
-                    return "<color=#00E5FF>05</color> <color=#4A5262>//</color> <color=#F5F6F8>FORMATION</color> <size=70%><color=#8A94A6>작전 부대 편성</color></size>";
+                    return "<color=#F3F2EC>05</color> <color=#7D8583>//</color> <color=#F5F6F8>FORMATION</color> <size=70%><color=#B1B7B4>작전 부대 편성</color></size>";
                 case OutgameViewType.Recruit:
-                    return "<color=#00E5FF>08</color> <color=#4A5262>//</color> <color=#F5F6F8>HEADHUNTING</color> <size=70%><color=#8A94A6>인재 채용</color></size>";
+                    return "<color=#F3F2EC>08</color> <color=#7D8583>//</color> <color=#F5F6F8>HEADHUNTING</color> <size=70%><color=#B1B7B4>인재 채용</color></size>";
                 case OutgameViewType.KingSuitBay:
-                    return "<color=#00E5FF>09</color> <color=#4A5262>//</color> <color=#F5F6F8>KING'S SUIT</color> <size=70%><color=#8A94A6>슈트 격납고</color></size>";
+                    return "<color=#F3F2EC>09</color> <color=#7D8583>//</color> <color=#F5F6F8>KING'S SUIT</color> <size=70%><color=#B1B7B4>슈트 격납고</color></size>";
                 case OutgameViewType.Archive:
-                    return "<color=#00E5FF>10</color> <color=#4A5262>//</color> <color=#F5F6F8>ARCHIVE</color> <size=70%><color=#8A94A6>전술 기록 보관소</color></size>";
+                    return "<color=#F3F2EC>10</color> <color=#7D8583>//</color> <color=#F5F6F8>ARCHIVE</color> <size=70%><color=#B1B7B4>전술 기록 보관소</color></size>";
                 default:
                     return "<color=#F5F6F8>CHECKMATE TACTICAL</color>";
             }

@@ -23,6 +23,7 @@ namespace CheckmateRPG.Core.Actions
             {
                 (ActionState.Queued,    ActionState.Casting)     => true,
                 (ActionState.Queued,    ActionState.Cancelled)   => true,
+                (ActionState.Queued,    ActionState.Interrupted) => true,
                 (ActionState.Casting,   ActionState.Resolving)   => true,
                 (ActionState.Casting,   ActionState.Interrupted) => true,
                 (ActionState.Casting,   ActionState.Cancelled)   => true,

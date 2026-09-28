@@ -28,6 +28,7 @@ namespace CheckmateRPG.UI
         public virtual void Show()
         {
             gameObject.SetActive(true);
+            TacticalLayout.Page(this);
             foreach (var text in GetComponentsInChildren<TMPro.TMP_Text>(true))
                 text.font = UiFontProvider.GetTmpFont();
             if (gameObject.activeInHierarchy)
@@ -150,6 +151,10 @@ namespace CheckmateRPG.UI
                 return;
             }
             
+            // Leaving a view also closes its overlays, so HOME cannot leave stale ESC actions.
+            while (_modalCloseActions.Count > 0)
+                _modalCloseActions.Pop()?.Invoke();
+
             if (clearHistory)
             {
                 _history.Clear();

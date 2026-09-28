@@ -33,6 +33,13 @@ namespace CheckmateRPG.UI
 
         private void EnsureUI()
         {
+            TacticalLayout.Label(transform,"SectionTitle","슈트 격납고",44,OutgameStyle.TextWhite,.05f,.77f,.7f,.08f);
+            TacticalLayout.Label(transform,"SectionCode","09 / KING'S SUIT",16,OutgameStyle.TextMuted,.052f,.845f,.7f,.035f);
+            var identity = TacticalLayout.Panel(transform,"IdentityPanel",OutgameStyle.Paper,.05f,.16f,.25f,.56f);
+            TacticalLayout.Label(identity.transform,"IdentityNumber","K / 01",68,OutgameStyle.Ink,.1f,.61f,.8f,.26f);
+            TacticalLayout.Label(identity.transform,"IdentityCaption","COMMANDER FRAME",18,OutgameStyle.Ink,.1f,.48f,.8f,.08f);
+            var note = TacticalLayout.Label(identity.transform,"IdentityNote","부대를 지휘하는 핵심 프레임.\n칙령 회로로 전술을 구성하세요.",22,OutgameStyle.Ink,.1f,.12f,.8f,.25f);
+            note.textWrappingMode = TextWrappingModes.Normal;
             var panel = transform.Find("BayContainer");
             if (panel == null)
             {
@@ -41,7 +48,7 @@ namespace CheckmateRPG.UI
                 var pRt = (RectTransform)panelGo.transform;
                 pRt.anchorMin = new Vector2(0.5f, 0.5f);
                 pRt.anchorMax = new Vector2(0.5f, 0.5f);
-                pRt.sizeDelta = new Vector2(900f, 500f);
+                TacticalLayout.Place(pRt,.32f,.16f,.63f,.56f);
                 panelGo.GetComponent<Image>().color = OutgameStyle.SurfaceCard;
 
                 var textGo = new GameObject("SpecText", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -79,7 +86,7 @@ namespace CheckmateRPG.UI
                 btTmp.alignment = TextAlignmentOptions.Center;
 
                 var btn = btnGo.GetComponent<Button>();
-                OutgameStyle.ApplyPrimaryButtonStyle(btn, btTmp);
+                OutgameStyle.ApplyLightButtonStyle(btn, btTmp);
                 btn.onClick.AddListener(() => OutgameUIManager.Instance.ChangeView(OutgameViewType.SynchroBoard));
             }
             else
@@ -102,16 +109,16 @@ namespace CheckmateRPG.UI
                 var kProg = SaveManager.Instance.CurrentData.KingProgression;
                 suitLv = Mathf.Max(1, kProg.SuitLevel);
                 if (!string.IsNullOrEmpty(kProg.EquippedAbsoluteEdictId)) edictAura = kProg.EquippedAbsoluteEdictId;
-                if (kProg.EquippedGeneralEdictIds != null) generalCount = kProg.EquippedGeneralEdictIds.Count;
+                if (kProg.EquippedGeneralEdictIds != null) generalCount = kProg.EquippedGeneralEdictIds.FindAll(id => !string.IsNullOrEmpty(id)).Count;
             }
 
             _suitSpecText.text =
-                $"<color=#00E5FF><b>[KING'S SUIT // 전술 프레임 제원]</b></color>\n\n" +
+                $"<color=#C9D4D0><b>[KING'S SUIT // 전술 프레임 제원]</b></color>\n\n" +
                 $"• 프레임 모델: <b>S-01 EXCALIBUR TACTICAL FRAME</b>\n" +
-                $"• 슈트 레벨: <color=#00E5FF><b>Lv.{suitLv}</b></color>\n" +
-                $"• 장착 절대 칙령(오라): <color=#FFB300>{edictAura}</color>\n" +
-                $"• 가동 일반 칙령 회로: <color=#00E5FF>{generalCount} / 3 개 슬롯</color>\n\n" +
-                $"<size=85%><color=#8A94A6>지휘관의 전술 슈트는 부대 전체의 작전 능력과 칙령 회로 용량을 결정합니다.\n싱크로 보드에서 칙령을 교체하여 전투 능력을 커스터마이즈할 수 있습니다.</color></size>";
+                $"• 슈트 레벨: <color=#C9D4D0><b>Lv.{suitLv}</b></color>\n" +
+                $"• 장착 절대 칙령(오라): <color=#D7BB79>{edictAura}</color>\n" +
+                $"• 가동 일반 칙령 회로: <color=#C9D4D0>{generalCount} / 3 개 슬롯</color>\n\n" +
+                $"<size=85%><color=#B1B7B4>지휘관의 전술 슈트는 부대 전체의 작전 능력과 칙령 회로 용량을 결정합니다.\n싱크로 보드에서 칙령을 교체하여 전투 능력을 커스터마이즈할 수 있습니다.</color></size>";
         }
     }
 }

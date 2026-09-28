@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -58,12 +59,16 @@ namespace CheckmateRPG.UI
         /// </summary>
         private void EnsureBoardUI()
         {
+            TacticalLayout.Label(transform,"SynchroTitle","칙령 회로",44,OutgameStyle.TextWhite,.05f,.77f,.6f,.08f);
+            TacticalLayout.Label(transform,"SynchroCode","04 / SYNCHRO MODDING  —  지휘관 회로 구성",16,OutgameStyle.TextMuted,.052f,.845f,.7f,.035f);
+            TacticalLayout.Label(transform,"SynchroHelp","슬롯 선택 → 효과·비용 비교 → 장착",20,OutgameStyle.TextMuted,.35f,.13f,.6f,.04f);
+
             if (capacityMeterText == null)
-                capacityMeterText = CreateText("CapacityMeter", new Vector2(0f, 430f), new Vector2(940f, 90f), 30);
+                capacityMeterText = CreateText("CapacityMeter", new Vector2(360f, 280f), new Vector2(800f, 90f), 30);
 
             if (absoluteSlotButton == null)
             {
-                absoluteSlotButton = CreateSlotButton("AbsoluteSlot", new Vector2(0f, 185f), new Vector2(470f, 170f),
+                absoluteSlotButton = CreateSlotButton("AbsoluteSlot", new Vector2(0f, 100f), new Vector2(470f, 170f),
                     out absoluteSlotText, out absoluteSlotFrame);
             }
             else
@@ -77,7 +82,7 @@ namespace CheckmateRPG.UI
                 if (generalSlotButtons[i] == null)
                 {
                     float x = (i - 1) * 350f;
-                    generalSlotButtons[i] = CreateSlotButton($"GeneralSlot{i + 1}", new Vector2(x, -40f), new Vector2(320f, 170f),
+                    generalSlotButtons[i] = CreateSlotButton($"GeneralSlot{i + 1}", new Vector2(x, -140f), new Vector2(320f, 170f),
                         out generalSlotTexts[i], out generalSlotFrames[i]);
                 }
                 else
@@ -101,6 +106,30 @@ namespace CheckmateRPG.UI
                 selectorModal = modalGo.AddComponent<EdictSelectorModal>();
             }
             selectorModal.EnsureRuntimeUI();
+            TacticalLayout.Place(capacityMeterText.transform,.05f,.53f,.25f,.20f);
+            capacityMeterText.alignment=TextAlignmentOptions.TopLeft;
+            capacityMeterText.fontSize=26;
+            TacticalLayout.Panel(transform,"SummaryRule",OutgameStyle.BorderSubtle,.05f,.43f,.25f,.001f);
+            var rules=TacticalLayout.Label(transform,"SlotGuide","CIRCUIT / 극성 안내\n\n질서  / /     혼돈  ×     중립  −\n\n극성 일치 시 장착 비용 감소\n일반 칙령은 중복 장착 불가\n장착·교체 비용  1,500 크레딧",18,OutgameStyle.TextMuted,.05f,.17f,.25f,.24f);
+            rules.textWrappingMode=TextWrappingModes.Normal;
+            rules.alignment=TextAlignmentOptions.TopLeft;
+            TacticalLayout.Place(absoluteSlotButton.transform,.35f,.61f,.6f,.14f);
+            TacticalLayout.Place(absoluteSlotText.transform,.20f,.12f,.76f,.7f);
+            absoluteSlotText.alignment=TextAlignmentOptions.MidlineLeft;
+            for(int i=0;i<generalSlotButtons.Length;i++)
+            {
+                float step=.6f/Mathf.Max(1,generalSlotButtons.Length);
+                TacticalLayout.Place(generalSlotButtons[i].transform,.35f+i*step,.22f,step-.012f,.31f);
+                TacticalLayout.Place(generalSlotTexts[i].transform,.08f,.47f,.84f,.28f);
+                generalSlotTexts[i].alignment=TextAlignmentOptions.TopLeft;
+                generalSlotTexts[i].fontSize=22;
+            }
+            TacticalLayout.Panel(transform,"CircuitTrunk",OutgameStyle.BorderSubtle,.6495f,.565f,.001f,.045f);
+            TacticalLayout.Panel(transform,"CircuitBus",OutgameStyle.BorderSubtle,.444f,.565f,.4f,.001f);
+            TacticalLayout.Panel(transform,"CircuitLeft",OutgameStyle.BorderSubtle,.444f,.53f,.001f,.035f);
+            TacticalLayout.Panel(transform,"CircuitRight",OutgameStyle.BorderSubtle,.844f,.53f,.001f,.035f);
+            TacticalLayout.Panel(transform,"CircuitCenter",OutgameStyle.BorderSubtle,.644f,.53f,.001f,.035f);
+            selectorModal.transform.SetAsLastSibling();
         }
 
         private TextMeshProUGUI CreateText(string objectName, Vector2 position, Vector2 size, int fontSize)
@@ -128,7 +157,7 @@ namespace CheckmateRPG.UI
             rt.anchoredPosition = position;
             rt.sizeDelta = size;
             var frameImg = go.AddComponent<Image>();
-            frameImg.color = new Color(0.18f, 0.18f, 0.22f, 1f);
+            frameImg.color = OutgameStyle.SurfaceCard;
             var btn = go.AddComponent<Button>();
 
             var labelGo = new GameObject("Label", typeof(RectTransform));
@@ -210,7 +239,7 @@ namespace CheckmateRPG.UI
             bool valid = ValidateSelection(slot, candidate, out string reason);
             string detail = slot < 0 ? $"최대 수용량 {Capacity(currentAbsoluteEdict)} → {Capacity(candidate)}" :
                 $"슬롯 극성 {PolarityLabel(SlotPolarity(slot + 1))} · 비용 {PolarityCalculator.CalculateSlotCost(candidate, SlotPolarity(slot + 1))}";
-            return $"{detail}\n<color={(valid ? "#83E7C3" : "#FF8888")}>{reason}</color>";
+            return $"{detail}\n{(slot>=0 && candidate!=null ? "일반 칙령 장착/교체: 크레딧 1,500" : "")}\n<color={(valid ? "#83E7C3" : "#FF8888")}>{reason}</color>";
         }
 
         private void TryEquip(int slot, EdictData edict)
@@ -220,6 +249,9 @@ namespace CheckmateRPG.UI
                 if (capacityMeterText) capacityMeterText.text = $"<color=#FF8888>{reason}</color>";
                 return;
             }
+            if (slot >= 0 && edict != null && currentGeneralEdicts[slot] != edict &&
+                !EconomyService.TrySpendCredits(SaveManager.EnsureInstance().CurrentData,1500))
+            { if(capacityMeterText)capacityMeterText.text="에테르 크레딧 부족 · 일반 칙령 장착/교체 1,500"; return; }
             if (slot < 0) currentAbsoluteEdict = edict;
             else currentGeneralEdicts[slot] = edict;
             SaveBoardState();
@@ -284,13 +316,13 @@ namespace CheckmateRPG.UI
             // 1. Render Absolute Slot (Aura)
             if (currentAbsoluteEdict != null)
             {
-                if (absoluteSlotText) absoluteSlotText.text = $"<b><color=#FFDF00>{currentAbsoluteEdict.EdictName}</color></b>\n<size=80%>절대 칙령 · 슬롯 {PolarityLabel(SlotPolarity(0))} / 카드 {PolarityLabel(currentAbsoluteEdict.Polarity)}</size>";
+                if (absoluteSlotText) absoluteSlotText.text = $"<b><color=#D7BB79>{currentAbsoluteEdict.EdictName}</color></b>\n<size=80%>절대 칙령 · 슬롯 {PolarityLabel(SlotPolarity(0))} / 카드 {PolarityLabel(currentAbsoluteEdict.Polarity)}</size>";
                 if (absoluteSlotFrame) absoluteSlotFrame.color = GetPolarityColor(currentAbsoluteEdict.Polarity, true);
             }
             else
             {
                 if (absoluteSlotText) absoluteSlotText.text = $"<b>절대 칙령</b>\n<color=#B0B0B0><size=75%>{PolarityLabel(SlotPolarity(0))} 슬롯 · 선택하여 장착</size></color>";
-                if (absoluteSlotFrame) absoluteSlotFrame.color = new Color(0.15f, 0.15f, 0.18f, 1f);
+                if (absoluteSlotFrame) absoluteSlotFrame.color = OutgameStyle.SurfaceDark;
             }
 
             // 2. Render General Slots (Mod Circuits)
@@ -302,7 +334,7 @@ namespace CheckmateRPG.UI
                     int cost = PolarityCalculator.CalculateSlotCost(edict, SlotPolarity(i + 1));
                     totalUsed += cost;
 
-                    string costHex = cost < edict.SyncCost ? "#00FF66" : (cost > edict.SyncCost ? "#FF3333" : "#FFFFFF");
+                    string costHex = cost < edict.SyncCost ? "#B8D1BC" : (cost > edict.SyncCost ? "#DB7671" : "#FFFFFF");
                     if (i < generalSlotTexts.Length && generalSlotTexts[i] != null)
                     {
                         generalSlotTexts[i].text = $"<b>{edict.EdictName}</b>\n<size=75%>슬롯 {PolarityLabel(SlotPolarity(i + 1))} / 카드 {PolarityLabel(edict.Polarity)}</size>\n비용 <b><color={costHex}>{cost}</color></b> (기본 {edict.SyncCost})";
@@ -320,16 +352,22 @@ namespace CheckmateRPG.UI
                     }
                     if (i < generalSlotFrames.Length && generalSlotFrames[i] != null)
                     {
-                        generalSlotFrames[i].color = new Color(0.18f, 0.18f, 0.22f, 1f);
+                        generalSlotFrames[i].color = OutgameStyle.SurfaceCard;
                     }
                 }
             }
 
+            RenderSlotDetails(absoluteSlotButton,currentAbsoluteEdict,-1);
+            for(int i=0;i<generalSlotButtons.Length;i++)
+                RenderSlotDetails(generalSlotButtons[i],i<currentGeneralEdicts.Count?currentGeneralEdicts[i]:null,i);
+            var track = TacticalLayout.Panel(transform,"CapacityTrack",OutgameStyle.SurfaceCard,.05f,.49f,.25f,.009f);
+            TacticalLayout.Panel(track.transform,"Fill",totalUsed <= maxCapacity ? OutgameStyle.AccentGold : OutgameStyle.AccentRed,0,0,maxCapacity > 0 ? Mathf.Clamp01((float)totalUsed / maxCapacity) : 0,1);
+            if (selectorModal) selectorModal.transform.SetAsLastSibling();
             // 3. Render Capacity Meter
             if (capacityMeterText != null)
             {
-                string drainColor = totalUsed <= maxCapacity ? "#00E5FF" : "#FF3333";
-                capacityMeterText.text = $"싱크로 수용량 <color={drainColor}><b>{totalUsed}</b></color> / <b>{maxCapacity}</b>\n<size=65%>슈트 기본 {CapacityData?.BaseCapacity ?? 0} + 플레이 TP {KingSave?.PlayTP ?? 0} + 절대 칙령 보너스</size>";
+                string drainColor = totalUsed <= maxCapacity ? "#C9D4D0" : "#DB7671";
+                capacityMeterText.text = $"<size=17>CAPACITY / 싱크로 수용량</size>\n<size=48><color={drainColor}><b>{totalUsed}</b></color> / {maxCapacity}</size>\n<size=17>슈트 기본 {CapacityData?.BaseCapacity ?? 0} + 기존 보정 {KingSave?.PlayTP ?? 0}\n절대 칙령 보너스 {maxCapacity-(CapacityData?.BaseCapacity??0)-Mathf.Max(0,KingSave?.PlayTP??0)}</size>";
 
                 bool hasEdictContent = DeckManager.Instance != null && DeckManager.Instance.AllEdicts != null && DeckManager.Instance.AllEdicts.Count > 0;
                 if (!hasEdictContent)
@@ -340,13 +378,46 @@ namespace CheckmateRPG.UI
             }
         }
 
+        private void RenderSlotDetails(Button button,EdictData edict,int slot)
+        {
+            if(!button)return;
+            OutgameStyle.ApplyPrimaryButtonStyle(button);
+            var accent=slot<0?OutgameStyle.AccentGold:OutgameStyle.BorderSubtle;
+            TacticalLayout.Panel(button.transform,"SlotRule",accent,0,0,1,.009f);
+            var code=TacticalLayout.Label(button.transform,"SlotCode",slot<0?"ABSOLUTE / 00":$"GENERAL / {slot+1:00}",14,OutgameStyle.TextMuted,.08f,.86f,.84f,.08f);
+            code.overflowMode=TextOverflowModes.Overflow;
+            if(slot<0)
+            {
+                TacticalLayout.Label(button.transform,"Mark","K",45,accent,.06f,.16f,.10f,.62f).overflowMode=TextOverflowModes.Overflow;
+                return;
+            }
+            var text=new StringBuilder();
+            if(edict?.Bonuses!=null)foreach(var bonus in edict.Bonuses)
+            {
+                string name=EffectName(bonus.Stat);
+                if(bonus.FlatBonus!=0)text.Append(name).Append(' ').Append(bonus.FlatBonus.ToString("+0.##;-0.##")).Append('\n');
+                if(bonus.PercentBonus!=0)text.Append(name).Append(' ').Append(bonus.PercentBonus.ToString("+0%;-0%")).Append('\n');
+            }
+            var effects=TacticalLayout.Label(button.transform,"Effects",edict==null?"+\n선택하여 칙령 장착":text.Length>0?text.ToString():"능력치 보너스 없음",18,OutgameStyle.TextMuted,.08f,.06f,.84f,.35f);
+            effects.textWrappingMode=TextWrappingModes.Normal;effects.alignment=TextAlignmentOptions.TopLeft;
+            TacticalLayout.Panel(button.transform,"EffectDivider",OutgameStyle.BorderSubtle,.08f,.43f,.84f,.002f);
+        }
+
+        private static string EffectName(MetaStatType stat)=>stat switch
+        {
+            MetaStatType.MaxHealth=>"최대 체력",MetaStatType.AttackDamage=>"공격력",MetaStatType.Defense=>"방어력",
+            MetaStatType.Resistance=>"마법 저항",MetaStatType.MoveRange=>"이동 범위",MetaStatType.AttackRange=>"공격 범위",
+            MetaStatType.MoveCostAP=>"이동 AP",MetaStatType.AttackCostAP=>"공격 AP",MetaStatType.SupportPower=>"지원 계수",
+            MetaStatType.MaxSP=>"최대 SP",MetaStatType.ActionSpeed=>"행동 속도",_=>stat.ToString()
+        };
+
         private Color GetPolarityColor(PolarityType type, bool isAbsolute)
         {
             float alpha = isAbsolute ? 0.95f : 0.85f;
             return type switch
             {
-                PolarityType.Order => new Color(0.12f, 0.35f, 0.7f, alpha),    // Blue Order Circuit
-                PolarityType.Chaos => new Color(0.7f, 0.15f, 0.18f, alpha),    // Red Chaos Circuit
+                PolarityType.Order => new Color(.24f,.29f,.30f,alpha),    // Blue Order Circuit
+                PolarityType.Chaos => new Color(.35f,.27f,.26f,alpha),    // Red Chaos Circuit
                 PolarityType.Neutral => new Color(0.4f, 0.4f, 0.45f, alpha),   // Steel Neutral
                 _ => new Color(0.2f, 0.2f, 0.25f, alpha)
             };

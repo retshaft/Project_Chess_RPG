@@ -141,7 +141,7 @@ namespace CheckmateRPG.UI
             int enhanceCost = stage * 30;
             if (enhanceCostText != null)
             {
-                enhanceCostText.text = stage >= 5 ? "MAX STAGE" : $"Breakthrough ({enhanceCost} TP)";
+                enhanceCostText.text = stage >= 3 ? "돌파 완료" : $"증표 {(stage==1?5:15)} + 크레딧 {(stage==1?10000:40000):N0}";
             }
 
             // AP Discount indication from ResonanceSystem
@@ -225,25 +225,10 @@ namespace CheckmateRPG.UI
             var prog = GetOrCreateProgression(selectedUnit.name);
             if (prog == null) return;
 
-            if (prog.ResonanceStage >= 5)
-            {
-                Debug.Log("[RosterUI] Resonance is already at maximum stage (5)!");
-                return;
-            }
-
-            int cost = prog.ResonanceStage * 30;
-            if (SaveManager.Instance != null && SaveManager.Instance.CurrentData != null)
-            {
-                if (SaveManager.Instance.CurrentData.TacticalPoints < cost)
-                {
-                    if (enhanceCostText) enhanceCostText.text = $"TP 부족 · 필요 {cost} / 보유 {SaveManager.Instance.CurrentData.TacticalPoints}";
-                    return;
-                }
-                SaveManager.Instance.CurrentData.TacticalPoints -= cost;
-                prog.ResonanceStage++;
-                SaveManager.Instance.SaveGame();
-            }
-
+            var manager=SaveManager.EnsureInstance();
+            if (!EconomyService.TryUpgradeResonance(manager.CurrentData,selectedUnit.name,out string reason))
+            {if(enhanceCostText)enhanceCostText.text=reason;return;}
+            manager.SaveGame();
             RefreshUnitDetails();
         }
 
@@ -277,9 +262,10 @@ namespace CheckmateRPG.UI
             var prog = GetOrCreateProgression(selectedUnit != null ? selectedUnit.name : "");
             if (prog == null) return;
 
-            int currentTP = SaveManager.Instance != null && SaveManager.Instance.CurrentData != null 
-                ? SaveManager.Instance.CurrentData.TacticalPoints : 100;
-
+            int spent=0;
+            foreach(var n in DeckManager.Instance.AllNotationNodes)
+                if(n!=null && prog.UnlockedNodeIds.Contains(n.NodeId))spent+=Mathf.Max(0,n.TPCost);
+            int currentTP=Mathf.Max(0,EconomyService.TotalNotationTP(prog)-spent);
             if (tpBudgetText != null)
             {
                 tpBudgetText.text = $"Tactical Points Budget: <color=#00FFCC>{currentTP} TP</color>";
@@ -360,12 +346,12 @@ namespace CheckmateRPG.UI
                 }
                 if (SaveManager.Instance != null && SaveManager.Instance.CurrentData != null)
                 {
-                    if (SaveManager.Instance.CurrentData.TacticalPoints < node.TPCost)
+                    if (currentTP < node.TPCost)
                     {
-                        if (tpBudgetText) tpBudgetText.text = $"TP 부족 · 필요 {node.TPCost} / 보유 {SaveManager.Instance.CurrentData.TacticalPoints}";
+                        if (tpBudgetText) tpBudgetText.text = $"TP 부족 · 필요 {node.TPCost} / 보유 {currentTP}";
                         return;
                     }
-                    SaveManager.Instance.CurrentData.TacticalPoints -= node.TPCost;
+
                     prog.UnlockedNodeIds.Add(node.NodeId);
                     SaveManager.Instance.SaveGame();
                     RefreshNotationCircuit();

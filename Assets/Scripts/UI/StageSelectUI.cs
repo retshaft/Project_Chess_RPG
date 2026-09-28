@@ -28,15 +28,16 @@ namespace CheckmateRPG.UI
 
         private StageData _selectedStage;
         private readonly Dictionary<StageData, Button> _stageButtons = new Dictionary<StageData, Button>();
+        private readonly Dictionary<StageData, Button> _chartButtons = new Dictionary<StageData, Button>();
 
         // 확정된 공통 Outgame 스타일 팔레트
-        private static readonly Color SurfaceColor = new Color(0.04f, 0.055f, 0.085f, 1f);
-        private static readonly Color ModalBgColor = new Color(0.025f, 0.038f, 0.06f, 0.96f);
-        private static readonly Color ModalCardColor = new Color(0.065f, 0.095f, 0.14f, 1f);
-        private static readonly Color AccentColor = new Color(0.23f, 0.86f, 0.87f, 1f);
-        private static readonly Color NormalBtnColor = new Color(0.1f, 0.17f, 0.23f, 1f);
-        private static readonly Color SelectedBtnColor = new Color(0.14f, 0.38f, 0.44f, 1f);
-        private static readonly Color DisabledBtnColor = new Color(0.16f, 0.19f, 0.22f, 0.65f);
+        private static readonly Color SurfaceColor = OutgameStyle.BackgroundBase;
+        private static readonly Color ModalBgColor = OutgameStyle.SurfaceDark;
+        private static readonly Color ModalCardColor = OutgameStyle.SurfaceCard;
+        private static readonly Color AccentColor = OutgameStyle.TextWhite;
+        private static readonly Color NormalBtnColor = OutgameStyle.SurfaceCard;
+        private static readonly Color SelectedBtnColor = OutgameStyle.SurfaceCardLight;
+        private static readonly Color DisabledBtnColor = OutgameStyle.TextDisabled;
 
         private void Awake()
         {
@@ -77,15 +78,20 @@ namespace CheckmateRPG.UI
 
         private void LoadStagesIfEmpty()
         {
-            if (_availableStages == null || _availableStages.Count == 0)
+            if (_availableStages == null) _availableStages = new List<StageData>();
+            foreach (var stage in Resources.LoadAll<StageData>("Stages"))
             {
-                var stages = Resources.LoadAll<StageData>("Stages");
-                if (stages != null && stages.Length > 0)
-                {
-                    if (_availableStages == null) _availableStages = new List<StageData>();
-                    _availableStages.AddRange(stages);
-                }
+                if (stage != null && !_availableStages.Contains(stage)) _availableStages.Add(stage);
             }
+            _availableStages.Sort((a, b) =>
+            {
+                bool readyA = a != null && a.TryGetReadiness(out _);
+                bool readyB = b != null && b.TryGetReadiness(out _);
+                int readiness = readyB.CompareTo(readyA);
+                if (readiness != 0) return readiness;
+                int level = (a != null ? a.RecommendedLevel : 0).CompareTo(b != null ? b.RecommendedLevel : 0);
+                return level != 0 ? level : string.CompareOrdinal(a != null ? a.StageID : "", b != null ? b.StageID : "");
+            });
         }
 
         public void RefreshUI()
@@ -159,8 +165,9 @@ namespace CheckmateRPG.UI
                     bool isCleared = saveData != null && saveData.ClearedStages != null &&
                                      (saveData.ClearedStages.Contains(stageKey) || saveData.ClearedStages.Contains(stage.name));
 
-                    string clearBadge = isCleared ? "<color=#00E5FF>[클리어 완료]</color> " : "<color=#FFB300>[작전 가능]</color> ";
-                    string levelBadge = stage.RecommendedLevel > 0 ? $"<size=80%><color=#8A94A6>Lv.{stage.RecommendedLevel}</color></size> " : "";
+                    string clearBadge = isCleared ? "<color=#C9D4D0>[클리어 완료]</color> " : "<color=#D7BB79>[작전 가능]</color> ";
+                    if (!stage.TryGetReadiness(out _)) clearBadge = "<color=#AAAAAA>[준비 중]</color> ";
+                    string levelBadge = stage.RecommendedLevel > 0 ? $"<size=80%><color=#B1B7B4>Lv.{stage.RecommendedLevel}</color></size> " : "";
                     string titleText = $"{clearBadge}{levelBadge}<b>{stage.StageID}</b> : {stage.StageName}";
 
                     var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
@@ -213,16 +220,19 @@ namespace CheckmateRPG.UI
         private void UpdateStageButtonVisual(Button btn, bool isSelected)
         {
             if (btn == null) return;
+            OutgameStyle.ApplyPrimaryButtonStyle(btn);
             var img = btn.GetComponent<Image>();
             if (img != null)
             {
-                img.color = isSelected ? SelectedBtnColor : NormalBtnColor;
+                img.color = Color.white;
+                var colors = btn.colors; colors.normalColor = isSelected ? SelectedBtnColor : NormalBtnColor; btn.colors = colors;
             }
         }
 
         private void OnStageSelected(StageData stage)
         {
             _selectedStage = stage;
+            foreach (var item in _chartButtons) OutgameStyle.ApplySelectionStyle(item.Value,item.Key==stage);
 
             foreach (var kvp in _stageButtons)
             {
@@ -254,7 +264,7 @@ namespace CheckmateRPG.UI
 
             if (_stageTitleText != null)
             {
-                string statusTag = isCleared ? "<color=#00FFCC>[클리어]</color> " : "<color=#FFD700>[작전 미완료]</color> ";
+                string statusTag = isCleared ? "<color=#B8D1BC>[클리어]</color> " : "<color=#D7BB79>[작전 미완료]</color> ";
                 string levelInfo = stage.RecommendedLevel > 0 ? $" <size=75%><color=#AAAAAA>(권장 레벨 Lv.{stage.RecommendedLevel})</color></size>" : "";
                 _stageTitleText.text = $"{statusTag}<b>[{stage.StageID}]</b> {stage.StageName}{levelInfo}";
             }
@@ -262,7 +272,7 @@ namespace CheckmateRPG.UI
             if (_objectiveText != null)
             {
                 string objName = stage.Objective == ObjectiveType.Annihilation ? "섬멸전 (적 전원 격파)" : "체크메이트 (적 지휘관 킹 처치)";
-                _objectiveText.text = $"• 작전 목표: <color=#FF8800><b>{objName}</b></color>";
+                _objectiveText.text = $"• 작전 목표: <color=#D7BB79><b>{objName}</b></color>";
             }
 
             if (_descriptionText != null)
@@ -275,7 +285,7 @@ namespace CheckmateRPG.UI
                 if (!string.IsNullOrEmpty(stage.TacticalBriefing))
                 {
                     if (sb.Length > 0) sb.AppendLine();
-                    sb.Append("<color=#66CCFF><b>[전술 브리핑]</b></color>\n");
+                    sb.Append("<color=#C9D4D0><b>[전술 브리핑]</b></color>\n");
                     sb.Append(stage.TacticalBriefing);
                 }
                 if (sb.Length == 0)
@@ -290,7 +300,7 @@ namespace CheckmateRPG.UI
                 int totalEnemies = stage.EnemySpawns != null ? stage.EnemySpawns.Count : 0;
                 if (totalEnemies == 0)
                 {
-                    _enemyIntelText.text = "• 적군 병력: <color=#AAAAAA>추적된 적 정보 없음 (기본 주둔군 배치)</color>";
+                    _enemyIntelText.text = "• 적군 병력: <color=#AAAAAA>배치 준비 중 · 출격 불가</color>";
                 }
                 else
                 {
@@ -314,29 +324,15 @@ namespace CheckmateRPG.UI
 
             if (_rewardText != null)
             {
-                int repeatTP = stage.RewardTP > 0 ? stage.RewardTP : 50;
-                int firstBonusTP = Mathf.Max(0, stage.FirstClearBonusTP);
-
                 var sb = new StringBuilder();
-                sb.Append("• 보상 안내:\n");
-
-                if (isCleared)
-                {
-                    sb.Append($"  - 작전 반복 보상: <color=#00FFFF>+{repeatTP} TP</color> (반복 지급)\n");
-                    sb.Append("  - <color=#888888>첫 클리어 보너스: 지급 완료</color>");
-                }
+                if (!stage.EconomyConfigured) sb.Append("전력 소모·크레딧·기록 칩 보상 설정 필요\n");
                 else
                 {
-                    int totalFirstTP = repeatTP + firstBonusTP;
-                    sb.Append($"  - 첫 클리어 지급: <color=#FFD700><b>+{totalFirstTP} TP</b></color>");
-                    if (firstBonusTP > 0)
-                    {
-                        sb.Append($" (기본 {repeatTP} + 첫 클리어 보너스 {firstBonusTP})");
-                    }
-                    sb.Append("\n");
-                    sb.Append($"  - 반복 클리어 시: <color=#00FFFF>+{repeatTP} TP</color>");
+                    long repeatCredits=stage.RepeatCredits>0?stage.RepeatCredits:stage.RewardCredits;
+                    int repeatT1=stage.RepeatChipT1, repeatT2=stage.RepeatChipT2, repeatT3=stage.RepeatChipT3, repeatT4=stage.RepeatChipT4;
+                    sb.Append($"출격 전력  {EconomyService.GetSanityCost(stage)}\n반복 크레딧  +{repeatCredits:N0}\n반복 기록 칩  T1 {repeatT1} / T2 {repeatT2} / T3 {repeatT3} / T4 {repeatT4}\n");
+                    sb.Append(isCleared ? "첫 클리어 보상 지급 완료" : $"첫 클리어: 크레딧 {(stage.FirstClearCredits>0?stage.FirstClearCredits:stage.FirstClearBonusCredits):N0} / 공명석 {stage.FirstClearCrystals}");
                 }
-
                 if (stage.ClearRewards != null && stage.ClearRewards.Count > 0)
                 {
                     var unitNames = new List<string>();
@@ -346,13 +342,14 @@ namespace CheckmateRPG.UI
                     }
                     if (unitNames.Count > 0)
                     {
-                        sb.Append($"\n  - 오퍼레이터 동기화 보상: <color=#00FFCC>{string.Join(", ", unitNames)}</color>");
+                        sb.Append($"\n  - 오퍼레이터 동기화 보상: <color=#B8D1BC>{string.Join(", ", unitNames)}</color>");
                     }
                 }
                 _rewardText.text = sb.ToString();
             }
 
-            bool hasContent = stage.EnemySpawns != null && stage.EnemySpawns.Count > 0;
+            bool hasContent = stage.TryGetReadiness(out string readiness);
+            if (!hasContent && _enemyIntelText != null) _enemyIntelText.text += "\n" + readiness;
             if (_confirmSortieButton != null)
             {
                 _confirmSortieButton.interactable = hasContent;
@@ -360,12 +357,12 @@ namespace CheckmateRPG.UI
                 if (btnText != null)
                 {
                     btnText.text = hasContent ? "작전 출격 준비" : "콘텐츠 준비 중";
-                    btnText.color = hasContent ? AccentColor : new Color(0.6f, 0.6f, 0.6f, 1f);
+                    btnText.color = OutgameStyle.Ink;
                 }
                 var btnImg = _confirmSortieButton.GetComponent<Image>();
                 if (btnImg != null)
                 {
-                    btnImg.color = hasContent ? NormalBtnColor : DisabledBtnColor;
+                    OutgameStyle.ApplyCombatButtonStyle(_confirmSortieButton);
                 }
             }
         }
@@ -383,14 +380,16 @@ namespace CheckmateRPG.UI
         {
             if (_selectedStage == null) return;
 
-            bool hasContent = _selectedStage.EnemySpawns != null && _selectedStage.EnemySpawns.Count > 0;
+            bool hasContent = _selectedStage.TryGetReadiness(out _);
             if (!hasContent)
             {
                 Debug.LogWarning($"[StageSelectUI] {_selectedStage.StageName} 콘텐츠가 준비되지 않아 출격할 수 없습니다.");
                 return;
             }
 
-            if (_briefingModalPanel != null) _briefingModalPanel.SetActive(false);
+            if (!EconomyService.CanEnter(SaveManager.EnsureInstance().CurrentData,_selectedStage,System.DateTime.UtcNow,out string reason))
+            { EconomyDialog.Open(false,reason); return; }
+            CloseBriefingModal();
 
             if (StageManager.Instance != null)
             {
@@ -418,7 +417,61 @@ namespace CheckmateRPG.UI
                 }
             }
 
+            TacticalLayout.Label(transform,"OperationsTitle","작전 구역",44,OutgameStyle.TextWhite,.05f,.77f,.42f,.08f);
+            TacticalLayout.Label(transform,"OperationsCode","02 / OPERATIONS  —  전술 브리핑",16,OutgameStyle.TextMuted,.052f,.845f,.5f,.035f);
+            if (_stageListContainer && _stageListContainer.parent == transform)
+            {
+                var viewport = TacticalLayout.Panel(transform,"StageViewport",OutgameStyle.BackgroundBase,.05f,.15f,.53f,.59f);
+                viewport.raycastTarget = true;
+                viewport.gameObject.AddComponent<RectMask2D>();
+                _stageListContainer.SetParent(viewport.transform,false);
+                var content = (RectTransform)_stageListContainer;
+                content.anchorMin = new Vector2(0,1); content.anchorMax = Vector2.one;
+                content.pivot = new Vector2(.5f,1); content.anchoredPosition = Vector2.zero; content.sizeDelta = Vector2.zero;
+                var fit = content.gameObject.AddComponent<ContentSizeFitter>(); fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                var scroll = viewport.gameObject.AddComponent<ScrollRect>(); scroll.viewport = viewport.rectTransform; scroll.content = content;
+                scroll.horizontal = false; scroll.scrollSensitivity = 35; scroll.movementType = ScrollRect.MovementType.Clamped;
+            }
+            BuildOperationChart();
+            if (_briefingModalPanel) _briefingModalPanel.transform.SetAsLastSibling();
             WireModalComponents();
+        }
+
+        private void BuildOperationChart()
+        {
+            // A schematic index of existing missions; connectors do not impose unlock rules.
+            if (transform.Find("SectorIntel")) return;
+            var chart=TacticalLayout.Panel(transform,"SectorIntel",OutgameStyle.Paper,.62f,.15f,.33f,.59f);
+            TacticalLayout.Label(chart.transform,"Code","TACTICAL INDEX / 01",16,OutgameStyle.Ink,.06f,.90f,.88f,.05f);
+            TacticalLayout.Label(chart.transform,"Title","정규 작전",30,OutgameStyle.Ink,.06f,.80f,.88f,.09f);
+            TacticalLayout.Label(chart.transform,"Help","구역 선택 → 전술 브리핑",17,OutgameStyle.Ink,.06f,.035f,.88f,.06f);
+            for(int i=1;i<8;i++)
+            {
+                TacticalLayout.Panel(chart.transform,"GridH"+i,new Color(0,0,0,.07f),.04f,.11f+i*.09f,.92f,.001f);
+                TacticalLayout.Panel(chart.transform,"GridV"+i,new Color(0,0,0,.07f),.04f+i*.115f,.11f,.001f,.66f);
+            }
+            var stages=_availableStages.FindAll(s=>s!=null && !string.IsNullOrEmpty(s.StageID) && s.StageID.StartsWith("OP",System.StringComparison.Ordinal));
+            stages.Sort((a,b)=>string.CompareOrdinal(a.StageID,b.StageID));
+            float step=.62f/Mathf.Max(1,stages.Count);
+            for(int i=0;i<stages.Count;i++)
+            {
+                var stage=stages[i]; float y=.72f-i*step; float x=i%2==0?.10f:.39f;
+                if(i>0)
+                {
+                    float previousX=(i-1)%2==0?.10f:.39f;
+                    TacticalLayout.Panel(chart.transform,"RouteH"+i,OutgameStyle.BorderSubtle,Mathf.Min(x,previousX)+.16f,y+step/2,.29f,.002f);
+                    TacticalLayout.Panel(chart.transform,"RouteV"+i,OutgameStyle.BorderSubtle,x+.16f,y,.002f,step/2);
+                    TacticalLayout.Panel(chart.transform,"RouteUpper"+i,OutgameStyle.BorderSubtle,previousX+.16f,y+step/2,.002f,step/2);
+                }
+                var node=TacticalLayout.Panel(chart.transform,"Node_"+stage.StageID,OutgameStyle.Ink,x,y,.46f,Mathf.Min(.09f,step*.72f));
+                node.raycastTarget=true;
+                var button=node.gameObject.AddComponent<Button>();button.targetGraphic=node;
+                var title=TacticalLayout.Label(node.transform,"Label",stage.StageID,23,OutgameStyle.TextWhite,.12f,.1f,.78f,.8f);
+                title.overflowMode=TextOverflowModes.Overflow;
+                OutgameStyle.ApplyPrimaryButtonStyle(button,title);
+                button.onClick.AddListener(()=>OnStageSelected(stage));
+                _chartButtons[stage]=button;
+            }
         }
 
         private void WireModalComponents()
@@ -514,7 +567,7 @@ namespace CheckmateRPG.UI
             scrollRt.anchorMax = new Vector2(1f, 1f);
             scrollRt.offsetMin = new Vector2(24f, 85f);
             scrollRt.offsetMax = new Vector2(-24f, -80f);
-            scrollGo.GetComponent<Image>().color = new Color(0.04f, 0.06f, 0.09f, 0.8f);
+            scrollGo.GetComponent<Image>().color = OutgameStyle.SurfaceDark;
 
             var scrollRect = scrollGo.GetComponent<ScrollRect>();
             scrollRect.horizontal = false;
@@ -599,7 +652,7 @@ namespace CheckmateRPG.UI
             if (onClick != null) btn.onClick.AddListener(onClick);
 
             var label = CreateTmpLabel(go.transform, "Text", text, 20, TextAlignmentOptions.Center);
-            label.color = AccentColor;
+            OutgameStyle.ApplyPrimaryButtonStyle(btn, label);
             var labelRt = label.rectTransform;
             labelRt.anchorMin = Vector2.zero;
             labelRt.anchorMax = Vector2.one;

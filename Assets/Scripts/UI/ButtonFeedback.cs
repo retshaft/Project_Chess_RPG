@@ -25,7 +25,7 @@ namespace CheckmateRPG.UI
             if (_outline == null)
             {
                 _outline = gameObject.AddComponent<Outline>();
-                _outline.effectDistance = new Vector2(2, -2);
+                _outline.effectDistance = new Vector2(1, -1);
             }
             _outline.enabled = false;
         }
@@ -56,7 +56,7 @@ namespace CheckmateRPG.UI
         {
             if (_selectable != null && !_selectable.interactable) return;
             ScaleTo(_hoverScale, _animationDuration);
-            if (_outline != null) { _outline.effectColor = _hoverOutlineColor; _outline.enabled = true; }
+            if (_outline != null) { _outline.effectColor = OutgameStyle.TextMuted; _outline.enabled = true; }
         }
 
         public void OnPointerExit(PointerEventData eventData)
@@ -77,7 +77,7 @@ namespace CheckmateRPG.UI
         {
             if (_selectable != null && !_selectable.interactable) return;
             ScaleTo(_hoverScale, _animationDuration * 0.5f);
-            if (_outline != null) _outline.effectColor = _hoverOutlineColor;
+            if (_outline != null) _outline.effectColor = OutgameStyle.TextMuted;
         }
         
         private void OnDisable()

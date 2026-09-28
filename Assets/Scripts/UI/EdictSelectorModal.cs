@@ -58,7 +58,7 @@ namespace CheckmateRPG.UI
                 windowRt.anchorMin = windowRt.anchorMax = new Vector2(0.5f, 0.5f);
                 windowRt.sizeDelta = new Vector2(1150f, 780f);
                 var windowImg = windowGo.AddComponent<Image>();
-                windowImg.color = new Color(0.09f, 0.1f, 0.13f, 0.98f);
+                windowImg.color = OutgameStyle.SurfaceDark;
 
                 var titleGo = new GameObject("WindowTitle", typeof(RectTransform));
                 titleGo.transform.SetParent(windowGo.transform, false);
@@ -70,29 +70,40 @@ namespace CheckmateRPG.UI
                 titleRt.anchoredPosition = new Vector2(0f, -18f);
                 windowTitleText = titleGo.AddComponent<TextMeshProUGUI>();
                 windowTitleText.fontSize = 30;
-                windowTitleText.alignment = TextAlignmentOptions.Center;
+                windowTitleText.alignment = TextAlignmentOptions.MidlineLeft;
+                titleRt.offsetMin = new Vector2(32f,-88f); titleRt.offsetMax = new Vector2(-230f,-18f);
                 windowTitleText.raycastTarget = false;
 
+                var viewport = TacticalLayout.Panel(windowGo.transform,"CardViewport",OutgameStyle.SurfaceDark,.022f,.04f,.956f,.80f);
+                viewport.raycastTarget = true;
+                viewport.gameObject.AddComponent<RectMask2D>();
                 var gridGo = new GameObject("CardGrid", typeof(RectTransform));
-                gridGo.transform.SetParent(windowGo.transform, false);
+                gridGo.transform.SetParent(viewport.transform, false);
                 var gridRt = (RectTransform)gridGo.transform;
-                gridRt.anchorMin = Vector2.zero;
+                gridRt.anchorMin = new Vector2(0,1);
                 gridRt.anchorMax = Vector2.one;
-                gridRt.offsetMin = new Vector2(25f, 30f);
-                gridRt.offsetMax = new Vector2(-25f, -110f);
+                gridRt.pivot = new Vector2(.5f,1);
+                gridRt.sizeDelta = Vector2.zero;
                 cardGridContainer = gridGo.transform;
                 var grid = gridGo.AddComponent<GridLayoutGroup>();
-                grid.cellSize = new Vector2(190f, 260f);
+                grid.cellSize = new Vector2(202f, 286f);
                 grid.spacing = new Vector2(16f, 16f);
                 grid.childAlignment = TextAnchor.UpperCenter;
                 grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
                 grid.constraintCount = 5;
+                gridGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                var scroll = viewport.gameObject.AddComponent<ScrollRect>();
+                scroll.viewport = viewport.rectTransform; scroll.content = gridRt;
+                scroll.horizontal = false; scroll.scrollSensitivity = 35;
+                scroll.movementType = ScrollRect.MovementType.Clamped;
 
-                closeButton = CreateModalButton(windowGo.transform, "CloseButton", "닫기", new Vector2(0f, -24f), new Vector2(180f, 56f));
+                closeButton = CreateModalButton(windowGo.transform, "CloseButton", "닫기", new Vector2(0f, -24f), new Vector2(160f, 50f));
             }
 
             if (closeButton != null)
             {
+                TacticalLayout.Place(closeButton.transform,.815f,.9f,.15f,.065f);
+                OutgameStyle.ApplyLightButtonStyle(closeButton);
                 // Awake 시점에는 closeButton이 없어 리스너가 붙지 못했을 수 있다 — 생성 후 확실히 연결.
                 closeButton.onClick.RemoveAllListeners();
                 closeButton.onClick.AddListener(CloseModal);
@@ -134,6 +145,8 @@ namespace CheckmateRPG.UI
             currentCallback = onSelected;
             selectionDescription = describe;
             if (modalPanel) modalPanel.SetActive(true);
+            OutgameUIManager.Instance?.UnregisterModalCloseAction(CloseModal);
+            OutgameUIManager.Instance?.RegisterModalCloseAction(CloseModal);
             if (windowTitleText) windowTitleText.text = filterKind == EdictKind.Absolute 
                 ? "절대 칙령 선택 · 수용량과 효과 비교"
                 : "일반 칙령 선택 · 슬롯 비용과 효과 비교";
@@ -144,11 +157,12 @@ namespace CheckmateRPG.UI
         public void CloseModal()
         {
             if (modalPanel) modalPanel.SetActive(false);
+            OutgameUIManager.Instance?.UnregisterModalCloseAction(CloseModal);
         }
 
         private void RefreshCardList(EdictKind filterKind)
         {
-            foreach (var c in activeCards) Destroy(c);
+            foreach (var c in activeCards) { c.SetActive(false); Destroy(c); }
             activeCards.Clear();
 
             if (cardGridContainer == null) return;
@@ -188,7 +202,8 @@ namespace CheckmateRPG.UI
             btn.onClick.AddListener(() => onClick());
 
             var img = obj.AddComponent<Image>();
-            img.color = GetCardFrameColor(edict);
+            img.color = OutgameStyle.SurfaceCard;
+            OutgameStyle.ApplyPrimaryButtonStyle(btn);
 
             var layout = obj.AddComponent<LayoutElement>();
             layout.preferredWidth = 180;
@@ -199,7 +214,7 @@ namespace CheckmateRPG.UI
             headerObj.transform.SetParent(obj.transform, false);
             var headerTmp = headerObj.AddComponent<TextMeshProUGUI>();
             headerTmp.text = edict != null 
-                ? $"<color=yellow>{(edict.Kind == EdictKind.Absolute ? "수용량 +" : "기본 비용 ")}{edict.SyncCost}</color> · <color=#00E5FF>{SynchroBoardUI.PolarityLabel(edict.Polarity)}</color>"
+                ? $"<color=#D7BB79>{(edict.Kind == EdictKind.Absolute ? "수용량 +" : "기본 비용 ")}{edict.SyncCost}</color> · <color=#C9D4D0>{SynchroBoardUI.PolarityLabel(edict.Polarity)}</color>"
                 : "";
             headerTmp.fontSize = 18;
             headerTmp.raycastTarget = false;
@@ -242,10 +257,21 @@ namespace CheckmateRPG.UI
             bodyTmp.color = Color.white;
             var bRect = bodyTmp.GetComponent<RectTransform>();
             bRect.anchorMin = Vector2.zero;
-            bRect.anchorMax = new Vector2(1f, 0.8f);
+            bRect.anchorMax = new Vector2(1f, 0.63f);
             bRect.offsetMin = new Vector2(10, 10);
             bRect.offsetMax = new Vector2(-10, -10);
 
+            var frame = GetCardFrameColor(edict);
+            TacticalLayout.Place(headerTmp.transform,.07f,.86f,.86f,.10f);
+            headerTmp.fontSize = 14;
+            headerTmp.font = UiFontProvider.GetTmpFont(); bodyTmp.font = UiFontProvider.GetTmpFont();
+            TacticalLayout.Panel(obj.transform,"PolarityRule",frame,.025f,.98f,.95f,.01f);
+            TacticalLayout.Panel(obj.transform,"LeftFrame",frame,.025f,.025f,.006f,.96f);
+            TacticalLayout.Panel(obj.transform,"RightFrame",frame,.969f,.025f,.006f,.96f);
+            TacticalLayout.Panel(obj.transform,"BottomFrame",frame,.025f,.025f,.95f,.01f);
+            var glyph=TacticalLayout.Label(obj.transform,"CircuitGlyph",edict==null?"−":edict.Kind==EdictKind.Absolute?"K":edict.Polarity==PolarityType.Order?"/ /":edict.Polarity==PolarityType.Chaos?"×":"−",32,frame,.1f,.64f,.8f,.19f);
+            glyph.alignment=TextAlignmentOptions.Center;glyph.overflowMode=TextOverflowModes.Overflow;
+            TacticalLayout.Panel(obj.transform,"EffectRule",frame,.07f,.63f,.86f,.003f);
             return obj;
         }
 
@@ -260,15 +286,9 @@ namespace CheckmateRPG.UI
 
         private Color GetCardFrameColor(EdictData edict)
         {
-            if (edict == null) return new Color(0.2f, 0.2f, 0.22f, 1f); // Muted grey for unequip
-            if (edict.Kind == EdictKind.Absolute) return new Color(0.35f, 0.28f, 0.1f, 1f); // Gold/Bronze Aura style
-            
-            return edict.Polarity switch
-            {
-                PolarityType.Order => new Color(0.15f, 0.25f, 0.45f, 1f),  // Deep blue order circuit
-                PolarityType.Chaos => new Color(0.45f, 0.15f, 0.18f, 1f),  // Crimson chaos circuit
-                _ => new Color(0.25f, 0.25f, 0.28f, 1f)                    // Neutral metallic
-            };
+            if (edict == null) return OutgameStyle.BorderSubtle;
+            if (edict.Kind == EdictKind.Absolute) return OutgameStyle.AccentGold;
+            return edict.Polarity == PolarityType.Chaos ? OutgameStyle.AccentRed : edict.Polarity == PolarityType.Order ? OutgameStyle.AccentCyan : OutgameStyle.TextMuted;
         }
     }
 }

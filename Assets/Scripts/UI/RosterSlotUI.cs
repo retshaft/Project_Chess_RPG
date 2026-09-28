@@ -37,18 +37,28 @@ namespace CheckmateRPG.UI
         public void SetUnit(UnitData unit)
         {
             CurrentUnit = unit;
+            var cost = TacticalLayout.Label(transform, "FormationUnitCost",
+                unit != null ? $"COST  {unit.DeploymentCost}" : "", 18,
+                OutgameStyle.TextWhite, .08f, .89f, .84f, .09f);
+            cost.alignment = TextAlignmentOptions.MidlineRight;
+            cost.overflowMode = TextOverflowModes.Overflow;
             if (unit != null)
             {
                 if (_unitNameText != null) 
                 {
-                    string roleTag = SlotIndex == 0 ? "<color=#FFB300>[KING]</color>" : $"<color=#00E5FF>[{unit.PieceType}]</color>";
+                    string roleTag = unit.PieceType == ChessPieceType.King ? "<color=#D7BB79>[KING]</color>" : $"<color=#C9D4D0>[{unit.PieceType}]</color>";
                     _unitNameText.text = $"{roleTag}\n<b>{unit.UnitName}</b>";
-                    _unitNameText.fontSize = 16;
+                    _unitNameText.fontSize = 23;
+                    TacticalLayout.Place(_unitNameText.transform,.06f,.05f,.88f,.28f);
                     _unitNameText.alignment = TextAlignmentOptions.Center;
                 }
                 if (_unitIcon != null) 
                 {
-                    _unitIcon.gameObject.SetActive(true);
+                    _unitIcon.gameObject.SetActive(unit.Icon != null);
+                    _unitIcon.sprite = unit.Icon;
+                    TacticalLayout.Place(_unitIcon.transform,.08f,.36f,.84f,.52f);
+                    _unitIcon.preserveAspect = true;
+                    _unitIcon.raycastTarget = false;
                     if (unit.Icon != null)
                         _unitIcon.sprite = unit.Icon;
                 }
@@ -57,8 +67,9 @@ namespace CheckmateRPG.UI
             {
                 if (_unitNameText != null) 
                 {
-                    _unitNameText.text = "<color=#4A5262>+</color>";
-                    _unitNameText.fontSize = 40;
+                    _unitNameText.text = "미배치";
+                    _unitNameText.fontSize = 20;
+                    TacticalLayout.Place(_unitNameText.transform,.06f,.05f,.88f,.28f);
                     _unitNameText.alignment = TextAlignmentOptions.Center;
                 }
                 if (_unitIcon != null) 
@@ -68,16 +79,19 @@ namespace CheckmateRPG.UI
                 }
             }
             
+            var symbol = TacticalLayout.Label(transform,"PieceMark",unit != null ? (unit.PieceType == ChessPieceType.Knight ? "N" : unit.PieceType.ToString().Substring(0,1)) : "+",76,OutgameStyle.TextDim,.08f,.38f,.84f,.46f);
+            symbol.alignment = TextAlignmentOptions.Center;
+            symbol.gameObject.SetActive(unit == null || unit.Icon == null);
+            TacticalLayout.Panel(transform,"RoleRule",unit != null && unit.PieceType == ChessPieceType.King ? OutgameStyle.AccentGold : OutgameStyle.BorderSubtle,.06f,.32f,.88f,.009f);
             // Action button must always be active to allow clicking empty slots
             if (_actionButton != null)
             {
                 _actionButton.gameObject.SetActive(true);
+                OutgameStyle.ApplyPrimaryButtonStyle(_actionButton,_unitNameText);
                 var btnImg = _actionButton.GetComponent<Image>();
                 if (btnImg != null)
                 {
-                    btnImg.color = unit != null 
-                        ? (SlotIndex == 0 ? new Color(0.18f, 0.16f, 0.12f, 1f) : OutgameStyle.SurfaceCard) 
-                        : OutgameStyle.SurfaceDark;
+                    btnImg.color = Color.white;
                 }
             }
         }

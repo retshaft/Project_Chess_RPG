@@ -216,7 +216,11 @@ namespace CheckmateRPG.Core.Actions
                 if (action == null || action.IsCompleted || !ContainsActor(actorIds, action.ActorId))
                     continue;
 
-                Transition(action, ActionState.Interrupted);
+                // Resolving 상태는 이번 틱에 해약 효과가 이미 적용된 뒤이므로 중단(Interrupted)이
+                // 허용되지 않는다(해약 잠금 구간). 상태 머신 규칙에 맞게 완료로 마무리한다.
+                Transition(action, action.State == ActionState.Resolving
+                    ? ActionState.Completed
+                    : ActionState.Interrupted);
                 _activeActions.Remove(action.ActionId);
                 _pendingInterrupts.Remove(action.ActionId);
                 _interruptContextByTarget.Remove(action.ActionId);

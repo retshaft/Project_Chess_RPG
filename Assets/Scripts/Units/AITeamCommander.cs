@@ -104,9 +104,11 @@ namespace CheckmateRPG.Units
             }
         }
 
+        [SerializeField] private bool _showDebugAP;
+
         private void OnGUI()
         {
-            if (!IsEnemyTeam) return;
+            if (!IsEnemyTeam || !_showDebugAP) return;
             
             GUIStyle style = new GUIStyle();
             style.fontSize = 24;

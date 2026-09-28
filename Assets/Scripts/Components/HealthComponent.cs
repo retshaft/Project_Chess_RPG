@@ -80,6 +80,7 @@ namespace CheckmateRPG.Components
             _defense = data.Defense;
             _resistance = Mathf.Clamp01(data.Resistance); // 저항력은 % 감소이므로 0~1 유지
             _defenseBonus = 0f;
+            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
         }
 
         // ─── IDamageable Implementation ───────────────────────────────────────────
