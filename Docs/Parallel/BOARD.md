@@ -28,3 +28,9 @@
 - 원본 프로젝트의 적 유닛 데이터 8개는 기존 미커밋 변경으로 보존한다. `Assets/Data/Units/Enemies/Enemy_BlackKnight.asset`, `Enemy_BlackPawn.asset` 및 `Assets/Resources/Units/Enemies/Enemy_Black{Bishop,King,Knight,Pawn,Queen,Rook}.asset`이다.
 - 이 데이터는 bootstrap 워크트리에 포함되지 않는다. 관련 전투·밸런스 과제를 배정하기 전에 메인이 변경을 검토하여 기준에 포함할지 결정한다.
 - 기능 과제는 `Docs/MILESTONES.md`의 현재 우선순위에서 선정한다. 이 보드의 대기 행은 구현 지시가 아니다.
+
+## 2026-09-27 UI 아트 디렉션
+- ui-command-pass | Codex | Review | 칙령 보드/전투 정보창, 배치 비용 제거 및 편성 비용 표시. 144/144 테스트 및 후속 컴파일/Play 확인. Handoffs/ui-command-pass.md.
+- ui-reference-pass | Codex | Review | 대원 카드 갤러리/상세, 칙령 카드 및 스크롤, OP 선택도. 전체 144/144 및 정식 씬 Play 확인. Handoffs/ui-reference-pass.md.
+- ui-art-direction | Codex | Review | Handoffs/ui-art-direction.md. UI 적용, 122/122 테스트, 정식 경로 Play 확인. 기존 스킬/물 오류 잔존.
+- economy-system | Codex | Review | Handoffs/economy-system.md. 4-Tier 재화 저장·회복·충전·레벨/공명·OP-01~05 및 자원 작전 보상·40인 정규 소집 풀 적용, 144/144 통과.

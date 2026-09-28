@@ -1,0 +1,13 @@
+# economy-system
+- 상태: Review
+- 담당: Codex 메인 단독
+- 브랜치: codex/integration
+- 워크트리: C:/PersonalFiles/2026/Task/Unity/Graduation_Project/Graduation_Project_v01
+- 기준 HEAD: c8f5bda23ab5f917177097ebbd82a7d3e2f68319
+- 근거: CURRENCY_AND_ECONOMY_SPECIFICATION v1.0, 동일 한글 문서 및 사용자 구현 요청.
+- 허용: Assets/Scripts/Progression/*.cs, Assets/Scripts/UI/*.cs, Assets/Scripts/Data/StageData.cs, 신규 메타, Assets/Scripts/Testing/EditModeTests/*Economy* 및 BattleRewardServiceTests.cs/OutgameProgressionRegressionTests.cs, Docs/Parallel/{BOARD.md,Tasks/economy-system.md,Handoffs/economy-system.md}, Captures/EconomyReview/.
+- 기존 UI 변경·폰트·스크린샷 보존. 씬/전투 규칙/에셋 수치 임의 변경 금지.
+- 목표: 신규 계정 재화와 버전 마이그레이션, 전력 회복/충전/출격, 크레딧/공명석 보상, 실제 소집과 중복 증표/천장, 개인 TP 분리, 헤더·부족 모달, 회귀 테스트 및 Play 검증.
+- 미확정 콘텐츠 수치는 설정 필드로 노출하고 소비를 거부하며 명확히 안내. AP/SP 변경 금지.
+- 검증: EditMode 144/144 통과, 정식 OutgameScene에서 재화 헤더·전력 충전 팝업·저장 반영 확인. 레벨·소집 로스터 회귀 포함.
+- 참고: 부관 이미지는 사용자가 직접 설정하는 영역으로 이번 범위에서 건드리지 않음. 새 초상/프리팹이 없는 40인 대원은 ID·성급·기물·직군 메타데이터로 동작하며 정식 UnitData가 추가되면 같은 ID로 자동 대체.
