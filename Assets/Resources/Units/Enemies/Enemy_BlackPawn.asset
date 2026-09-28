@@ -21,13 +21,13 @@ MonoBehaviour:
   BaseRole: "\uCC99\uD6C4\uB300"
   Subclass: 0
   ResonanceRole: 0
-  MaxHealth: 35
-  Defense: 0
+  MaxHealth: 380
+  Defense: 15
   Resistance: 0.1
   Style: 0
   AttackCount: 1
   AttackDamageRatio: 1
-  AttackDamage: 10
+  AttackDamage: 70
   AttackCooldown: 1
   AttackRange: 1
   BasicAttackDamageType: 0
@@ -42,10 +42,10 @@ MonoBehaviour:
   AttackCostAP: 8
   ActionSpeed: 1
   MoveRange: 3
-  SpeedLevel: 1
-  MoveSpeed: 0.8
+  SpeedLevel: 2
+  MoveSpeed: 1.1
   MoveCooldown: 4.5
-  ActionDelay: 2.5
+  ActionDelay: 1.5
   Weight: 1
   IsBoss: 0
   InitialSkillLevels: []

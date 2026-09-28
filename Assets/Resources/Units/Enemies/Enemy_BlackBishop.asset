@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
   AIProfile: {fileID: 0}
   UnitName: Black Bishop
+  Rarity: 3
   Icon: {fileID: 0}
   Prefab: {fileID: 1511322229767056736, guid: 432ebdf8507f65445aca812cb1e085d1, type: 3}
   PieceType: 2
@@ -21,16 +22,17 @@ MonoBehaviour:
   BaseRole: "\uB300\uC8FC\uAD50"
   Subclass: 0
   ResonanceRole: 0
-  MaxHealth: 50
-  Defense: 0
-  Resistance: 0.1
+  MaxHealth: 420
+  Defense: 14
+  Resistance: 0.25
   Style: 0
+  SupportPower: 1
   AttackCount: 1
   AttackDamageRatio: 1
-  AttackDamage: 10
+  AttackDamage: 120
   AttackCooldown: 1
   AttackRange: 1
-  BasicAttackDamageType: 0
+  BasicAttackDamageType: 1
   KillValue: 10
   ChargeType: 0
   MaxSP: 100
@@ -42,10 +44,10 @@ MonoBehaviour:
   AttackCostAP: 24
   ActionSpeed: 1
   MoveRange: 3
-  SpeedLevel: 1
-  MoveSpeed: 0.8
+  SpeedLevel: 2
+  MoveSpeed: 1.1
   MoveCooldown: 1.75
-  ActionDelay: 2.5
+  ActionDelay: 2
   Weight: 2
   IsBoss: 0
   InitialSkillLevels: []

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
   AIProfile: {fileID: 0}
   UnitName: Black Knight
+  Rarity: 3
   Icon: {fileID: 0}
   Prefab: {fileID: 7084689673845775966, guid: 7a4d15eea0d0cac498cd3fc988c19347, type: 3}
   PieceType: 1
@@ -21,13 +22,14 @@ MonoBehaviour:
   BaseRole: "\uB3CC\uACA9\uAE30\uC0AC"
   Subclass: 0
   ResonanceRole: 0
-  MaxHealth: 60
-  Defense: 0
-  Resistance: 0.1
+  MaxHealth: 520
+  Defense: 22
+  Resistance: 0.15
   Style: 0
+  SupportPower: 1
   AttackCount: 1
   AttackDamageRatio: 1
-  AttackDamage: 10
+  AttackDamage: 105
   AttackCooldown: 1
   AttackRange: 1
   BasicAttackDamageType: 0
@@ -42,10 +44,10 @@ MonoBehaviour:
   AttackCostAP: 24
   ActionSpeed: 1
   MoveRange: 3
-  SpeedLevel: 1
-  MoveSpeed: 0.8
+  SpeedLevel: 3
+  MoveSpeed: 1.5
   MoveCooldown: 1.75
-  ActionDelay: 2.5
+  ActionDelay: 1.5
   Weight: 2
   IsBoss: 0
   InitialSkillLevels: []

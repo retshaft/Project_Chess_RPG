@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3627a1b9c1c2426478fa89392812cba5, type: 3}
+  m_Name: CE_01_CreditConvoy
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
+  StageID: CE-1
+  StageName: "군수 수송 보호전 · 초급"
+  Objective: 0
+  RecommendedLevel: 10
+  Description: "수송로를 급습한 적 기동 부대를 격퇴하고 에테르 크레딧 보급품을 확보하세요."
+  TacticalBriefing: "경량 폰 부대와 기동 나이트들이 보급로를 차단하고 있습니다. 전선을 밀어내고 크레딧을 탈환하세요."
+  InitialEnemyAP: 40
+  EnemyAPRegen: 4.5
+  MaxEnemyAP: 100
+  EconomyConfigured: 1
+  OfficialRewardTable: 1
+  SanityCost: 15
+  RepeatCredits: 12000
+  FirstClearCredits: 0
+  RequiredSanity: 15
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 2, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 4, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 5, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 1, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 2
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 6, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 2
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 4, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  ClearRewards: []

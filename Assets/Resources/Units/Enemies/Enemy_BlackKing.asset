@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
   AIProfile: {fileID: 0}
   UnitName: Black King
+  Rarity: 3
   Icon: {fileID: 0}
   Prefab: {fileID: 7280224136315881766, guid: a08f66414462a6648bbe724bdf5709ec, type: 3}
   PieceType: 5
@@ -21,13 +22,14 @@ MonoBehaviour:
   BaseRole: "\uAD70\uC8FC"
   Subclass: 0
   ResonanceRole: 0
-  MaxHealth: 200
-  Defense: 0
-  Resistance: 0.1
+  MaxHealth: 1800
+  Defense: 45
+  Resistance: 0.25
   Style: 0
+  SupportPower: 1
   AttackCount: 1
   AttackDamageRatio: 1
-  AttackDamage: 10
+  AttackDamage: 150
   AttackCooldown: 1
   AttackRange: 1
   BasicAttackDamageType: 0
@@ -42,10 +44,10 @@ MonoBehaviour:
   AttackCostAP: 24
   ActionSpeed: 1
   MoveRange: 3
-  SpeedLevel: 1
-  MoveSpeed: 0.8
+  SpeedLevel: 2
+  MoveSpeed: 1.1
   MoveCooldown: 2
-  ActionDelay: 2.5
+  ActionDelay: 2
   Weight: 5
   IsBoss: 0
   InitialSkillLevels: []

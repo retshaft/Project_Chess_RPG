@@ -13,10 +13,85 @@ MonoBehaviour:
   m_Name: Stage_03_Checkmate
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
   StageID: OP-03
-  StageName: "King's Gambit (\uCCB4\uD06C\uBA54\uC774\uD2B8)"
+  StageName: "Knight's Breach (기사의 돌파)"
   Objective: 1
-  Description: Decisive battle against enemy commander. Bypass enemy defenders and
-    execute Checkmate!
-  EnemySpawns: []
+  RecommendedLevel: 12
+  Description: Decisive battle against enemy commander. Bypass enemy heavy rooks and execute Checkmate!
+  TacticalBriefing: 적 룩 2기가 양측 기둥을 봉쇄하고 중앙을 돌파형 나이트가 압박합니다. 적 킹을 신속히 포위하여 체크메이트를 달성하세요!
+  InitialEnemyAP: 40
+  EnemyAPRegen: 5
+  MaxEnemyAP: 100
+  EconomyConfigured: 1
+  OfficialRewardTable: 1
+  SanityCost: 10
+  RewardCredits: 1300
+  FirstClearBonusCredits: 0
+  RewardExperienceChips: 0
+  FirstClearCrystals: 50
+  FirstClearCredits: 8000
+  FirstClearChipT1: 0
+  FirstClearChipT2: 3
+  FirstClearChipT3: 0
+  FirstClearChipT4: 0
+  RepeatCredits: 1300
+  RepeatChipT1: 4
+  RepeatChipT2: 0
+  RepeatChipT3: 0
+  RepeatChipT4: 0
+  ChanceDropT1: 0
+  ChanceDropT2: 0.4
+  ChanceDropT3: 0
+  ChanceDropT4: 0
+  ChanceDropCount: 1
+  RequiredSanity: 10
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 2, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 3, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 3
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 5, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 0, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 2, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 5, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 2
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 7, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 4, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 2
+    EnemyResonanceRole: 1
   RewardTP: 150
   ClearRewards: []

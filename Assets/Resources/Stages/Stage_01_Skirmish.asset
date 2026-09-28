@@ -13,10 +13,73 @@ MonoBehaviour:
   m_Name: Stage_01_Skirmish
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
   StageID: OP-01
-  StageName: "Frontier Recon (\uC815\uCC30 \uD6C8\uB828)"
+  StageName: "Frontier Recon (침공의 서막)"
   Objective: 0
-  Description: Initial border reconnaissance operation. Eliminate hostile pawns along
-    the perimeter.
-  EnemySpawns: []
+  RecommendedLevel: 1
+  Description: Initial border reconnaissance operation. Eliminate hostile pawns along the perimeter.
+  TacticalBriefing: 적 폰 전선이 중앙(2~5열)을 방어하고 측면에 기동 나이트가 배치되어 있습니다. 아군의 사거리와 위치 선정을 활용해 적 전선을 각개격파하세요.
+  InitialEnemyAP: 30
+  EnemyAPRegen: 4
+  MaxEnemyAP: 100
+  EconomyConfigured: 1
+  OfficialRewardTable: 1
+  SanityCost: 6
+  RewardCredits: 600
+  FirstClearBonusCredits: 0
+  RewardExperienceChips: 0
+  FirstClearCrystals: 50
+  FirstClearCredits: 3000
+  FirstClearChipT1: 5
+  FirstClearChipT2: 0
+  FirstClearChipT3: 0
+  FirstClearChipT4: 0
+  RepeatCredits: 600
+  RepeatChipT1: 2
+  RepeatChipT2: 0
+  RepeatChipT3: 0
+  RepeatChipT4: 0
+  ChanceDropT1: 0.5
+  ChanceDropT2: 0
+  ChanceDropT3: 0
+  ChanceDropT4: 0
+  ChanceDropCount: 1
+  RequiredSanity: 6
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 2, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 3, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 4, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 5, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 1, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 4, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 0
+    EnemyResonanceRole: 1
   RewardTP: 50
   ClearRewards: []

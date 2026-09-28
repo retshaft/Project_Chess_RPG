@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f4e3d2c1b0a9876543210fedcba9876, type: 3}
+  m_Name: Enemy_Boss_BlackKing
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
+  AIProfile: {fileID: 0}
+  UnitName: "심연의 흑색 군주"
+  Icon: {fileID: 0}
+  Prefab: {fileID: 7280224136315881766, guid: a08f66414462a6648bbe724bdf5709ec, type: 3}
+  PieceType: 5
+  MovePattern: 2
+  BaseRole: "군주"
+  Subclass: 0
+  ResonanceRole: 0
+  MaxHealth: 3800
+  Defense: 65
+  Resistance: 0.35
+  Style: 0
+  AttackCount: 1
+  AttackDamageRatio: 1
+  AttackDamage: 220
+  AttackCooldown: 1
+  AttackRange: 1
+  BasicAttackDamageType: 0
+  KillValue: 25
+  ChargeType: 0
+  MaxSP: 100
+  InitSP: 4
+  BasicAttackAbilityData: {fileID: 0}
+  BasicAttackAbility: {fileID: 0}
+  DeploymentCost: 5
+  MoveCostAP: 18
+  AttackCostAP: 18
+  ActionSpeed: 1
+  MoveRange: 3
+  SpeedLevel: 3
+  MoveSpeed: 1.5
+  MoveCooldown: 2
+  ActionDelay: 1.2
+  Weight: 4
+  IsBoss: 1
+  InitialSkillLevels: []
+  Abilities: []
+  SelectableActiveSkills: []
+  SelectedSkillIndex: 0

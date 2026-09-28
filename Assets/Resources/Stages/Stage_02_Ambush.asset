@@ -13,10 +13,85 @@ MonoBehaviour:
   m_Name: Stage_02_Ambush
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
   StageID: OP-02
-  StageName: "Knight's Ambush (\uB9E4\uBCF5 \uB3CC\uD30C)"
+  StageName: "Tactical Chokepoint (전술적 요충지)"
   Objective: 0
-  Description: Hostile armored cavalry detected in Sector 4. Break through their
-    blockade.
-  EnemySpawns: []
+  RecommendedLevel: 5
+  Description: Hostile armored cavalry and tactical casters detected. Break through their blockade.
+  TacticalBriefing: 적 비숍이 대각선 사선에서 방어력을 무시하는 마법 포격을 가하고, 양익의 나이트가 아군 후방을 암살하려 듭니다. 아군 폰으로 사선을 차단하세요.
+  InitialEnemyAP: 35
+  EnemyAPRegen: 4.5
+  MaxEnemyAP: 100
+  EconomyConfigured: 1
+  OfficialRewardTable: 1
+  SanityCost: 8
+  RewardCredits: 900
+  FirstClearBonusCredits: 0
+  RewardExperienceChips: 0
+  FirstClearCrystals: 50
+  FirstClearCredits: 5000
+  FirstClearChipT1: 8
+  FirstClearChipT2: 0
+  FirstClearChipT3: 0
+  FirstClearChipT4: 0
+  RepeatCredits: 900
+  RepeatChipT1: 3
+  RepeatChipT2: 0
+  RepeatChipT3: 0
+  RepeatChipT4: 0
+  ChanceDropT1: 0
+  ChanceDropT2: 0.25
+  ChanceDropT3: 0
+  ChanceDropT4: 0
+  ChanceDropCount: 1
+  RequiredSanity: 8
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 1, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 3, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 4, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 6, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 1, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 2
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 3, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 6, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 2
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 4, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 1
+    EnemyResonanceRole: 1
   RewardTP: 80
   ClearRewards: []

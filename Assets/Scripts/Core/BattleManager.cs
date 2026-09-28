@@ -91,7 +91,6 @@ namespace CheckmateRPG.Core
         
         // Deployment UI
         private GameObject _deploymentPanel;
-        private UnityEngine.UI.Text _deploymentCostText;
         private UnitData _selectedDeployUnit;
         private Button _selectedDeployButtonRef;
         private int _currentDeploymentCost;
@@ -183,7 +182,6 @@ namespace CheckmateRPG.Core
                 _currentDeploymentCost = 9999;
                 if (_deploymentPanel != null) _deploymentPanel.SetActive(true);
                 if (_commandPanel != null) _commandPanel.SetActive(false);
-                UpdateDeploymentCostText();
                 
                 TickScheduler.EnsureExists().IsPaused = true; // Pause AI and Actions during deployment
             }
@@ -217,6 +215,13 @@ namespace CheckmateRPG.Core
                                 unitToSpawn.AIProfile = customProfile;
                             }
                             unitToSpawn.ResonanceRole = spawnInfo.EnemyResonanceRole;
+                            if (spawnInfo.EnemyResonanceStage > 0)
+                            {
+                                float stageMult = 1f + (spawnInfo.EnemyResonanceStage * 0.15f);
+                                unitToSpawn.MaxHealth = Mathf.Round(unitToSpawn.MaxHealth * stageMult);
+                                unitToSpawn.AttackDamage = Mathf.Round(unitToSpawn.AttackDamage * stageMult);
+                                unitToSpawn.Defense = Mathf.Round(unitToSpawn.Defense * stageMult);
+                            }
                         }
 
                         RegisterAI(SpawnUnit($"Enemy_{spawnInfo.EnemyUnit.UnitName}", unitToSpawn, spawnInfo.GridPosition, Team.Red));
@@ -238,6 +243,13 @@ namespace CheckmateRPG.Core
 
         private void StartBattle()
         {
+            if (_currentPhase != BattlePhase.Deployment) return;
+            if (!HasLivingKing(Team.Blue))
+            { _hudView?.Hint("킹을 먼저 배치하세요 · 킹은 아군 맨 뒤쪽 행에 배치합니다."); return; }
+            if (!HasLivingUnits(Team.Red))
+            { _hudView?.Hint("적 병력이 없습니다 · 작전 배치를 확인해야 합니다."); return; }
+            ClearDeploymentHighlights();
+            if (_3dGhostUnit != null) Destroy(_3dGhostUnit);
             if (_deploymentPanel != null)
                 _deploymentPanel.SetActive(false);
 
@@ -404,15 +416,17 @@ namespace CheckmateRPG.Core
                 return;
 
             if (GetUnitAtCell(targetCell) != null)
-                return;
+            { _hudView?.Hint("이미 기물이 있는 칸입니다 · 빈 배치 칸을 선택하세요."); return; }
 
-            if (unit.PieceType == ChessPieceType.Pawn && targetCell.y != 1) return;
-            if (unit.PieceType != ChessPieceType.Pawn && targetCell.y != 0) return;
+            if (unit.PieceType == ChessPieceType.Pawn && targetCell.y != 1)
+            { _hudView?.Hint("폰은 아군 앞쪽 행에 배치하세요."); return; }
+            if (unit.PieceType != ChessPieceType.Pawn && targetCell.y != 0)
+            { _hudView?.Hint("킹과 오퍼레이터는 아군 맨 뒤쪽 행에 배치하세요."); return; }
 
             SpawnUnit($"Blue {unit.PieceType} (Deployed)", unit, targetCell, Team.Blue);
             _currentDeploymentCost -= unit.DeploymentCost;
-            UpdateDeploymentCostText();
             sourceBtn.interactable = false;
+            _hudView?.Hint(unit.PieceType == ChessPieceType.King ? "킹 배치 완료 · 나머지 대원을 배치한 뒤 전투를 시작하세요." : $"{unit.UnitName} 배치 완료 · 킹을 포함한 출전 대원을 확인하세요.");
         }
 
         private GameObject CreateTileHighlight(Vector2Int cell, Color color)
@@ -452,14 +466,6 @@ namespace CheckmateRPG.Core
         {
             foreach (var hl in _deploymentHighlights) if (hl != null) Destroy(hl);
             _deploymentHighlights.Clear();
-        }
-
-        private void UpdateDeploymentCostText()
-        {
-            if (_deploymentCostText != null)
-            {
-                _deploymentCostText.text = $"배치 가능 COST  {_currentDeploymentCost}";
-            }
         }
 
         private void HandleDebugScenarioHotkeys()
@@ -889,59 +895,39 @@ namespace CheckmateRPG.Core
             bool blueKingAlive = HasLivingKing(Team.Blue);
             bool redKingAlive = HasLivingKing(Team.Red);
 
-            bool isKingDefeatObjective = _preferKingDefeatVictory;
-            if (CheckmateRPG.Progression.StageManager.Instance != null && CheckmateRPG.Progression.StageManager.Instance.CurrentStage != null)
+            // 킹 처치는 스테이지 목표 타입과 무관하게 즉시 종료한다.
+            // UI_SPECIFICATION §6.4: "적 킹 처치 시 ... [CHECKMATE] 연출 후 전투 결과창으로 전이".
+            // 스테이지 목표가 Annihilation이어도 Enemy_BlackKing을 배치하는 스테이지(Stage_01 등)가 있으므로
+            // 목표 타입으로 킹 판정을 생략하면 킹을 잡아도 전투가 끝나지 않는 문제가 생긴다(2026-09-29).
+            bool blueKingDown = HasKingRecord(Team.Blue) && !blueKingAlive;
+            bool redKingDown = HasKingRecord(Team.Red) && !redKingAlive;
+
+            if (blueKingDown || redKingDown)
             {
-                isKingDefeatObjective = (CheckmateRPG.Progression.StageManager.Instance.CurrentStage.Objective == CheckmateRPG.Progression.ObjectiveType.KingDefeat);
+                _battleEnded = true;
+                string result = blueKingDown && redKingDown
+                    ? "Draw (Both Kings Down)"
+                    : (blueKingDown ? "Red Victory" : "Blue Victory");
+                Debug.Log($"[BattleManager] Battle ended: {result}");
+                ShowGameOverPanel(result);
+                return;
             }
 
-            if (isKingDefeatObjective)
+            // 킹을 배치하지 않는 편성(예: Stage_02 매복)은 전멸로 승부를 낸다.
+            if (!redAlive)
             {
-                // Blue team always loses if Blue King dies, regardless of objective? 
-                // The prompt mentions "상대 유닛을 전부 처치하면 종료되는 스테이지" (Defeat all enemy units).
-                // So Blue still loses if Blue King dies? Usually player must protect their king.
-                // Let's assume Blue always loses if Blue King dies.
-                if (!blueKingAlive || !redKingAlive)
-                {
-                    _battleEnded = true;
-                    string result = blueKingAlive == redKingAlive
-                        ? "Draw (Both Kings Down)"
-                        : (blueKingAlive ? "Blue Victory" : "Red Victory");
-                    Debug.Log($"[BattleManager] Battle ended: {result}");
-                    ShowGameOverPanel(result);
-                    return;
-                }
+                _battleEnded = true;
+                Debug.Log($"[BattleManager] Battle ended: Blue Victory (Red Annihilated)");
+                ShowGameOverPanel("Blue Victory");
+                return;
             }
-            else
-            {
-                // Annihilation objective for Red. 
-                // For Blue, let's still enforce King survival as a lose condition, or Annihilation for Blue too.
-                // If Blue King is dead, Blue loses immediately.
-                if (!blueKingAlive)
-                {
-                    _battleEnded = true;
-                    Debug.Log($"[BattleManager] Battle ended: Red Victory (Blue King died)");
-                    ShowGameOverPanel("Red Victory");
-                    return;
-                }
 
-                // If Red team is annihilated, Blue wins.
-                if (!redAlive)
-                {
-                    _battleEnded = true;
-                    Debug.Log($"[BattleManager] Battle ended: Blue Victory (Red Annihilated)");
-                    ShowGameOverPanel("Blue Victory");
-                    return;
-                }
-                
-                // If Blue team is annihilated, Red wins.
-                if (!blueAlive)
-                {
-                    _battleEnded = true;
-                    Debug.Log($"[BattleManager] Battle ended: Red Victory (Blue Annihilated)");
-                    ShowGameOverPanel("Red Victory");
-                    return;
-                }
+            if (!blueAlive)
+            {
+                _battleEnded = true;
+                Debug.Log($"[BattleManager] Battle ended: Red Victory (Blue Annihilated)");
+                ShowGameOverPanel("Red Victory");
+                return;
             }
         }
 
@@ -993,6 +979,23 @@ namespace CheckmateRPG.Core
             foreach (UnitRecord record in roster)
             {
                 if (record.Brain == null || record.Brain.IsDead || record.Brain.UnitData == null)
+                    continue;
+
+                if (record.Brain.UnitData.PieceType == ChessPieceType.King)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool HasKingRecord(Team team)
+        {
+            if (!_teams.TryGetValue(team, out List<UnitRecord> roster))
+                return false;
+
+            foreach (UnitRecord record in roster)
+            {
+                if (record == null || record.Brain == null || record.Brain.UnitData == null)
                     continue;
 
                 if (record.Brain.UnitData.PieceType == ChessPieceType.King)
@@ -1341,7 +1344,7 @@ namespace CheckmateRPG.Core
             panelRect.anchorMax = new Vector2(1f, 0f);
             panelRect.pivot = new Vector2(1f, 0f);
             panelRect.anchoredPosition = new Vector2(-24f, 24f);
-            panelRect.sizeDelta = new Vector2(440f, 92f);
+            panelRect.sizeDelta = new Vector2(440f, 104f);
 
             HorizontalLayoutGroup layout = _commandPanel.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12f;
@@ -1357,6 +1360,9 @@ namespace CheckmateRPG.Core
             _moveModeButton = CreateModeButton(_commandPanel.transform, "이동 / MOVE", Color.white, () => SetInputMode(InputMode.Move));
             _attackModeButton = CreateModeButton(_commandPanel.transform, "공격 / ATK", Color.white, () => SetInputMode(InputMode.Attack));
             _skillModeButton = CreateModeButton(_commandPanel.transform, "스킬 / SKILL", Color.white, () => SetInputMode(InputMode.Skill));
+            _moveModeButton.GetComponentInChildren<Text>().text = "이동\n<size=12>MOVE</size>";
+            _attackModeButton.GetComponentInChildren<Text>().text = "공격\n<size=12>ATTACK</size>";
+            _skillModeButton.GetComponentInChildren<Text>().text = "스킬\n<size=12>SKILL</size>";
 
             _commandPanel.SetActive(false);
             RefreshModeButtonVisuals();
@@ -1391,7 +1397,7 @@ namespace CheckmateRPG.Core
             btnRect.sizeDelta = new Vector2(300f, 80f);
             btnRect.anchoredPosition = new Vector2(0f, -100f);
             Image btnImg = restartBtnGO.AddComponent<Image>();
-            btnImg.color = new Color(0.2f, 0.6f, 0.2f);
+            btnImg.color = CheckmateRPG.UI.OutgameStyle.AccentOrange;
             Button restartBtn = restartBtnGO.AddComponent<Button>();
             restartBtn.onClick.AddListener(() => UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name));
             
@@ -1402,7 +1408,7 @@ namespace CheckmateRPG.Core
             btnText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
             btnText.fontSize = 32;
             btnText.alignment = TextAnchor.MiddleCenter;
-            btnText.color = Color.white;
+            btnText.color = CheckmateRPG.UI.OutgameStyle.Ink;
             btnText.GetComponent<RectTransform>().anchorMin = Vector2.zero;
             btnText.GetComponent<RectTransform>().anchorMax = Vector2.one;
             btnText.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
@@ -1434,7 +1440,7 @@ namespace CheckmateRPG.Core
             panelRect.sizeDelta = new Vector2(0f, 100f);
 
             Image bg = _deploymentPanel.AddComponent<Image>();
-            bg.color = new Color(0.1f, 0.1f, 0.15f, 0.85f);
+            bg.color = CheckmateRPG.UI.OutgameStyle.SurfaceDark;
 
             HorizontalLayoutGroup layout = _deploymentPanel.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 16f;
@@ -1461,7 +1467,8 @@ namespace CheckmateRPG.Core
                 foreach (UnitData unit in CheckmateRPG.Progression.DeckManager.Instance.GetModifiedDeck())
                 {
                     if (unit == null) continue;
-                    Button btn = CreateModeButton(rosterGO.transform, $"{unit.UnitName}", new Color(0.3f, 0.3f, 0.4f), null);
+                    Button btn = CreateModeButton(rosterGO.transform, $"{unit.UnitName}", CheckmateRPG.UI.OutgameStyle.Paper, null);
+                    btn.GetComponentInChildren<Text>().color = CheckmateRPG.UI.OutgameStyle.Ink;
                     LayoutElement btnLE = btn.gameObject.AddComponent<LayoutElement>();
                     btnLE.minWidth = 80f;
                     btnLE.preferredWidth = 100f;
@@ -1482,15 +1489,8 @@ namespace CheckmateRPG.Core
             statusLayout.childForceExpandWidth = true;
             statusLayout.childControlWidth = true;
             
-            GameObject textGO = new GameObject("CostText");
-            textGO.transform.SetParent(statusGO.transform, false);
-            _deploymentCostText = textGO.AddComponent<Text>();
-            _deploymentCostText.font = CheckmateRPG.UI.UiFontProvider.GetLegacyFont();
-            _deploymentCostText.fontSize = 24;
-            _deploymentCostText.color = Color.cyan;
-            _deploymentCostText.alignment = TextAnchor.MiddleCenter;
-
-            Button startBtn = CreateModeButton(statusGO.transform, "전투 개시", new Color(0.12f, 0.5f, 0.58f), StartBattle);
+            Button startBtn = CreateModeButton(statusGO.transform, "전투 개시  /  START", CheckmateRPG.UI.OutgameStyle.AccentOrange, StartBattle);
+            startBtn.GetComponentInChildren<Text>().color = CheckmateRPG.UI.OutgameStyle.Ink;
             LayoutElement startLE = startBtn.gameObject.AddComponent<LayoutElement>();
             startLE.minHeight = 40f;
 
@@ -1551,9 +1551,9 @@ namespace CheckmateRPG.Core
                 return;
 
             bool selected = alpha >= 1f;
-            button.targetGraphic.color = selected ? CheckmateRPG.UI.BattleHudView.Cyan : new Color(0.16f, 0.19f, 0.23f);
+            CheckmateRPG.UI.OutgameStyle.ApplySelectionStyle(button, selected);
             var label = button.GetComponentInChildren<Text>();
-            if (label != null) label.color = selected ? new Color(0.035f, 0.07f, 0.08f) : Color.white;
+            if (label != null) label.color = selected ? CheckmateRPG.UI.OutgameStyle.Ink : CheckmateRPG.UI.OutgameStyle.TextWhite;
         }
 
         private void SyncOverlayMode()

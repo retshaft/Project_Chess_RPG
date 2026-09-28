@@ -1,0 +1,123 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3627a1b9c1c2426478fa89392812cba5, type: 3}
+  m_Name: Stage_05_CheckmateProtocol
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
+  StageID: OP-05
+  StageName: "Checkmate Protocol (체크메이트 작전)"
+  Objective: 1
+  RecommendedLevel: 28
+  Description: Final decisive battle of Chapter 1. Neutralize the Black Sovereign King and his vanguard army!
+  TacticalBriefing: 흑색 대군단의 총사령부 결전입니다! 심연의 흑색 군주와 암흑의 퀸이 호위 병력과 함께 전면 공세를 펼칩니다. 폰 방어선을 무너뜨리고 킹을 포위하여 궁극의 체크메이트를 완수하세요!
+  InitialEnemyAP: 60
+  EnemyAPRegen: 7
+  MaxEnemyAP: 120
+  EconomyConfigured: 1
+  OfficialRewardTable: 1
+  SanityCost: 15
+  RewardCredits: 2500
+  FirstClearBonusCredits: 0
+  RewardExperienceChips: 0
+  FirstClearCrystals: 100
+  FirstClearCredits: 20000
+  FirstClearChipT1: 0
+  FirstClearChipT2: 0
+  FirstClearChipT3: 2
+  FirstClearChipT4: 0
+  FirstClearProtocolChips: 1
+  RepeatCredits: 2500
+  RepeatChipT1: 0
+  RepeatChipT2: 2
+  RepeatChipT3: 0
+  RepeatChipT4: 0
+  ChanceDropT1: 0
+  ChanceDropT2: 0
+  ChanceDropT3: 0.3
+  ChanceDropT4: 0
+  ChanceDropCount: 1
+  RequiredSanity: 15
+  IsBossStage: 1
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 1, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 2, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 5, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 6, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 0, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 1, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 2
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 2, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 5, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: 8e2bbdc1454b45d45b5854091a010f12, type: 2}
+    GridPosition: {x: 6, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 2
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 7, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 3b58a12857f6c954396225a8748bacef, type: 2}
+    GridPosition: {x: 3, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 3
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8f9fe8ab6c4743ee9fe4e931ca32315a, type: 2}
+    GridPosition: {x: 4, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  RewardTP: 0
+  ClearRewards: []

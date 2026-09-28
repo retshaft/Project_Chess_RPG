@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3627a1b9c1c2426478fa89392812cba5, type: 3}
+  m_Name: LS_03_TacticalTraining
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
+  StageID: LS-3
+  StageName: "모의 전술 훈련 · 상급"
+  Objective: 0
+  RecommendedLevel: 40
+  Description: "최고난도 모의 전술 환경에서 흑색 퀸을 포함한 완편 기물 군단을 격파하세요."
+  TacticalBriefing: "흑색 퀸과 룩, 비숍이 총집결한 완전 편성 전술 시험입니다. 높은 스펙과 정밀한 수싸움이 요구됩니다."
+  InitialEnemyAP: 60
+  EnemyAPRegen: 6.5
+  MaxEnemyAP: 120
+  EconomyConfigured: 1
+  OfficialRewardTable: 1
+  SanityCost: 30
+  RepeatChipT1: 0
+  RepeatChipT2: 0
+  RepeatChipT3: 3
+  RequiredSanity: 30
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 1, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 3, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 4, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 6, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 0, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 2, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 5, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 7, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 3b58a12857f6c954396225a8748bacef, type: 2}
+    GridPosition: {x: 3, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 3
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 4, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 4
+    EnemyResonanceRole: 1
+  ClearRewards: []

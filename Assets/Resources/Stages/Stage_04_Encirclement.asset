@@ -1,0 +1,109 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3627a1b9c1c2426478fa89392812cba5, type: 3}
+  m_Name: Stage_04_Encirclement
+  m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Progression.StageData
+  StageID: OP-04
+  StageName: "Encirclement Line (포위망 형성)"
+  Objective: 0
+  RecommendedLevel: 20
+  Description: Complete encirclement operation. Beware of the hostile Black Queen roaming the battlefield.
+  TacticalBriefing: 흑색 퀸이 전장에 강림했습니다! 퀸의 8방향 돌진과 비숍들의 교차 사선은 치명적입니다. 룩으로 방벽을 치고 퀸을 최우선으로 일점사하세요.
+  InitialEnemyAP: 50
+  EnemyAPRegen: 6
+  MaxEnemyAP: 100
+  EconomyConfigured: 1
+  OfficialRewardTable: 1
+  SanityCost: 12
+  RewardCredits: 1800
+  FirstClearBonusCredits: 0
+  RewardExperienceChips: 0
+  FirstClearCrystals: 80
+  FirstClearCredits: 12000
+  FirstClearChipT1: 0
+  FirstClearChipT2: 5
+  FirstClearChipT3: 0
+  FirstClearChipT4: 0
+  RepeatCredits: 1800
+  RepeatChipT1: 0
+  RepeatChipT2: 1
+  RepeatChipT3: 0
+  RepeatChipT4: 0
+  ChanceDropT1: 0
+  ChanceDropT2: 0.5
+  ChanceDropT3: 0
+  ChanceDropT4: 0
+  ChanceDropCount: 1
+  RequiredSanity: 12
+  EnemySpawns:
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 1, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 3, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 4, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 61ef1f9908546a743bacd9299ded0679, type: 2}
+    GridPosition: {x: 6, y: 5}
+    OverrideAIBehavior: 1
+    AIBehavior: 0
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 0, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 2, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: 75f415cf40164bc4c937c9a170d52819, type: 2}
+    GridPosition: {x: 5, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 4
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 2
+  - EnemyUnit: {fileID: 11400000, guid: d46466d68681dbc45afd221cd07d0a8f, type: 2}
+    GridPosition: {x: 7, y: 6}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  - EnemyUnit: {fileID: 11400000, guid: 3b58a12857f6c954396225a8748bacef, type: 2}
+    GridPosition: {x: 3, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 3
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 0
+  - EnemyUnit: {fileID: 11400000, guid: 8f088329b68f5a04a8c9d6065ebe25d3, type: 2}
+    GridPosition: {x: 4, y: 7}
+    OverrideAIBehavior: 1
+    AIBehavior: 1
+    EnemyResonanceStage: 3
+    EnemyResonanceRole: 1
+  RewardTP: 0
+  ClearRewards: []

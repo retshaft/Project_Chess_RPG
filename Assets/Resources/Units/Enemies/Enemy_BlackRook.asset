@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CheckmateRPG.Data.UnitData
   AIProfile: {fileID: 0}
   UnitName: Black Rook
+  Rarity: 3
   Icon: {fileID: 0}
   Prefab: {fileID: 6798481724360485254, guid: 8253210878d3fd446a9a90cca5221f04, type: 3}
   PieceType: 3
@@ -21,13 +22,14 @@ MonoBehaviour:
   BaseRole: "\uD3EC\uD2B8\uB9AC\uC2A4"
   Subclass: 0
   ResonanceRole: 0
-  MaxHealth: 80
-  Defense: 0
-  Resistance: 0.1
+  MaxHealth: 1250
+  Defense: 55
+  Resistance: 0.15
   Style: 0
+  SupportPower: 1
   AttackCount: 1
   AttackDamageRatio: 1
-  AttackDamage: 10
+  AttackDamage: 140
   AttackCooldown: 1
   AttackRange: 1
   BasicAttackDamageType: 0
