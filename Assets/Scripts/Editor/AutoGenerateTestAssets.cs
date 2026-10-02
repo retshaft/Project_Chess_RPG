@@ -40,7 +40,7 @@ namespace CheckmateRPG.Testing.Editor
             if (AssetDatabase.LoadAssetAtPath<PlayerDeckData>(deckPath) == null)
             {
                 PlayerDeckData deck = ScriptableObject.CreateInstance<PlayerDeckData>();
-                deck.MaxCostCap = 15;
+                deck.MaxCostCap = CheckmateRPG.Progression.DeckManager.MAX_FORMATION_COST;
                 
                 // Try to load existing units to populate
                 UnitData king = AssetDatabase.LoadAssetAtPath<UnitData>("Assets/Scenes/Test/KingUnitData.asset");

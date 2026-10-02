@@ -36,6 +36,7 @@ namespace CheckmateRPG.UI
         /// </summary>
         public void EnsureRuntimeUI()
         {
+            if (modalPanel != null) UILayers.SetOverlay(modalPanel, UILayers.Modal);
             if (modalPanel != null && windowTitleText != null && cardGridContainer != null && closeButton != null)
                 return;
 
@@ -51,6 +52,7 @@ namespace CheckmateRPG.UI
                 var dim = panelGo.AddComponent<Image>();
                 dim.color = new Color(0f, 0f, 0f, 0.86f); // 배경 클릭 차단 + 딤
                 modalPanel = panelGo;
+                UILayers.SetOverlay(modalPanel, UILayers.Modal);
 
                 var windowGo = new GameObject("Window", typeof(RectTransform));
                 windowGo.transform.SetParent(panelGo.transform, false);
@@ -144,7 +146,7 @@ namespace CheckmateRPG.UI
         {
             currentCallback = onSelected;
             selectionDescription = describe;
-            if (modalPanel) modalPanel.SetActive(true);
+            if (modalPanel) { modalPanel.SetActive(true); UILayers.SetOverlay(modalPanel, UILayers.Modal); }
             OutgameUIManager.Instance?.UnregisterModalCloseAction(CloseModal);
             OutgameUIManager.Instance?.RegisterModalCloseAction(CloseModal);
             if (windowTitleText) windowTitleText.text = filterKind == EdictKind.Absolute 

@@ -147,6 +147,26 @@ namespace CheckmateRPG.Data
         [Header("Deployment")]
         [Tooltip("Cost required to deploy this unit in the deck.")]
         [Min(0)] public int DeploymentCost = 2;
+        [Tooltip("특수 기물에만 사용. 킹은 슈트별 DeploymentCost를 항상 사용한다.")]
+        public bool OverrideFormationCost;
+
+        public int FormationCost => OverrideFormationCost || PieceType == ChessPieceType.King
+            ? Mathf.Max(0, DeploymentCost)
+            : PieceType switch
+            {
+                ChessPieceType.Pawn => 1,
+                ChessPieceType.Knight or ChessPieceType.Bishop => 3,
+                ChessPieceType.Rook => 4,
+                ChessPieceType.Queen => 5,
+                _ => Mathf.Max(0, DeploymentCost)
+            };
+
+        public AbilityLevelData SelectedSkillLevel => GetSelectedActiveSkill() is { } skill
+            ? skill.GetLevelData(GetSkillLevel(skill.name)) : null;
+        public float SkillMaxSP => SelectedSkillLevel is { } level ? level.SPCost : MaxSP;
+        public float SkillInitSP => SelectedSkillLevel is { } level ? level.InitSP : InitSP;
+        public SPChargeType SkillChargeType => SelectedSkillLevel is { } level
+            ? (level.ChargeType == SPChargeType.Auto ? GetSelectedActiveSkill().DefaultChargeType : level.ChargeType) : ChargeType;
 
         [Header("Action Costs")]
         [Tooltip("AP cost to perform one move action (before multipliers).")]

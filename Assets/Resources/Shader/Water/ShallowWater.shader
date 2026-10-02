@@ -9,6 +9,7 @@ Shader "Checkmate/Water/Shallow Water"
         _SurfaceTint ("Minimum surface tint", Color) = (0.06,0.34,0.34,1)
         _SurfaceTintStrength ("Minimum surface tint strength", Range(0,0.5)) = 0.14
         _MaxThickness ("Maximum optical path (m)", Float) = 12
+        _ClearDepth ("Clear shallows transition metres (0 disables)", Range(0,5)) = 0
         [Header(Refraction)]
         _Refraction ("Distortion strength", Range(0,0.1)) = 0.018
         _MaxOffset ("Maximum screen UV offset", Range(0,0.04)) = 0.012
@@ -31,6 +32,13 @@ Shader "Checkmate/Water/Shallow Water"
         _WaveFrequency ("Frequency", Range(0.1,8)) = 2
         _WaveSpeed ("Speed", Range(0,3)) = 0.7
         _WaveDirection ("Primary wave direction X Z", Vector) = (1,0.3,0,0)
+        [Toggle] _PixelWaves ("Per pixel wave normals for large surfaces", Float) = 0
+        [HideInInspector] _MotionEnabled ("Motion controller enabled", Float) = 0
+        [HideInInspector] _MotionSwell ("Motion swell envelope", Float) = 1
+        [HideInInspector] _MotionPhases ("Motion phases", Vector) = (0,0,0,0)
+        [HideInInspector] _MotionFlowA ("Motion flow A", Vector) = (0,0,0,0)
+        [HideInInspector] _MotionFlowB ("Motion flow B", Vector) = (0,0,0,0)
+        [HideInInspector] _MotionFlowC ("Motion flow C", Vector) = (0,0,0,0)
         [Header(Caustics)]
         [NoScaleOffset] _CausticsTex ("Seamless caustics", 2D) = "black" {}
         _CausticsA ("Scale / rotation radians / speed / distortion", Vector) = (0.28,0.24,0.025,0.09)
@@ -42,6 +50,10 @@ Shader "Checkmate/Water/Shallow Water"
         _Reflection ("Environment reflection strength", Range(0,2)) = 0.85
         _F0 ("Normal incidence reflectance", Range(0,0.1)) = 0.02
         _Roughness ("Perceptual roughness", Range(0.08,0.8)) = 0.24
+        _PlanarStrength ("Local reflected scenery", Range(0,1)) = 0.85
+        _PlanarDistortion ("Reflection ripple distortion metres", Range(0,2)) = 0.65
+        [HideInInspector] _PlanarEnabled ("Planar available", Float) = 0
+        [HideInInspector] _PlanarReflectionTex ("Planar reflection", 2D) = "black" {}
         [Header(Specular)]
         [Enum(Off,0,Subtle,1,Strong,2)] _StylizedSpecular ("Specular styling", Float) = 1
         _Specular ("Sun highlight intensity", Range(0,3)) = 0.8
@@ -54,6 +66,7 @@ Shader "Checkmate/Water/Shallow Water"
         _FoamIntensity ("Foam intensity (0 disables)", Range(0,1)) = 0
         _FoamBreakup ("Foam breakup", Range(0,1)) = 0.55
         _CrestFoam ("Wave crest foam (waves only)", Range(0,1)) = 0
+        _ContactRipples ("Organic contact foam coverage", Range(0,1)) = 0
         [Header(Distance and Quality)]
         _FadeStart ("Detail fade start metres", Float) = 12
         _FadeEnd ("Detail fade end metres", Float) = 45
@@ -92,6 +105,8 @@ Shader "Checkmate/Water/Shallow Water"
             TEXTURE2D(_NormalB); SAMPLER(sampler_NormalB);
             TEXTURE2D(_NormalC); SAMPLER(sampler_NormalC);
             TEXTURE2D(_CausticsTex); SAMPLER(sampler_CausticsTex);
+            TEXTURE2D(_PlanarReflectionTex); SAMPLER(sampler_PlanarReflectionTex);
+            float4x4 _PlanarVP;
             CBUFFER_START(UnityPerMaterial)
                 float4 _Absorption, _Scattering, _SurfaceTint, _LayerA, _LayerB, _LayerC, _CausticsA, _CausticsB, _ContactColor, _WaveDirection;
                 float _Density, _MaxThickness, _Refraction, _MaxOffset, _EdgeFade, _SurfaceTintStrength;
@@ -99,7 +114,11 @@ Shader "Checkmate/Water/Shallow Water"
                 float _CausticsIntensity, _CausticsDepth, _CausticsShadows, _Reflection, _F0, _Roughness;
                 float _StylizedSpecular, _Specular, _SpecularLimit, _ContactMode, _ContactWidth, _ContactIntensity;
                 float _FoamIntensity, _FoamBreakup, _CrestFoam, _FadeStart, _FadeEnd, _Quality, _DebugView;
-                float _WaveRefraction;
+                float _WaveRefraction, _PixelWaves, _ContactRipples;
+                float _PlanarStrength, _PlanarDistortion, _PlanarEnabled;
+                float _ClearDepth;
+                float _MotionEnabled, _MotionSwell;
+                float4 _MotionPhases, _MotionFlowA, _MotionFlowB, _MotionFlowC;
             CBUFFER_END
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float4 tangentOS : TANGENT; };
             struct Varyings {
@@ -111,28 +130,37 @@ Shader "Checkmate/Water/Shallow Water"
                 float wave : TEXCOORD4;
                 half3 baseNormalWS : TEXCOORD5;
             };
-            void AddWave(float2 p, float2 direction, float k, float weight, float phaseOffset,
+            void AddWave(float2 p, float2 direction, float k, float weight, float phaseOffset, float motionPhase,
                          inout float height, inout float2 gradient)
             {
                 // Dispersive speeds avoid a mechanically repeating pair of equally paced sine waves.
-                float phase = dot(p,direction)*k - _Time.y*_WaveSpeed*sqrt(9.81*k) + phaseOffset;
+                float travel = _MotionEnabled > 0.5 ? motionPhase : _Time.y*_WaveSpeed*sqrt(9.81*k);
+                float phase = dot(p,direction)*k - travel + phaseOffset;
                 float s,c; sincos(phase,s,c);
                 height += weight*s;
                 gradient += weight*k*c*direction;
+            }
+            void WaveSurface(float2 p, out float height, out float2 slope)
+            {
+                float2 d = normalize(_WaveDirection.xy + float2(0.0001,0));
+                float2 perpendicular = float2(-d.y,d.x);
+                height = 0; slope = 0;
+                AddWave(p,d,_WaveFrequency,1,0,_MotionPhases.x,height,slope);
+                AddWave(p,d*0.6+perpendicular*0.8,_WaveFrequency*1.73,0.48,1.7,_MotionPhases.y,height,slope);
+                AddWave(p,-d*0.8+perpendicular*0.6,_WaveFrequency*2.91,0.24,3.1,_MotionPhases.z,height,slope);
+                AddWave(p,d*0.28-perpendicular*0.96,_WaveFrequency*4.37,0.12,0.8,_MotionPhases.w,height,slope);
+                float envelope = _MotionEnabled > 0.5 ? _MotionSwell : 1;
+                height *= envelope;
+                slope *= envelope;
             }
             Varyings Vert(Attributes v)
             {
                 Varyings o;
                 float3 p = TransformObjectToWorld(v.positionOS.xyz);
-                float2 d = normalize(_WaveDirection.xy + float2(0.0001,0));
-                float2 perpendicular = float2(-d.y,d.x);
                 float height = 0; float2 slope = 0;
                 UNITY_BRANCH if (_WaveAmplitude > 0)
                 {
-                    AddWave(p.xz,d,_WaveFrequency,1,0,height,slope);
-                    AddWave(p.xz,d*0.6+perpendicular*0.8,_WaveFrequency*1.73,0.48,1.7,height,slope);
-                    AddWave(p.xz,-d*0.8+perpendicular*0.6,_WaveFrequency*2.91,0.24,3.1,height,slope);
-                    AddWave(p.xz,d*0.28-perpendicular*0.96,_WaveFrequency*4.37,0.12,0.8,height,slope);
+                    WaveSurface(p.xz,height,slope);
                 }
                 o.wave = height/1.84;
                 p.y += o.wave*_WaveAmplitude;
@@ -157,8 +185,21 @@ Shader "Checkmate/Water/Shallow Water"
                 #endif
             }
             float3 Reconstruct(float2 uv, float raw) { return ComputeWorldSpacePosition(uv, DeviceDepth(raw), UNITY_MATRIX_I_VP); }
-            float2 FlowUV(float2 uv, float4 layer) { return uv * layer.x + normalize(layer.yz + 0.00001) * layer.w * _Time.y; }
+            float2 FlowUV(float2 uv, float4 layer, float2 motionOffset)
+            {
+                return uv*layer.x + (_MotionEnabled > 0.5 ? motionOffset : normalize(layer.yz+0.00001)*layer.w*_Time.y);
+            }
             half3 RNM(half3 a, half3 b) { a.z += 1; b.xy = -b.xy; return normalize(a * dot(a,b) / max(a.z,0.001h) - b); }
+            float FoamNoise(float2 p)
+            {
+                float2 cell = floor(p), f = frac(p);
+                f = f*f*(3-2*f);
+                float4 h = frac(sin(float4(dot(cell,float2(127.1,311.7)),
+                    dot(cell+float2(1,0),float2(127.1,311.7)),
+                    dot(cell+float2(0,1),float2(127.1,311.7)),
+                    dot(cell+1,float2(127.1,311.7))))*43758.5453);
+                return lerp(lerp(h.x,h.y,f.x),lerp(h.z,h.w,f.x),f.y);
+            }
             float2 CausticUV(float2 p, float4 layer)
             {
                 float s, c; sincos(layer.y,s,c);
@@ -177,13 +218,24 @@ Shader "Checkmate/Water/Shallow Water"
                 float contact = 1 - smoothstep(0, max(_ContactWidth,0.001), thickness);
                 float distanceToCamera = distance(GetCameraPositionWS(), i.positionWS);
                 half detail = 1 - smoothstep(_FadeStart, max(_FadeEnd,_FadeStart+0.01), distanceToCamera);
-                half3 na = UnpackNormalScale(SAMPLE_TEXTURE2D(_NormalA,sampler_NormalA,FlowUV(i.positionWS.xz,_LayerA)),_StrengthA * detail);
-                half3 nb = UnpackNormalScale(SAMPLE_TEXTURE2D(_NormalB,sampler_NormalB,FlowUV(i.positionWS.xz,_LayerB)),_StrengthB * detail);
+                half3 na = UnpackNormalScale(SAMPLE_TEXTURE2D(_NormalA,sampler_NormalA,FlowUV(i.positionWS.xz,_LayerA,_MotionFlowA.xy)),_StrengthA * detail);
+                half3 nb = UnpackNormalScale(SAMPLE_TEXTURE2D(_NormalB,sampler_NormalB,FlowUV(i.positionWS.xz,_LayerB,_MotionFlowB.xy)),_StrengthB * detail);
                 half3 nt = RNM(na,nb);
                 UNITY_BRANCH if (_Quality >= 2)
-                    nt = RNM(nt,UnpackNormalScale(SAMPLE_TEXTURE2D(_NormalC,sampler_NormalC,FlowUV(i.positionWS.xz,_LayerC)),_StrengthC * detail));
+                    nt = RNM(nt,UnpackNormalScale(SAMPLE_TEXTURE2D(_NormalC,sampler_NormalC,FlowUV(i.positionWS.xz,_LayerC,_MotionFlowC.xy)),_StrengthC * detail));
                 half3 n0 = normalize(i.normalWS);
+                float crest = i.wave;
+                UNITY_BRANCH if (_PixelWaves > 0.5 && _WaveAmplitude > 0 && _Quality >= 1)
+                {
+                    float height; float2 slope;
+                    WaveSurface(i.positionWS.xz,height,slope);
+                    // Re-evaluate slope rather than interpolating aliased normals across giant triangles.
+                    slope *= _WaveAmplitude * detail / 1.84;
+                    n0 = normalize(i.baseNormalWS + float3(-slope.x,0,-slope.y));
+                    crest = height/1.84;
+                }
                 half3 tangent = normalize(i.tangentWS.xyz);
+                tangent = normalize(tangent - n0*dot(tangent,n0));
                 half3 bitangent = normalize(cross(n0,tangent)) * i.tangentWS.w;
                 half3 normal = normalize(nt.x*tangent + nt.y*bitangent + nt.z*n0);
                 float2 edge = min(uv,1-uv);
@@ -209,7 +261,11 @@ Shader "Checkmate/Water/Shallow Water"
                     thickness = clamp(distance(i.positionWS,floorWS),0,_MaxThickness);
                 }
                 half3 scene = SampleSceneColor(refrUV);
-                half3 transmittance = exp(-max(_Absorption.rgb,0) * _Density * thickness);
+                // Artist-controlled clear surface layer; deeper water still accumulates extinction.
+                float opticalPath = thickness;
+                if (_ClearDepth > 0.001)
+                    opticalPath -= _ClearDepth*(1-exp(-thickness/_ClearDepth));
+                half3 transmittance = exp(-max(_Absorption.rgb,0) * _Density * opticalPath);
                 Light sun = GetMainLight();
                 float verticalDepth = max(0,i.positionWS.y-floorWS.y);
                 half caustics = 0;
@@ -231,9 +287,24 @@ Shader "Checkmate/Water/Shallow Water"
                 half3 transmitted = scene * (1 + caustics * sun.color) * transmittance + _Scattering.rgb * (1-transmittance);
                 // A paper-thin optical path still has a visible surface colour. This prevents
                 // a copied water object from looking like an invisible overlay in a new scene.
-                transmitted = lerp(transmitted, _SurfaceTint.rgb, max(_SurfaceTintStrength, 0.22));
+                transmitted = lerp(transmitted, _SurfaceTint.rgb, saturate(_SurfaceTintStrength));
                 half fresnel = _F0 + (1-_F0) * pow(1-saturate(dot(normal,view)),5);
                 half3 reflection = GlossyEnvironmentReflection(reflect(-view,normal),i.positionWS,_Roughness,1,uv) * _Reflection;
+                UNITY_BRANCH if (_PlanarEnabled > 0.5 && _PlanarStrength > 0)
+                {
+                    float3 reflectedPoint = i.positionWS;
+                    reflectedPoint.xz += normal.xz*_PlanarDistortion*max(1,distanceToCamera*0.08);
+                    float4 projected = mul(_PlanarVP,float4(reflectedPoint,1));
+                    float2 reflectionUV = projected.xy/max(projected.w,0.001)*0.5+0.5;
+                    #if UNITY_UV_STARTS_AT_TOP
+                        reflectionUV.y = 1-reflectionUV.y;
+                    #endif
+                    float2 margin = min(reflectionUV,1-reflectionUV);
+                    float valid = smoothstep(0,0.04,min(margin.x,margin.y))*step(0,projected.w);
+                    half3 localReflection = SAMPLE_TEXTURE2D_LOD(_PlanarReflectionTex,sampler_PlanarReflectionTex,
+                        saturate(reflectionUV),_Roughness*5).rgb;
+                    reflection = lerp(reflection,localReflection*_Reflection,valid*_PlanarStrength);
+                }
                 BRDFData brdf;
                 half alpha = 1;
                 InitializeBRDFData(half3(0,0,0),0,half3(0.02,0.02,0.02),1-_Roughness,alpha,brdf);
@@ -249,7 +320,21 @@ Shader "Checkmate/Water/Shallow Water"
                     half noise = SAMPLE_TEXTURE2D(_CausticsTex,sampler_CausticsTex,i.positionWS.xz*1.3+_Time.y*float2(0.02,-0.014)).r;
                     half breakup = smoothstep(_FoamBreakup,_FoamBreakup+0.15,noise);
                     foam = (_ContactMode > 0.5 ? contact*_FoamIntensity : 0) * breakup;
-                    if (_WaveAmplitude > 0) foam += smoothstep(0.6,0.95,i.wave)*_CrestFoam*breakup;
+                    if (_WaveAmplitude > 0) foam += smoothstep(0.6,0.95,crest)*_CrestFoam*breakup;
+                    UNITY_BRANCH if (_ContactRipples > 0 && _ContactMode > 0.5)
+                    {
+                        // Advected patches, independent of the caustic net. No periodic contour rings.
+                        float2 flow = i.positionWS.xz + _Time.y*float2(0.055,-0.035);
+                        float broad = FoamNoise(flow*2.1);
+                        float fine = FoamNoise(flow*9.3 + broad*2.0 - _Time.y*0.045);
+                        float patch = broad*0.7 + fine*0.3;
+                        float coverage = smoothstep(0.48,0.72,patch);
+                        float width = max(_ContactWidth,0.001)*(0.35+0.85*broad);
+                        float fringe = 1-smoothstep(0,width,thickness);
+                        float pulse = 0.65+0.35*sin(_Time.y*0.85+broad*6.28);
+                        float organic = fringe*coverage*pulse*_FoamIntensity;
+                        foam = lerp(foam,organic,_ContactRipples);
+                    }
                     foam *= detail;
                 }
                 color += _ContactColor.rgb * contact * _ContactIntensity * (0.75+0.25*sin(thickness*70-_Time.y*2));
@@ -267,7 +352,12 @@ Shader "Checkmate/Water/Shallow Water"
                 #if defined(FOG_EXP2_KEYWORD_DECLARED)
                     if (FOG_EXP2) waterVisibility = ComputeFogIntensity(i.fog);
                 #endif
-                color = lerp(scene,color,waterVisibility);
+                // Fog must not reveal the unattenuated seabed again at long distances.
+                // The scene term already has fog; fog only the remaining water contribution.
+                half3 sceneWeight = transmittance * (1-saturate(_SurfaceTintStrength))
+                    * (1-fresnel) * (1-saturate(foam));
+                color = scene*sceneWeight + (color-scene*sceneWeight)*waterVisibility
+                    + unity_FogColor.rgb*(1-sceneWeight)*(1-waterVisibility);
                 if (_DebugView == 1) color = saturate(thickness/2).xxx;
                 else if (_DebugView == 2) color = fresnel.xxx;
                 else if (_DebugView == 3) color = refrMask.xxx;

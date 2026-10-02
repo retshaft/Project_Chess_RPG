@@ -1,0 +1,11 @@
+# 터레인 수면 범위 확장
+- Status: Verified
+- Owner: Codex main / codex/integration
+- Base: ef130428defd3076024644c5addc0b9bd4d8dcf5
+- Workspace: C:/PersonalFiles/2026/Task/Unity/Graduation_Project/Graduation_Project_v01
+- Allowed: Assets/Scenes/Test/BattleScene.unity 수면 Transform, 본 작업서, Docs/Parallel/BOARD.md, Captures/CombatRuins/water-terrain*.
+- Goal: 기존 수면을 터레인 전체 XZ 범위까지 확장. 수색/유적/지형 데이터 보존.
+- Verify: 터레인과 수면 bounds 비교, 렌더, Play 및 콘솔, Play 종료.
+- Result: Verified. 기존 수면 XZ 위치 (8,8)→(0,0), 범위 113.4×99.4→1064×1064m. 1024×1024m 터레인에 가장자리 20m 여유. 높이 -9.8m 유지(높은 언덕은 수면 위).
+- Validation: 씬 diff는 수면 Transform 네 값만 변경. 전체 Terrain XZ 포함 True, 정식 Outgame→Battle Play에서 motion/reflection 활성, 콘솔 오류/경고 0, 종료 및 BattleScene 편집 모드 복귀. 코드 변경 없어 단위 테스트 재실행 생략.
+- Captures: water-terrain-before.unity, water-terrain-overview.png, water-terrain-play.png.

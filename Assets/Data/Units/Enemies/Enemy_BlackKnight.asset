@@ -15,7 +15,7 @@ MonoBehaviour:
   AIProfile: {fileID: 0}
   UnitName: Black Knight
   Icon: {fileID: 0}
-  Prefab: {fileID: 9115544909242704181, guid: 37f93dc3859037c4987242a9c115a57c, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 1
   MovePattern: 1
   BaseRole: "\uB3CC\uACA9\uAE30\uC0AC"

@@ -178,6 +178,13 @@ namespace CheckmateRPG.Core
 
             if (resolveResult.Succeeded)
             {
+                var data = request.Actor.UnitData;
+                if (data != null && request.Definition == data.BasicAttackAbility &&
+                    data.GetSelectedActiveSkill() != null && data.SkillChargeType == CheckmateRPG.Data.SPChargeType.OnAttack)
+                {
+                    mutations.Add(new SPMutation(SeededRandomProvider.Shared.NextGuid(), request.Actor.ActorId, 1,
+                        new MutationContext(request.CurrentTick, request.Action.ActionId, request.Actor.ActorId, "BasicAbilitySP")));
+                }
                 int level = request.Actor.UnitData != null ? request.Actor.UnitData.GetSkillLevel(request.Definition.name) : 1;
                 var levelData = request.Definition.GetLevelData(level);
 

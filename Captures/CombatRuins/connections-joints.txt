@@ -1,0 +1,6 @@
+Paving joints tightened=32
+Colliders=0
+Runtime scripts=0
+Paving joints tightened=2
+Colliders=0
+Runtime scripts=0

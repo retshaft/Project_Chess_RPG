@@ -11,7 +11,7 @@ namespace CheckmateRPG.Data
     {
         [Header("Deck Configuration")]
         [Tooltip("The maximum allowed deployment cost for this deck.")]
-        [Min(1)] public int MaxCostCap = 15;
+        [HideInInspector] public int MaxCostCap = 20; // Legacy serialized field; the shared formation rule owns the cap.
 
         [Tooltip("The list of units included in this deck.")]
         public List<UnitData> Roster = new List<UnitData>();
@@ -28,7 +28,7 @@ namespace CheckmateRPG.Data
             {
                 if (unit != null)
                 {
-                    total += unit.DeploymentCost;
+                    total += unit.FormationCost;
                 }
             }
             return total;
@@ -39,14 +39,14 @@ namespace CheckmateRPG.Data
         /// </summary>
         public bool IsWithinCostCap()
         {
-            return GetTotalCost() <= MaxCostCap;
+            return GetTotalCost() <= CheckmateRPG.Progression.DeckManager.MAX_FORMATION_COST;
         }
 
         private void OnValidate()
         {
             if (!IsWithinCostCap())
             {
-                Debug.LogWarning($"[PlayerDeckData] '{name}' exceeds MaxCostCap! Total: {GetTotalCost()} / {MaxCostCap}");
+                Debug.LogWarning($"[PlayerDeckData] '{name}' exceeds formation budget! Total: {GetTotalCost()} / {CheckmateRPG.Progression.DeckManager.MAX_FORMATION_COST}");
             }
         }
     }

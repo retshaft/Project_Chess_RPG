@@ -300,30 +300,8 @@ namespace CheckmateRPG.Testing
             // Parent GameObject – holds game-logic components
             var go = new GameObject(unitName);
 
-            // Visual child: a simple primitive so the unit is visible in the Game view
-            var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            visual.name = "Visual";
-            visual.transform.SetParent(go.transform, false);
-            visual.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-            visual.transform.localScale = new Vector3(0.65f, 0.5f, 0.65f);
-
-            // Remove the collider – physics are grid-based, not physics-engine-based
-            Destroy(visual.GetComponent<Collider>());
-
-            // Team colour (works with both Built-in and URP pipelines)
-            var rend = visual.GetComponent<Renderer>();
-            if (rend != null)
-            {
-                var mat = new Material(rend.sharedMaterial);
-                var color = isEnemy
-                    ? new Color(0.90f, 0.20f, 0.20f)
-                    : new Color(0.20f, 0.45f, 0.90f);
-                mat.color = color;
-                // URP uses _BaseColor; setting both is harmless
-                if (mat.HasProperty("_BaseColor"))
-                    mat.SetColor("_BaseColor", color);
-                rend.material = mat;
-            }
+            // Visual child: Prefab이 없으면 Resources/Models/ChessUnits의 기본 체스 모델을 사용한다.
+            UnitVisualFactory.CreateVisual(data, go.transform, isEnemy);
 
             // Add logic components before UnitBrain so Awake() can cache them
             go.AddComponent<HealthComponent>();

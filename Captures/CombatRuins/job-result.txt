@@ -1,0 +1,705 @@
+project=C:/Users/VR13/Downloads/Graduation_Project_v01/Assets
+scene=Assets/Scenes/Test/BattleScene.unity
+play=False
+dirty=True
+Board Barrier - Emission Line | children=8
+Main Camera | children=0
+Directional Light | children=0
+TestSceneBattleManager | children=1
+Plane | children=0
+GridSystem | children=0
+GlobalAPManager | children=0
+M2_InputAndOverlaySystems | children=0
+M3_HUD_Systems | children=0
+Water Environment Probe | children=0
+Battle Shallow Water | children=0
+Combat Ruins - Environment | children=3
+Ruin Art - Shader Graph Dressing | children=2
+BigGear - Textured | children=0
+BigGear - Textured (1) | children=0
+BigGear - Textured (2) | children=0
+BigGear - Textured (3) | children=0
+BrokenBigGear - Textured | children=0
+BrokenBigGear - Textured (1) | children=0
+RuinCenter | children=0
+Path - Textured (2) | children=0
+Path - Textured (3) | children=0
+Path - Textured (6) | children=0
+Path - Textured (7) | children=0
+Path - Textured (9) | children=0
+Path - Textured (8) | children=0
+Path - Textured (4) | children=0
+GameObject (5) | children=0
+Path - Textured (5) | children=0
+Platform | children=0
+Platform (2) | children=0
+Platform (3) | children=0
+Platform (1) | children=0
+LowWallOneMinus | children=0
+LowWallOneMinus (1) | children=0
+LowWallOneMinus (2) | children=0
+LowWallOneMinus (3) | children=0
+GameObject | children=4
+Platform (7) | children=0
+LowWallOneMinus (4) | children=0
+LowWallTwoMinus | children=0
+ew | children=11
+LowWallTwoMinus (1) | children=0
+SmallPillar - Textured | children=0
+Stairs - Textured | children=0
+Stairs - Textured (1) | children=0
+Stairs - Textured (2) | children=0
+Stairs - Textured (3) | children=0
+Path - Textured | children=0
+Path - Textured (1) | children=0
+LowWall - Textured | children=0
+LowWall - Textured (1) | children=0
+Pillar | children=0
+Pillar (6) | children=0
+Pillar (7) | children=0
+GameObject (4) | children=1
+Pillar (2) | children=0
+Pillar (8) | children=0
+Pillar (4) | children=0
+Pillar (5) | children=0
+Pillar (3) | children=0
+GameObject (3) | children=1
+GameObject (1) | children=2
+GameObject (2) | children=4
+FortressPillar | children=0
+w | children=1
+Platform (8) | children=0
+Path - Textured (10) | children=0
+GameObject (6) | children=1
+w | children=1
+LowWall - Textured (2) | children=0
+LowWall - Textured (3) | children=0
+GameObject (7) | children=1
+BigGear - Textured 1 | children=0
+BigGear - Textured 1 (1) | children=0
+BigGear - Textured 1 (2) | children=0
+Platform (9) | children=0
+Platform (10) | children=0
+LowWall - Textured (4) | children=0
+LowWall - Textured (5) | children=0
+GameObject (8) | children=3
+GameObject (9) | children=3
+Combat Ruins - Mood Volume | children=0
+Combat Ruins - Distant City | children=0
+Combat Ruins - Connected Terraces | children=4
+Renderers:
+GrayboxBoardPlane | Center: (8.00, -0.20, 8.00), Extents: (8.00, 0.00, 8.00) | Library/unity default resources
+TileMetal | Center: (1.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (1.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (1.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (1.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (1.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (1.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (1.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (1.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileRock | Center: (3.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (3.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (3.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (3.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (3.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (3.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (3.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (3.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileMetal | Center: (5.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (5.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (5.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (5.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (5.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (5.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (5.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (5.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileRock | Center: (7.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (7.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (7.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (7.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (7.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (7.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (7.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (7.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileMetal | Center: (9.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (9.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (9.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (9.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (9.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (9.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (9.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (9.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileRock | Center: (11.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (11.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (11.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (11.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (11.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (11.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (11.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (11.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileMetal | Center: (13.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (13.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (13.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (13.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (13.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (13.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (13.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (13.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileRock | Center: (15.00, 0.35, 1.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (15.00, 0.35, 3.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (15.00, 0.35, 5.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (15.00, 0.35, 7.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (15.00, 0.35, 9.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (15.00, 0.35, 11.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+TileRock | Center: (15.00, 0.35, 13.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileRock.fbx
+TileMetal | Center: (15.00, 0.35, 15.00), Extents: (1.00, 0.35, 1.00) | Assets/Resources/Models/TileMetal.fbx
+Plane | Center: (8.00, -17.56, 8.00), Extents: (50.00, 0.00, 50.00) | Library/unity default resources
+Battle Shallow Water | Center: (8.00, -11.35, 8.00), Extents: (405.00, 15.00, 355.00) | Assets/Scenes/Test/Water/ShallowWater.asset
+Stairs - Textured | Center: (8.00, -0.26, -4.49), Extents: (2.18, 1.05, 2.64) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured (1) | Center: (8.00, -1.80, -8.13), Extents: (1.99, 0.67, 2.31) | Assets/Resources/Models/Ruin/Path.fbx
+Stairs - Textured (2) | Center: (17.09, -2.01, -12.60), Extents: (2.64, 1.05, 2.18) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured (2) | Center: (20.73, -3.54, -12.60), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (4) | Center: (25.25, -3.69, -12.60), Extents: (2.96, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured (4) | Center: (21.36, -2.38, -14.43), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+Stairs - Textured (3) | Center: (28.60, -2.01, -1.22), Extents: (2.18, 1.05, 2.64) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured (3) | Center: (28.60, -3.54, -4.86), Extents: (1.99, 0.67, 2.31) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (5) | Center: (28.60, -3.69, -9.71), Extents: (1.99, 0.86, 2.96) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured (6) | Center: (26.77, -2.38, -5.49), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (7) | Center: (30.51, -2.38, -5.49), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (5) | Center: (21.36, -2.38, -10.69), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured | Center: (6.17, -0.63, -8.76), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (1) | Center: (9.91, -0.63, -8.76), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (2) | Center: (4.09, 0.75, -2.18), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (3) | Center: (11.92, 0.75, -2.18), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallTwoMinus | Center: (18.06, 0.71, -0.06), Extents: (0.19, 0.57, 1.92) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+LowWallTwoMinus (1) | Center: (-2.08, 0.71, -0.06), Extents: (0.19, 0.57, 1.92) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+LowWallOneMinus | Center: (16.30, 0.75, -2.18), Extents: (2.21, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallOneMinus (1) | Center: (-0.32, 0.75, -2.18), Extents: (2.21, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Stairs - Textured | Center: (-4.45, -0.26, 7.99), Extents: (2.64, 1.05, 2.18) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured (1) | Center: (-8.09, -1.80, 7.99), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured | Center: (-8.68, -0.63, 9.82), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (1) | Center: (-8.68, -0.63, 6.08), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (2) | Center: (-2.14, 0.75, 11.90), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (3) | Center: (-2.14, 0.75, 4.07), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallTwoMinus (1) | Center: (-0.02, 0.71, 18.07), Extents: (1.92, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+LowWallOneMinus (1) | Center: (-2.14, 0.75, 16.31), Extents: (0.44, 0.63, 2.21) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Stairs - Textured | Center: (8.00, -0.26, 20.44), Extents: (2.18, 1.05, 2.64) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured (1) | Center: (8.00, -1.80, 24.08), Extents: (1.99, 0.67, 2.31) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured | Center: (9.83, -0.64, 24.78), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (1) | Center: (6.09, -0.64, 24.78), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (2) | Center: (11.91, 0.75, 18.13), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (3) | Center: (4.08, 0.75, 18.13), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallTwoMinus (1) | Center: (18.08, 0.71, 16.01), Extents: (0.19, 0.57, 1.92) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+LowWallOneMinus (1) | Center: (16.32, 0.75, 18.13), Extents: (2.21, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Stairs - Textured | Center: (20.43, -0.26, 7.97), Extents: (2.64, 1.05, 2.18) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured (1) | Center: (24.07, -1.80, 7.97), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured | Center: (24.81, -0.63, 6.14), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (1) | Center: (24.81, -0.63, 9.88), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (2) | Center: (18.12, 0.75, 4.06), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (3) | Center: (18.12, 0.75, 11.89), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+Platform | Center: (3.07, -0.60, 2.92), Extents: (4.97, 0.75, 4.97) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (5) | Center: (3.01, -0.60, 12.89), Extents: (4.97, 0.75, 4.97) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (6) | Center: (12.97, -0.60, 2.92), Extents: (4.97, 0.75, 4.97) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (4) | Center: (12.91, -0.60, 12.88), Extents: (4.97, 0.75, 4.97) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (11) | Center: (-4.00, -1.81, 8.00), Extents: (2.21, 0.66, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (8.00, -1.81, 20.00), Extents: (2.21, 0.66, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (14) | Center: (8.00, -1.81, -4.00), Extents: (2.21, 0.66, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (20.00, -1.81, 8.00), Extents: (2.21, 0.66, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+BigGear - Textured | Center: (-43.10, -9.80, 27.80), Extents: (3.35, 36.84, 36.84) | Assets/Resources/Models/Ruin/BigGear.fbx
+BigGear - Textured (1) | Center: (-24.20, -9.80, 104.32), Extents: (33.03, 33.03, 3.35) | Assets/Resources/Models/Ruin/BigGear.fbx
+BigGear - Textured (2) | Center: (-43.90, -11.60, 138.20), Extents: (62.23, 62.23, 5.65) | Assets/Resources/Models/Ruin/BigGear.fbx
+BigGear - Textured (3) | Center: (50.10, -22.30, 138.20), Extents: (57.46, 57.46, 5.65) | Assets/Resources/Models/Ruin/BigGear.fbx
+BrokenBigGear - Textured | Center: (-66.70, -1.62, 3.86), Extents: (3.35, 19.52, 27.73) | Assets/Resources/Models/Ruin/BrokenBigGear.fbx
+BrokenBigGear - Textured (1) | Center: (28.70, -6.03, 103.79), Extents: (28.47, 24.22, 3.35) | Assets/Resources/Models/Ruin/BrokenBigGear.fbx
+RuinCenter | Center: (7.74, 126.55, 5.48), Extents: (139.61, 106.76, 136.90) | Assets/Resources/Models/Ruin/RuinCenter.fbx
+Path - Textured (2) | Center: (3.58, -1.80, 28.54), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (3) | Center: (12.40, -1.80, 28.54), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (6) | Center: (28.55, -1.80, 12.38), Extents: (1.99, 0.67, 2.31) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (7) | Center: (28.55, -1.80, 3.56), Extents: (1.99, 0.67, 2.31) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (9) | Center: (-12.57, -1.80, 3.56), Extents: (1.99, 0.67, 2.31) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (8) | Center: (-12.57, -1.80, 12.38), Extents: (1.99, 0.67, 2.31) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (4) | Center: (3.58, -1.80, -12.59), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (5) | Center: (12.40, -1.80, -12.59), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Platform | Center: (8.00, -1.41, 28.54), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (2) | Center: (28.56, -1.41, 7.97), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (3) | Center: (-12.56, -1.39, 7.97), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (1) | Center: (8.00, -1.39, -12.59), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+LowWallOneMinus | Center: (26.88, -0.63, 12.20), Extents: (0.44, 0.63, 2.21) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallOneMinus (1) | Center: (26.88, -0.63, 3.78), Extents: (0.44, 0.63, 2.21) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallOneMinus (2) | Center: (12.24, -0.63, -10.82), Extents: (2.21, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallOneMinus (3) | Center: (3.83, -0.63, -10.82), Extents: (2.21, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+BorderBarrierGenerator - Textured | Center: (16.69, 1.09, -0.69), Extents: (0.98, 1.06, 0.98) | Assets/Resources/Models/Ruin/BorderBarrierGenerator.fbx
+BorderBarrierGenerator - Textured  | Center: (16.69, 1.09, 16.69), Extents: (0.98, 1.06, 0.98) | Assets/Resources/Models/Ruin/BorderBarrierGenerator.fbx
+BorderBarrierGenerator - Textured | Center: (-0.69, 1.09, -0.69), Extents: (0.98, 1.06, 0.98) | Assets/Resources/Models/Ruin/BorderBarrierGenerator.fbx
+BorderBarrierGenerator - Textured | Center: (-0.69, 1.09, 16.69), Extents: (0.98, 1.06, 0.98) | Assets/Resources/Models/Ruin/BorderBarrierGenerator.fbx
+Platform (7) | Center: (28.53, -3.12, -12.60), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+LowWallOneMinus (4) | Center: (25.24, -2.38, -14.43), Extents: (2.21, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (26.77, -2.43, -8.53), Extents: (0.19, 0.57, 1.92) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Path - Textured (12) | Center: (25.25, -3.69, 28.57), Extents: (2.96, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured (4) | Center: (21.36, -2.38, 26.74), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (5) | Center: (21.36, -2.38, 30.48), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+Stairs - Textured (4) | Center: (17.09, -2.01, 28.57), Extents: (2.64, 1.05, 2.18) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured (13) | Center: (28.60, -3.69, 31.46), Extents: (1.99, 0.86, 2.96) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (11) | Center: (20.73, -3.54, 28.57), Extents: (2.31, 0.67, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus (5) | Center: (25.24, -2.38, 26.74), Extents: (2.21, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus (2) | Center: (26.77, -2.43, 32.64), Extents: (0.19, 0.57, 1.92) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Platform (9) | Center: (28.53, -3.12, 28.57), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+LowWallTwoMinus (3) | Center: (24.40, -2.43, 30.48), Extents: (1.92, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Pillar (9) | Center: (28.62, -15.36, 28.61), Extents: (2.84, 12.13, 2.84) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWallTwoMinus (1) | Center: (24.40, -2.43, -10.69), Extents: (1.92, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+SmallPillar - Textured | Center: (26.82, -2.23, -10.70), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Stairs - Textured | Center: (-12.57, -1.73, -0.88), Extents: (1.88, 0.90, 2.27) | Assets/Resources/Models/Ruin/Stairs.fbx
+Stairs - Textured (1) | Center: (-12.57, -3.14, -9.93), Extents: (1.88, 0.90, 2.27) | Assets/Resources/Models/Ruin/Stairs.fbx
+Stairs - Textured (2) | Center: (-16.86, -4.50, -19.48), Extents: (2.27, 0.90, 1.88) | Assets/Resources/Models/Ruin/Stairs.fbx
+Stairs - Textured (3) | Center: (-8.30, -4.50, -19.48), Extents: (2.27, 0.90, 1.88) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured | Center: (-12.57, -3.32, -5.02), Extents: (1.99, 0.86, 2.96) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured (1) | Center: (-12.57, -4.78, -14.32), Extents: (1.99, 0.86, 2.96) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured | Center: (-14.20, -2.05, -4.89), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (1) | Center: (-11.01, -2.06, -4.89), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+Pillar | Center: (-93.00, 5.50, 93.50), Extents: (10.66, 45.60, 10.66) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (6) | Center: (-122.00, 5.50, 126.10), Extents: (19.33, 46.80, 10.66) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (7) | Center: (-78.40, 5.50, 126.10), Extents: (25.27, 46.54, 10.66) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (1) | Center: (-59.96, 5.50, 93.50), Extents: (23.83, 46.70, 10.66) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (2) | Center: (14.28, -16.42, 1.38), Extents: (3.55, 15.17, 3.55) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (8) | Center: (28.62, -15.36, -12.56), Extents: (2.84, 12.13, 2.84) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (4) | Center: (14.28, -16.42, 13.97), Extents: (3.55, 15.17, 3.55) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (5) | Center: (1.77, -16.42, 13.97), Extents: (3.55, 15.17, 3.55) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (3) | Center: (1.77, -16.42, 1.38), Extents: (3.55, 15.17, 3.55) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (8) | Center: (-55.45, -16.42, -12.90), Extents: (9.85, 15.42, 6.17) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (8) | Center: (-8.05, -14.80, 8.27), Extents: (2.89, 12.35, 2.89) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (24.13, -14.80, 8.27), Extents: (2.89, 12.35, 2.89) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (8) | Center: (8.04, -14.80, 24.36), Extents: (2.89, 12.35, 2.89) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (8.04, -14.80, -7.82), Extents: (2.89, 12.35, 2.89) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (10) | Center: (-12.60, -16.82, -19.06), Extents: (2.89, 12.35, 2.89) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (11) | Center: (-12.60, -16.28, -5.04), Extents: (2.89, 12.35, 2.89) | Assets/Resources/Models/Ruin/Pillar.fbx
+FortressPillar | Center: (53.60, -46.30, 11.90), Extents: (11.70, 37.10, 11.70) | Assets/Resources/Models/Ruin/FortressPillar.fbx
+FortressPillarHead | Center: (51.15, -12.70, -13.81), Extents: (8.68, 5.22, 8.70) | Assets/Resources/Models/Ruin/FortressPillarHead.fbx
+Platform (8) | Center: (-12.57, -4.20, -19.48), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Path - Textured (10) | Center: (32.39, -3.49, -12.60), Extents: (2.15, 0.63, 1.45) | Assets/Resources/Models/Ruin/Path.fbx
+SmallPillar - Textured (1) | Center: (30.06, -2.56, -14.06), Extents: (0.78, 0.80, 0.68) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+SmallPillar - Textured (1) | Center: (29.69, -2.48, -11.57), Extents: (0.73, 0.53, 0.81) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+LowWall - Textured (2) | Center: (11.96, -0.64, -14.37), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (3) | Center: (4.11, -0.64, -14.37), Extents: (2.49, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+SmallPillar - Textured (1) | Center: (2.33, -0.76, -13.10), Extents: (0.80, 0.53, 0.67) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+BigGear - Textured 1 | Center: (10.90, -20.20, -43.60), Extents: (29.46, 29.46, 3.08) | Assets/Resources/Models/Ruin/BigGear.fbx
+BigGear - Textured 1 (1) | Center: (18.90, -20.20, -60.20), Extents: (32.42, 32.50, 4.73) | Assets/Resources/Models/Ruin/BigGear.fbx
+BigGear - Textured 1 (2) | Center: (8.00, 273.00, 8.00), Extents: (259.99, 32.27, 259.99) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (9) | Center: (-12.62, -5.90, -14.52), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (10) | Center: (-12.62, -5.90, -10.10), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+LowWall - Textured (4) | Center: (-14.34, -3.29, -14.42), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWall - Textured (5) | Center: (-10.92, -3.29, -14.78), Extents: (0.44, 0.63, 2.49) | Assets/Resources/Models/Ruin/LowWall.fbx
+Pillar (1) | Center: (-175.59, 8.67, 595.82), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-128.59, 8.67, 595.82), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-153.45, 5.88, 588.18), Extents: (24.78, 24.78, 3.08) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-151.45, -22.50, 596.83), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (14) | Center: (-114.68, -22.50, 610.97), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (20) | Center: (-187.51, -22.50, 610.26), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (21) | Center: (-187.51, 15.30, 610.26), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (22) | Center: (-187.51, 52.80, 610.26), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (23) | Center: (-115.39, -22.50, 683.80), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (24) | Center: (-115.39, 15.30, 683.80), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (25) | Center: (-115.39, 52.80, 683.80), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (15) | Center: (-114.68, 15.30, 610.97), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (16) | Center: (-114.68, 52.80, 610.97), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (17) | Center: (-188.22, -22.50, 683.09), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (18) | Center: (-188.22, 15.30, 683.09), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (19) | Center: (-188.22, 52.80, 683.09), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-151.45, 15.30, 596.83), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-151.45, 52.80, 596.83), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-128.59, 8.67, 698.59), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-175.59, 8.67, 698.59), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-150.74, 5.88, 707.63), Extents: (24.78, 24.78, 3.08) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-152.74, -22.50, 697.59), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-152.74, 15.30, 697.59), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-152.74, 52.80, 697.59), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-203.48, 8.67, 670.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-203.48, 8.67, 623.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-213.12, 5.88, 648.56), Extents: (3.08, 24.78, 24.78) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-202.48, -22.50, 646.56), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-202.48, 15.30, 646.56), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-202.48, 52.80, 646.56), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-100.71, 8.67, 623.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-100.71, 8.67, 670.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-91.17, 5.88, 645.85), Extents: (3.08, 24.78, 24.78) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-101.71, -22.50, 647.85), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-101.71, 15.30, 647.85), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-101.71, 52.80, 647.85), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-171.23, 116.18, 605.36), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-132.96, 116.18, 605.36), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-153.20, 113.90, 599.13), Extents: (20.18, 20.18, 2.50) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-151.57, 90.79, 606.18), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (14) | Center: (-121.63, 90.79, 617.69), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (20) | Center: (-180.94, 90.79, 617.12), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (21) | Center: (-180.94, 121.58, 617.12), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (22) | Center: (-180.94, 152.11, 617.12), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (23) | Center: (-122.20, 90.79, 677.01), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (24) | Center: (-122.20, 121.58, 677.01), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (25) | Center: (-122.20, 152.11, 677.01), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (15) | Center: (-121.63, 121.58, 617.69), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (16) | Center: (-121.63, 152.11, 617.69), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (17) | Center: (-181.52, 90.79, 676.43), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (18) | Center: (-181.52, 121.58, 676.43), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (19) | Center: (-181.52, 152.11, 676.43), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-151.57, 121.58, 606.18), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-151.57, 152.11, 606.18), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-132.96, 116.18, 689.05), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-171.23, 116.18, 689.05), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-150.99, 113.90, 696.42), Extents: (20.18, 20.18, 2.50) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-152.62, 90.79, 688.23), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-152.62, 121.58, 688.23), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-152.62, 152.11, 688.23), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-193.94, 116.18, 666.34), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-193.94, 116.18, 628.07), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-201.79, 113.90, 648.31), Extents: (2.50, 20.18, 20.18) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-193.12, 90.79, 646.68), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-193.12, 121.58, 646.68), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-193.12, 152.11, 646.68), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-110.25, 116.18, 628.07), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-110.25, 116.18, 666.34), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-102.48, 113.90, 646.10), Extents: (2.50, 20.18, 20.18) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-111.06, 90.79, 647.73), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-111.06, 121.58, 647.73), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-111.06, 152.11, 647.73), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-167.85, 192.87, 612.76), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-136.34, 192.87, 612.76), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-153.00, 191.00, 607.64), Extents: (16.61, 16.61, 2.06) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-151.66, 171.98, 613.43), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (14) | Center: (-127.01, 171.98, 622.91), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (20) | Center: (-175.84, 171.98, 622.44), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (21) | Center: (-175.84, 197.32, 622.44), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (22) | Center: (-175.84, 222.46, 622.44), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (23) | Center: (-127.49, 171.98, 671.74), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (24) | Center: (-127.49, 197.32, 671.74), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (25) | Center: (-127.49, 222.46, 671.74), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (15) | Center: (-127.01, 197.32, 622.91), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (16) | Center: (-127.01, 222.46, 622.91), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (17) | Center: (-176.31, 171.98, 671.27), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (18) | Center: (-176.31, 197.32, 671.27), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (19) | Center: (-176.31, 222.46, 671.27), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-151.66, 197.32, 613.43), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-151.66, 222.46, 613.43), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-136.34, 192.87, 681.66), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-167.85, 192.87, 681.66), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-151.18, 191.00, 687.72), Extents: (16.61, 16.61, 2.06) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-152.53, 171.98, 680.99), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-152.53, 197.32, 680.99), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-152.53, 222.46, 680.99), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-186.55, 192.87, 662.96), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-186.55, 192.87, 631.45), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-193.01, 191.00, 648.12), Extents: (2.06, 16.61, 16.61) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-185.87, 171.98, 646.78), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-185.87, 197.32, 646.78), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-185.87, 222.46, 646.78), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-117.64, 192.87, 631.45), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-117.64, 192.87, 662.96), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-111.25, 191.00, 646.30), Extents: (2.06, 16.61, 16.61) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-118.32, 171.98, 647.64), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-118.32, 197.32, 647.64), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-118.32, 222.46, 647.64), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-296.29, -79.33, 686.82), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-249.29, -79.33, 686.82), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-274.15, -82.12, 679.18), Extents: (24.78, 24.78, 3.08) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-272.15, -110.50, 687.83), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (14) | Center: (-235.38, -110.50, 701.97), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (20) | Center: (-308.21, -110.50, 701.26), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (21) | Center: (-308.21, -72.70, 701.26), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (22) | Center: (-308.21, -35.20, 701.26), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (23) | Center: (-236.09, -110.50, 774.80), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (24) | Center: (-236.09, -72.70, 774.80), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (25) | Center: (-236.09, -35.20, 774.80), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (15) | Center: (-235.38, -72.70, 701.97), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (16) | Center: (-235.38, -35.20, 701.97), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (17) | Center: (-308.92, -110.50, 774.09), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (18) | Center: (-308.92, -72.70, 774.09), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (19) | Center: (-308.92, -35.20, 774.09), Extents: (15.38, 18.91, 15.38) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-272.15, -72.70, 687.83), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-272.15, -35.20, 687.83), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-249.29, -79.33, 789.59), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-296.29, -79.33, 789.59), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-271.44, -82.12, 798.63), Extents: (24.78, 24.78, 3.08) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-273.44, -110.50, 788.59), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-273.44, -72.70, 788.59), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-273.44, -35.20, 788.59), Extents: (18.91, 18.91, 2.84) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-324.18, -79.33, 761.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-324.18, -79.33, 714.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-333.82, -82.12, 739.56), Extents: (3.08, 24.78, 24.78) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-323.18, -110.50, 737.56), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-323.18, -72.70, 737.56), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-323.18, -35.20, 737.56), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-221.41, -79.33, 714.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-221.41, -79.33, 761.71), Extents: (14.19, 60.67, 14.19) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-211.87, -82.12, 736.85), Extents: (3.08, 24.78, 24.78) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-222.41, -110.50, 738.85), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-222.41, -72.70, 738.85), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-222.41, -35.20, 738.85), Extents: (2.84, 18.91, 18.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-291.93, 28.18, 696.36), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-253.66, 28.18, 696.36), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-273.90, 25.90, 690.13), Extents: (20.18, 20.18, 2.50) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-272.27, 2.79, 697.18), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (14) | Center: (-242.33, 2.79, 708.69), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (20) | Center: (-301.64, 2.79, 708.12), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (21) | Center: (-301.64, 33.58, 708.12), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (22) | Center: (-301.64, 64.11, 708.12), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (23) | Center: (-242.90, 2.79, 768.01), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (24) | Center: (-242.90, 33.58, 768.01), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (25) | Center: (-242.90, 64.11, 768.01), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (15) | Center: (-242.33, 33.58, 708.69), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (16) | Center: (-242.33, 64.11, 708.69), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (17) | Center: (-302.22, 2.79, 767.43), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (18) | Center: (-302.22, 33.58, 767.43), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (19) | Center: (-302.22, 64.11, 767.43), Extents: (12.52, 15.40, 12.52) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-272.27, 33.58, 697.18), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-272.27, 64.11, 697.18), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-253.66, 28.18, 780.05), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-291.93, 28.18, 780.05), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-271.69, 25.90, 787.42), Extents: (20.18, 20.18, 2.50) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-273.32, 2.79, 779.23), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-273.32, 33.58, 779.23), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-273.32, 64.11, 779.23), Extents: (15.40, 15.40, 2.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-314.64, 28.18, 757.34), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-314.64, 28.18, 719.07), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-322.49, 25.90, 739.31), Extents: (2.50, 20.18, 20.18) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-313.82, 2.79, 737.68), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-313.82, 33.58, 737.68), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-313.82, 64.11, 737.68), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-230.95, 28.18, 719.07), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-230.95, 28.18, 757.34), Extents: (11.56, 49.41, 11.56) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-223.18, 25.90, 737.10), Extents: (2.50, 20.18, 20.18) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-231.76, 2.79, 738.73), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-231.76, 33.58, 738.73), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-231.76, 64.11, 738.73), Extents: (2.31, 15.40, 15.40) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-288.55, 104.87, 703.76), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-257.04, 104.87, 703.76), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-273.70, 103.00, 698.64), Extents: (16.61, 16.61, 2.06) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-272.36, 83.98, 704.43), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (14) | Center: (-247.71, 83.98, 713.91), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (20) | Center: (-296.54, 83.98, 713.44), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (21) | Center: (-296.54, 109.32, 713.44), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (22) | Center: (-296.54, 134.46, 713.44), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (23) | Center: (-248.19, 83.98, 762.74), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (24) | Center: (-248.19, 109.32, 762.74), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (25) | Center: (-248.19, 134.46, 762.74), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (15) | Center: (-247.71, 109.32, 713.91), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (16) | Center: (-247.71, 134.46, 713.91), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (17) | Center: (-297.01, 83.98, 762.27), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (18) | Center: (-297.01, 109.32, 762.27), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (19) | Center: (-297.01, 134.46, 762.27), Extents: (10.31, 12.68, 10.31) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-272.36, 109.32, 704.43), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-272.36, 134.46, 704.43), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-257.04, 104.87, 772.66), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-288.55, 104.87, 772.66), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-271.88, 103.00, 778.72), Extents: (16.61, 16.61, 2.06) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-273.23, 83.98, 771.99), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-273.23, 109.32, 771.99), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-273.23, 134.46, 771.99), Extents: (12.68, 12.68, 1.91) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-307.25, 104.87, 753.96), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-307.25, 104.87, 722.45), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-313.71, 103.00, 739.12), Extents: (2.06, 16.61, 16.61) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-306.57, 83.98, 737.78), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-306.57, 109.32, 737.78), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-306.57, 134.46, 737.78), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar (1) | Center: (-238.34, 104.87, 722.45), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar (9) | Center: (-238.34, 104.87, 753.96), Extents: (9.51, 40.67, 9.51) | Assets/Resources/Models/Ruin/Pillar.fbx
+BigGear - Textured 1 (3) | Center: (-231.95, 103.00, 737.30), Extents: (2.06, 16.61, 16.61) | Assets/Resources/Models/Ruin/BigGear.fbx
+Platform (11) | Center: (-239.02, 83.98, 738.64), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (12) | Center: (-239.02, 109.32, 738.64), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Platform (13) | Center: (-239.02, 134.46, 738.64), Extents: (1.91, 12.68, 12.68) | Assets/Resources/Models/Ruin/Platform.fbx
+Combat Ruins - Distant City | Center: (3.84, 54.33, 12.38), Extents: (502.60, 114.82, 505.73) | Assets/Environment/CombatRuins/Sky/DistantCity.asset
+Path - Textured 1 | Center: (-12.57, -1.99, 17.04), Extents: (1.99, 0.86, 2.47) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (-12.57, -13.86, 17.04), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (-14.36, -0.50, 17.04), Extents: (0.44, 0.63, 2.13) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (-10.78, -0.50, 17.04), Extents: (0.44, 0.63, 2.13) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (-12.57, -1.99, 21.77), Extents: (1.99, 0.86, 2.47) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (-14.36, -0.50, 21.77), Extents: (0.44, 0.63, 2.13) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (-10.78, -0.56, 21.77), Extents: (0.19, 0.57, 2.13) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Platform | Center: (-14.77, -1.46, 26.34), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-14.77, -12.81, 26.34), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-16.55, -0.50, 24.56), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-14.77, -1.46, 30.74), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-14.77, -12.81, 30.74), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-16.55, -0.50, 32.52), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-10.37, -1.46, 26.34), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-10.37, -12.81, 26.34), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-8.59, -0.50, 24.56), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-10.37, -1.46, 30.74), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-10.37, -12.81, 30.74), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-8.59, -0.50, 32.52), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Path - Textured 1 | Center: (-5.81, -1.99, 28.54), Extents: (2.47, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (-5.81, -13.86, 28.54), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (-5.81, -0.50, 26.75), Extents: (2.13, 0.62, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (-5.81, -0.50, 30.33), Extents: (2.13, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (-1.08, -1.99, 28.54), Extents: (2.47, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (-1.08, -0.50, 26.75), Extents: (2.13, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (-1.08, -0.56, 30.33), Extents: (2.13, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Stairs - Textured | Center: (-12.57, -1.98, 35.21), Extents: (1.99, 0.85, 2.28) | Assets/Resources/Models/Ruin/Stairs.fbx
+Path - Textured 1 | Center: (-12.57, -3.69, 39.00), Extents: (1.99, 0.86, 1.64) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (-12.57, -15.56, 39.00), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (-14.36, -2.20, 39.00), Extents: (0.44, 0.63, 1.29) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (-10.78, -2.20, 39.00), Extents: (0.44, 0.63, 1.29) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (-12.57, -3.69, 42.07), Extents: (1.99, 0.86, 1.64) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (-14.36, -2.20, 42.07), Extents: (0.44, 0.63, 1.29) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (-10.78, -2.26, 42.07), Extents: (0.19, 0.57, 1.29) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Platform | Center: (-14.77, -3.16, 45.80), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-14.77, -14.51, 45.80), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-16.55, -2.20, 44.02), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-14.77, -3.16, 50.20), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-14.77, -14.51, 50.20), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-16.55, -2.20, 51.98), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-10.37, -3.16, 45.80), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-10.37, -14.51, 45.80), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-8.59, -2.20, 44.02), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-10.37, -3.16, 50.20), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-10.37, -14.51, 50.20), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-8.59, -2.20, 51.98), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Path - Textured 1 | Center: (-5.47, -3.69, 48.00), Extents: (2.80, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (-5.47, -15.56, 48.00), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWallOneMinus | Center: (-5.47, -2.20, 49.79), Extents: (2.46, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (-0.08, -3.69, 48.00), Extents: (2.80, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (-0.08, -2.20, 46.21), Extents: (2.46, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (-0.08, -2.26, 49.79), Extents: (2.46, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Path - Textured 1 | Center: (5.32, -3.69, 48.00), Extents: (2.80, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (5.32, -15.56, 48.00), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWallTwoMinus | Center: (5.32, -2.26, 46.21), Extents: (2.46, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+LowWall - Textured | Center: (5.32, -2.20, 49.79), Extents: (2.46, 0.62, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+Path - Textured 1 | Center: (10.71, -3.69, 48.00), Extents: (2.80, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured | Center: (10.71, -2.20, 46.21), Extents: (2.46, 0.62, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+Path - Textured 1 | Center: (16.11, -3.69, 48.00), Extents: (2.80, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (16.11, -15.56, 48.00), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWallOneMinus | Center: (16.11, -2.20, 46.21), Extents: (2.46, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (16.11, -2.26, 49.79), Extents: (2.46, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Path - Textured 1 | Center: (21.50, -3.69, 48.00), Extents: (2.80, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured | Center: (21.50, -2.20, 49.79), Extents: (2.46, 0.62, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+Platform | Center: (26.40, -3.16, 45.80), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (26.40, -14.51, 45.80), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (24.62, -2.20, 44.02), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (26.40, -3.16, 50.20), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (26.40, -14.51, 50.20), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (24.62, -2.20, 51.98), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (30.80, -3.16, 45.80), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (30.80, -14.51, 45.80), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (32.58, -2.20, 44.02), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (30.80, -3.16, 50.20), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (30.80, -14.51, 50.20), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (32.58, -2.20, 51.98), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Path - Textured 1 | Center: (28.60, -3.69, 36.70), Extents: (1.99, 0.86, 2.40) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (28.60, -15.56, 36.70), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (26.81, -2.20, 36.70), Extents: (0.44, 0.63, 2.06) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (30.39, -2.20, 36.70), Extents: (0.44, 0.63, 2.06) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (28.60, -3.69, 41.30), Extents: (1.99, 0.86, 2.40) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (26.81, -2.20, 41.30), Extents: (0.44, 0.63, 2.06) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (30.39, -2.26, 41.30), Extents: (0.19, 0.57, 2.06) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Path - Textured 1 | Center: (36.43, -3.72, -12.60), Extents: (2.02, 0.86, 1.45) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (36.43, -15.59, -12.60), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (36.43, -2.24, -13.85), Extents: (1.68, 0.62, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (36.43, -2.24, -11.36), Extents: (1.68, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (40.28, -3.72, -12.60), Extents: (2.02, 0.86, 1.45) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (40.28, -2.24, -13.85), Extents: (1.68, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (40.28, -2.29, -11.36), Extents: (1.68, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Platform | Center: (44.40, -3.19, -14.80), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (44.40, -14.54, -14.80), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (42.62, -2.24, -16.58), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (44.40, -3.19, -10.40), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (44.40, -14.54, -10.40), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (42.62, -2.24, -8.62), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (48.80, -3.19, -14.80), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (48.80, -14.54, -14.80), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (50.58, -2.24, -16.58), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (48.80, -3.19, -10.40), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (48.80, -14.54, -10.40), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (50.58, -2.24, -8.62), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Path - Textured 1 | Center: (46.60, -3.72, -5.77), Extents: (1.99, 0.86, 2.53) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (46.60, -15.59, -5.77), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (44.81, -2.24, -5.77), Extents: (0.44, 0.63, 2.19) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (48.39, -2.24, -5.77), Extents: (0.44, 0.63, 2.19) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (46.60, -3.72, -0.91), Extents: (1.99, 0.86, 2.53) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallTwoMinus | Center: (48.39, -2.29, -0.91), Extents: (0.19, 0.57, 2.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Path - Textured 1 | Center: (46.60, -3.72, 3.95), Extents: (1.99, 0.86, 2.53) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (46.60, -15.59, 3.95), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWallTwoMinus | Center: (44.81, -2.29, 3.95), Extents: (0.19, 0.57, 2.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+LowWall - Textured | Center: (48.39, -2.24, 3.95), Extents: (0.44, 0.63, 2.19) | Assets/Resources/Models/Ruin/LowWall.fbx
+Path - Textured 1 | Center: (46.60, -3.72, 8.81), Extents: (1.99, 0.86, 2.53) | Assets/Resources/Models/Ruin/Path.fbx
+LowWall - Textured | Center: (44.81, -2.24, 8.81), Extents: (0.44, 0.63, 2.19) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (48.39, -2.24, 8.81), Extents: (0.44, 0.63, 2.19) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (46.60, -3.72, 13.67), Extents: (1.99, 0.86, 2.53) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (46.60, -15.59, 13.67), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWallOneMinus | Center: (44.81, -2.24, 13.67), Extents: (0.44, 0.63, 2.19) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Platform | Center: (44.40, -3.19, 18.30), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (44.40, -14.54, 18.30), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (42.62, -2.24, 16.52), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (44.40, -3.19, 22.70), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (44.40, -14.54, 22.70), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (42.62, -2.24, 24.48), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (48.80, -3.19, 18.30), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (48.80, -14.54, 18.30), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (50.58, -2.24, 16.52), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (48.80, -3.19, 22.70), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (48.80, -14.54, 22.70), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (50.58, -2.24, 24.48), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Path - Textured 1 | Center: (46.60, -3.72, 27.79), Extents: (1.99, 0.86, 2.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (46.60, -15.59, 27.79), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+Path - Textured 1 | Center: (46.60, -3.72, 33.56), Extents: (1.99, 0.86, 2.99) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured 1 | Center: (46.60, -3.72, 39.34), Extents: (1.99, 0.86, 2.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (46.60, -15.59, 39.34), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+Path - Textured 1 | Center: (46.60, -3.72, 45.11), Extents: (1.99, 0.86, 2.99) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured 1 | Center: (44.33, -3.72, 48.00), Extents: (2.37, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (44.33, -15.58, 48.00), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+Path - Textured 1 | Center: (39.80, -3.71, 48.00), Extents: (2.37, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Path - Textured 1 | Center: (35.27, -3.69, 48.00), Extents: (2.37, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (35.27, -15.56, 48.00), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+Path - Textured 1 | Center: (-21.23, -6.26, -19.48), Extents: (2.22, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (-21.23, -18.13, -19.48), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (-21.23, -4.78, -21.27), Extents: (1.88, 0.62, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (-21.23, -4.78, -17.69), Extents: (1.88, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (-25.48, -6.26, -19.48), Extents: (2.22, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (-25.48, -4.78, -21.27), Extents: (1.88, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (-25.48, -4.83, -17.69), Extents: (1.88, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Platform | Center: (-34.20, -5.73, -21.68), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-34.20, -17.08, -21.68), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-35.98, -4.78, -23.46), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-34.20, -5.73, -17.28), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-34.20, -17.08, -17.28), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-35.98, -4.78, -15.50), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-29.80, -5.73, -21.68), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-29.80, -17.08, -21.68), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-28.02, -4.78, -23.46), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-29.80, -5.73, -17.28), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-29.80, -17.08, -17.28), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-28.02, -4.78, -15.50), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Path - Textured 1 | Center: (-3.89, -6.26, -19.48), Extents: (2.26, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+Pillar | Center: (-3.89, -18.13, -19.48), Extents: (1.45, 11.00, 1.45) | Assets/Resources/Models/Ruin/Pillar.fbx
+LowWall - Textured | Center: (-3.89, -4.78, -21.27), Extents: (1.92, 0.62, 0.44) | Assets/Resources/Models/Ruin/LowWall.fbx
+LowWallOneMinus | Center: (-3.89, -4.78, -17.69), Extents: (1.92, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+Path - Textured 1 | Center: (0.44, -6.26, -19.48), Extents: (2.26, 0.86, 1.99) | Assets/Resources/Models/Ruin/Path.fbx
+LowWallOneMinus | Center: (0.44, -4.78, -21.27), Extents: (1.92, 0.63, 0.44) | Assets/Resources/Models/Ruin/LowWallOneMinus.fbx
+LowWallTwoMinus | Center: (0.44, -4.83, -17.69), Extents: (1.92, 0.57, 0.19) | Assets/Resources/Models/Ruin/LowWallTwoMinus.fbx
+Platform | Center: (4.80, -5.73, -21.68), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (4.80, -17.08, -21.68), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (3.02, -4.78, -23.46), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (4.80, -5.73, -17.28), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (4.80, -17.08, -17.28), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (3.02, -4.78, -15.50), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (9.20, -5.73, -21.68), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (9.20, -17.08, -21.68), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (10.98, -4.78, -23.46), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (9.20, -5.73, -17.28), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (9.20, -17.08, -17.28), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (10.98, -4.78, -15.50), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Stairs - Textured | Center: (-32.00, -6.30, -26.15), Extents: (1.99, 0.90, 2.27) | Assets/Resources/Models/Ruin/Stairs.fbx
+Platform | Center: (-34.20, -7.53, -35.02), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-34.20, -18.88, -35.02), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-35.98, -6.58, -36.80), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-34.20, -7.53, -30.62), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-34.20, -18.88, -30.62), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-35.98, -6.58, -28.84), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-29.80, -7.53, -35.02), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-29.80, -18.88, -35.02), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-28.02, -6.58, -36.80), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Platform | Center: (-29.80, -7.53, -30.62), Extents: (2.21, 0.33, 2.21) | Assets/Resources/Models/Ruin/Platform.fbx
+Pillar | Center: (-29.80, -18.88, -30.62), Extents: (1.65, 11.00, 1.65) | Assets/Resources/Models/Ruin/Pillar.fbx
+SmallPillar - Textured | Center: (-28.02, -6.58, -28.84), Extents: (0.44, 0.62, 0.44) | Assets/Resources/Models/Ruin/SmallPillar.fbx
+Pillar | Center: (-20.00, -4.00, 48.00), Extents: (2.30, 13.00, 2.30) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar | Center: (-4.00, -8.00, 54.00), Extents: (2.30, 13.00, 2.30) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar | Center: (15.00, -1.00, 54.00), Extents: (2.30, 13.00, 2.30) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar | Center: (36.00, -6.00, 54.00), Extents: (2.30, 13.00, 2.30) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar | Center: (54.00, -7.00, 28.00), Extents: (2.30, 13.00, 2.30) | Assets/Resources/Models/Ruin/Pillar.fbx
+Pillar | Center: (54.00, -10.00, -18.00), Extents: (2.30, 13.00, 2.30) | Assets/Resources/Models/Ruin/Pillar.fbx

@@ -1,0 +1,8 @@
+Volume validation
+Project: C:/Users/VR13/Downloads/Graduation_Project_v01/Assets
+Scene: Assets/Scenes/Test/BattleScene.unity
+ExitingEditMode
+EnteredPlayMode
+ExitingPlayMode
+EnteredEditMode
+PlayModeStopped=True

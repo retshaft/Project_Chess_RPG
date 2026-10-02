@@ -24,21 +24,16 @@ namespace CheckmateRPG.Components
 
         public float CurrentSP => _currentSP;
         public float MaxSP => _maxSP;
+        public bool IsReady => _currentSP >= _maxSP;
+        private Units.UnitBrain _brain;
 
         public void Initialise(UnitData data)
         {
-            _maxSP = data.MaxSP;
-            _currentSP = Mathf.Min(data.InitSP, _maxSP);
-            _chargeType = data.ChargeType;
-
-            var activeSkill = data.GetSelectedActiveSkill();
-            if (activeSkill != null && activeSkill.Levels != null && activeSkill.Levels.Count > 0)
-            {
-                var lvlData = activeSkill.GetLevelData(1); // 기본 1레벨 참조
-                if (lvlData.SPCost > 0) _maxSP = lvlData.SPCost;
-                if (lvlData.InitSP > 0) _currentSP = Mathf.Min(lvlData.InitSP, _maxSP);
-                _chargeType = lvlData.ChargeType != SPChargeType.Auto ? lvlData.ChargeType : activeSkill.DefaultChargeType;
-            }
+            OnDestroy(); // Reinitialisation must not duplicate combat listeners.
+            _brain = GetComponent<Units.UnitBrain>();
+            _maxSP = Mathf.Max(0, data.SkillMaxSP);
+            _currentSP = Mathf.Clamp(data.SkillInitSP, 0, _maxSP);
+            _chargeType = data.SkillChargeType;
 
             _isSkillActive = false;
 
@@ -65,6 +60,7 @@ namespace CheckmateRPG.Components
 
         private void Update()
         {
+            if (_brain != null || (Core.TickScheduler.Instance != null && Core.TickScheduler.Instance.IsPaused)) return;
             if (_isSkillActive || _maxSP <= 0f) return;
             if (_health != null && _health.IsDead) return;
 
@@ -76,6 +72,7 @@ namespace CheckmateRPG.Components
 
         private void HandleAttackPerformed(GameObject target)
         {
+            if (_brain != null) return; // Runtime mutations own battle SP.
             if (_isSkillActive || _maxSP <= 0f) return;
             if (_chargeType == SPChargeType.OnAttack)
             {
@@ -85,6 +82,7 @@ namespace CheckmateRPG.Components
 
         private void HandleDamageTaken(float amount, Core.DamageType type)
         {
+            if (_brain != null) return;
             if (_isSkillActive || _maxSP <= 0f) return;
             if (_chargeType == SPChargeType.OnHit && amount > 0)
             {
@@ -94,18 +92,8 @@ namespace CheckmateRPG.Components
 
         public void AddSP(float amount)
         {
-            if (_isSkillActive || amount <= 0f) return;
-
-            _currentSP = Mathf.Min(_currentSP + amount, _maxSP);
-            OnSPChanged?.Invoke(_currentSP, _maxSP);
-
-            if (_currentSP >= _maxSP)
-            {
-                _currentSP = 0f; // Reset SP when full
-                OnSPChanged?.Invoke(_currentSP, _maxSP);
-                _isSkillActive = true;
-                OnSPFull?.Invoke();
-            }
+            if (_isSkillActive || amount <= 0f || _maxSP <= 0) return;
+            SetCurrentSP(_currentSP + amount);
         }
 
         public void SetSkillActive(bool active)
@@ -115,8 +103,11 @@ namespace CheckmateRPG.Components
 
         public void SetCurrentSP(float value)
         {
+            bool wasReady = IsReady;
+            if (Mathf.Approximately(_currentSP, Mathf.Clamp(value, 0f, _maxSP))) return;
             _currentSP = Mathf.Clamp(value, 0f, _maxSP);
             OnSPChanged?.Invoke(_currentSP, _maxSP);
+            if (!wasReady && IsReady) OnSPFull?.Invoke();
         }
 
         public void ResetSP(float val)

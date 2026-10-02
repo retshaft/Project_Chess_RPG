@@ -16,10 +16,14 @@ namespace CheckmateRPG.PlayerInput
         public InputState CurrentState { get; private set; } = InputState.Idle;
         public UnitBrain SelectedUnit { get; private set; }
         public event System.Action<UnitBrain> OnSelectionChanged;
+        private Core.BattleManager battle;
+        private void Start() => battle = FindFirstObjectByType<Core.BattleManager>();
 
         private void Update()
         {
             if (Mouse.current == null) return;
+            if ((battle != null && (battle.OwnsPointerInput || battle.CurrentPhase != Core.BattleManager.BattlePhase.Playing)) ||
+                UI.UILayers.PointerOverUI()) return;
 
             // Left Click: Select Allied Unit
             if (Mouse.current.leftButton.wasPressedThisFrame)

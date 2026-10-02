@@ -64,6 +64,7 @@ namespace CheckmateRPG.Units
 
         /// <summary>Read-only access to this unit's SP logic.</summary>
         public SPComponent SPComponent { get; private set; }
+        public GameObject CurrentTarget => _currentTarget;
 
         /// <summary>Read-only access to the assigned unit data.</summary>
         public UnitData UnitData { get => _unitData; set => _unitData = value; }

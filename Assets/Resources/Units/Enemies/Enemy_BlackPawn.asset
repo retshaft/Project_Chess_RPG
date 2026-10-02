@@ -15,7 +15,7 @@ MonoBehaviour:
   AIProfile: {fileID: 0}
   UnitName: Black Pawn
   Icon: {fileID: 0}
-  Prefab: {fileID: 675204282786979514, guid: 27fcadd96d117344ca8cdbda5bfbe56a, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 0
   MovePattern: 0
   BaseRole: "\uCC99\uD6C4\uB300"

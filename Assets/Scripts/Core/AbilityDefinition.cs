@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace CheckmateRPG.Core
 {
+    public enum SkillActivationMode { Manual, Automatic }
     public enum AbilityTargetingRule
     {
         None,
@@ -47,6 +48,7 @@ namespace CheckmateRPG.Core
         public string SkillName = "Skill Name";
         [TextArea(2, 5)] public string Description = "Skill Description";
         public Sprite SkillIcon;
+        public SkillActivationMode ActivationMode = SkillActivationMode.Manual;
         public CheckmateRPG.Data.SPChargeType DefaultChargeType = CheckmateRPG.Data.SPChargeType.Auto;
 
         [Tooltip("레벨별 스킬 데이터. 인덱스 0 = 1레벨")]

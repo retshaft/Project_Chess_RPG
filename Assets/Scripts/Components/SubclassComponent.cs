@@ -35,10 +35,7 @@ namespace CheckmateRPG.Components
                 _combat.OnDamageDealtWithHitCounter += HandleHitPerformed;
             }
 
-            if (_sp != null)
-            {
-                _sp.OnSPFull += HandleSPFull;
-            }
+            // Active skills are queued by ActionRuntimeController, never by an SP notification.
         }
 
         public bool IsDefender()
@@ -121,7 +118,7 @@ namespace CheckmateRPG.Components
             
             // Phase 6: EX Skill Cut-In 연출 트리거 (존재하는 경우)
             var cutIn = UnityEngine.Object.FindAnyObjectByType<CheckmateRPG.UI.SkillCutInUI>();
-            if (cutIn != null)
+            if (cutIn != null && _unitBrain.UnitData.Rarity == 5)
             {
                 cutIn.ShowCutIn(_unitBrain.UnitData.UnitName, skill.SkillName, _unitBrain.UnitData.Icon);
             }

@@ -16,7 +16,7 @@ MonoBehaviour:
   UnitName: Black Queen
   Rarity: 3
   Icon: {fileID: 0}
-  Prefab: {fileID: 929550618595183695, guid: b9aa0c30306c18f44863e9cc73b8178b, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 4
   MovePattern: 5
   BaseRole: "\uB300\uC655"

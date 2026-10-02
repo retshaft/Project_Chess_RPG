@@ -24,6 +24,23 @@ namespace CheckmateRPG.Progression
         public UnitData[] CurrentDeck { get; private set; } = new UnitData[MAX_DECK_SIZE];
 
         public const int MAX_DECK_SIZE = 8;
+        // Baseline: King(3) + Queen(5) + Rook(4) + Bishop(3) + Knight(3) + two optional Pawns(2).
+        public const int MAX_FORMATION_COST = 20;
+        public int FormationCost => CalculateFormationCost(CurrentDeck);
+        public bool IsWithinFormationBudget => FormationCost <= MAX_FORMATION_COST;
+
+        public static int CalculateFormationCost(IReadOnlyList<UnitData> deck, int replacementSlot = -1, UnitData replacement = null)
+        {
+            int total = 0;
+            for (int i = 0; i < deck.Count; i++)
+            {
+                var unit = i == replacementSlot ? replacement : deck[i];
+                // Moving an existing operator to another slot must not count it twice.
+                if (i != replacementSlot && replacementSlot >= 0 && unit == replacement) continue;
+                if (unit != null) total += unit.FormationCost;
+            }
+            return total;
+        }
 
         public event Action OnDeckChanged;
 
@@ -134,6 +151,7 @@ namespace CheckmateRPG.Progression
                 {
                     if (CanUseUnit(AllUnitsDatabase[i]) && AllUnitsDatabase[i].PieceType != ChessPieceType.King)
                     {
+                        if (CalculateFormationCost(CurrentDeck, slot, AllUnitsDatabase[i]) > MAX_FORMATION_COST) continue;
                         CurrentDeck[slot] = AllUnitsDatabase[i];
                         slot++;
                         if (slot >= 3) break;
@@ -208,6 +226,7 @@ namespace CheckmateRPG.Progression
             }
 
             // Remove unit from other slots if it already exists
+            if (CalculateFormationCost(CurrentDeck, slotIndex, unit) > MAX_FORMATION_COST) return false;
             if (unit != null)
             {
                 for (int i = 0; i < MAX_DECK_SIZE; i++)

@@ -1,5 +1,11 @@
 # 병렬 작업 보드
 
+## 2026-10-01 원경 안개와 하늘
+- ruins-sky-fog | Codex | Review | 절차적 HDR 하늘·구름, Exp2 안개, 원경 도시 통합 메시. 4K 렌더 및 Play 진입/종료 확인. `Tasks/ruins-sky-fog.md`, `../CombatRuinsAtmosphere.md`.
+
+## 2026-10-01 침수 유적 무드 볼륨
+- ruins-mood-volume | Codex | Review | BattleScene 전용 URP 볼륨 적용, 컴파일 및 배경 Play 확인/종료. 현재 편성 부재로 캐릭터 색감 확인 잔여. `Tasks/ruins-mood-volume.md`, `../CombatRuinsVolume.md`.
+
 ## 2026-09-09 C01 리뷰 후 배정
 
 - 기존 attack-move-grace: Review 유지. 인계 기준 67/68 테스트 통과, Play Mode 미실행. 메인 정적 리뷰에서 실전/예측 사거리 규칙 불일치 및 강제 이동 뒤 기존 유예 기록 잔존 확인.
@@ -30,7 +36,28 @@
 - 기능 과제는 `Docs/MILESTONES.md`의 현재 우선순위에서 선정한다. 이 보드의 대기 행은 구현 지시가 아니다.
 
 ## 2026-09-27 UI 아트 디렉션
+- camera-ui-pass | Codex | Review | Cinemachine 조작/시작·승리 연출, UI 레이어·입력 관통·중복 캔버스 수정. 171/171 및 Play 확인. Handoffs/camera-ui-pass.md.
 - ui-command-pass | Codex | Review | 칙령 보드/전투 정보창, 배치 비용 제거 및 편성 비용 표시. 144/144 테스트 및 후속 컴파일/Play 확인. Handoffs/ui-command-pass.md.
 - ui-reference-pass | Codex | Review | 대원 카드 갤러리/상세, 칙령 카드 및 스크롤, OP 선택도. 전체 144/144 및 정식 씬 Play 확인. Handoffs/ui-reference-pass.md.
 - ui-art-direction | Codex | Review | Handoffs/ui-art-direction.md. UI 적용, 122/122 테스트, 정식 경로 Play 확인. 기존 스킬/물 오류 잔존.
 - economy-system | Codex | Review | Handoffs/economy-system.md. 4-Tier 재화 저장·회복·충전·레벨/공명·OP-01~05 및 자원 작전 보상·40인 정규 소집 풀 적용, 144/144 통과.
+- confirmed-battle-rules | Codex | Review | 기본 편성 기준 상한 20/기물 비용, 킹 자동 배치/철회, 수동·자동 SP와 5성 스킬 카메라. 최초 규칙 179/179 및 정식 경로 Play 확인, 20 상향 후 컴파일 확인. Handoffs/confirmed-battle-rules.md.
+- ruins-connected-layout | Codex | Verified (배경 배치) | BattleScene 기존 배치 보존, RuinsBackgrounds 198개로 회랑/광장/계단 연결. 컴파일·렌더·Play 오류 0 및 종료 확인. 기존 덱 예산 경고로 전체 전투 미검증. ../CombatRuinsConnections.md.
+
+## 2026-10-02 수중 유적 확장
+- ruins-submerged-modules | Codex | Verified (배경 배치) | 수중 배경 확장 및 반복 구조 프리팹 모듈화. Tasks/ruins-submerged-modules.md.
+
+
+## 2026-10-02 수면 디테일
+- water-detail | Codex | Verified (수면 렌더) | 픽셀 파도 노멀, 잔물결 거리, 청록 투과/카우스틱, 접촉 포말. 컴파일/Play 확인 및 종료. ../WaterDetail.md.
+
+## 2026-10-02 수면 완성도 보강
+- water-polish | Codex | Verified (수면 렌더) | 밝은 수색/깊이 분리, 실제 유적 평면 반사, 여러 시점과 수명주기 검증, 179/179. ../WaterDetail.md.
+
+
+## 2026-10-02 물살 제어
+- water-motion | Codex | Verified | ShallowWaterMotion 적용. 공유 재질 보존, 185/185, Play/정지·재개 및 콘솔 확인. ../WaterMotion.md.
+
+- water-polish reference follow-up | Codex | Verified | 재질의 물결/반사/접촉 포말/카우스틱 조정. 사용자 수색 보존, 물 테스트 6/6 및 정식 경로 Play/종료 확인. Docs/WaterDetail.md.
+
+- water-terrain-cover | Codex | Verified | 수면 1064×1064m 확장, 기존 수위 유지. Terrain 전체 XZ 포함 및 정식 경로 Play/콘솔/종료 확인.

@@ -15,7 +15,7 @@ MonoBehaviour:
   AIProfile: {fileID: 0}
   UnitName: "심연의 흑색 군주"
   Icon: {fileID: 0}
-  Prefab: {fileID: 7280224136315881766, guid: a08f66414462a6648bbe724bdf5709ec, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 5
   MovePattern: 2
   BaseRole: "군주"

@@ -1,0 +1,10 @@
+Project: C:/PersonalFiles/2026/Task/Unity/Graduation_Project/Graduation_Project_v01/Assets
+Scene: Assets/Scenes/Test/BattleScene.unity
+Checkmate/Ruins/RuinMoss_Decal errors=False
+Checkmate/Ruins/RuinSurface_Master errors=False
+Checkmate/Ruins/RuinWaterline_Decal errors=False
+ExitingEditMode
+EnteredPlayMode
+ExitingPlayMode
+EnteredEditMode
+PlayModeStopped=True

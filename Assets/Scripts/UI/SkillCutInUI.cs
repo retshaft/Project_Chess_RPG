@@ -24,6 +24,17 @@ namespace CheckmateRPG.UI
         [SerializeField] private float _slideOutDuration = 0.2f;
 
         private bool _isAnimating = false;
+        public bool IsAnimating => _isAnimating;
+        private float _savedTimeScale = 1;
+
+        public void Cancel()
+        {
+            StopAllCoroutines();
+            if (_isAnimating) Time.timeScale = _savedTimeScale;
+            _isAnimating = false;
+            if (_rootPanel) _rootPanel.SetActive(false);
+        }
+        private void OnDisable() => Cancel();
 
         private void Awake()
         {
@@ -46,6 +57,7 @@ namespace CheckmateRPG.UI
         private IEnumerator PlayCutInRoutine(string charName, string skillName, Sprite portrait)
         {
             _isAnimating = true;
+            _savedTimeScale = Time.timeScale;
             if (_rootPanel != null) _rootPanel.SetActive(true);
 
             if (_charNameText != null) _charNameText.text = charName;
@@ -102,8 +114,11 @@ namespace CheckmateRPG.UI
             canvasGO.transform.SetParent(transform);
             var canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 200;
-            canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvas.sortingOrder = UILayers.Cinematic;
+            var scaler = canvasGO.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = .5f;
             canvasGO.AddComponent<GraphicRaycaster>();
 
             _rootPanel = new GameObject("CutInPanel");

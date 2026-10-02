@@ -449,6 +449,42 @@ namespace CheckmateRPG.Core
                 $"AttackInput Actor={actor.ActorId:N} Target={targetId:N}");
         }
 
+        public bool TryEnqueueSelectedSkill(UnitBrain actor, UnitBrain target, bool automatic = false)
+        {
+            if (actor == null || actor.UnitData == null || _tickScheduler == null || _tickScheduler.IsPaused) return false;
+            var skill = actor.UnitData.GetSelectedActiveSkill();
+            if (skill == null || (skill.ActivationMode == SkillActivationMode.Automatic) != automatic) return false;
+            var level = actor.UnitData.SelectedSkillLevel;
+            if (level == null || level.Effects == null || !level.Effects.Exists(effect => effect != null)) return false;
+            if (!CanQueueAction(actor) || GetCurrentSp(actor.ActorId) < Mathf.CeilToInt(actor.UnitData.SkillMaxSP)) return false;
+            IReadOnlyList<Guid> targets;
+            if (level.TargetingRule == AbilityTargetingRule.None) targets = Array.Empty<Guid>();
+            else if (level.TargetingRule == AbilityTargetingRule.Self) targets = new[] { actor.ActorId };
+            else
+            {
+                if (target == null || target.IsDead) return false;
+                targets = new[] { target.ActorId };
+            }
+            if (!TryEnqueueAbility(actor, skill, targets)) return false;
+            if (actor.UnitData.Rarity == 5)
+                FindFirstObjectByType<BattleCameraDirector>()?.PlaySkillCloseup(actor);
+            return true;
+        }
+
+        private void QueueAutomaticSkills()
+        {
+            foreach (var actor in _unitsById.Values)
+            {
+                if (actor == null || actor.IsDead || actor.UnitData == null) continue;
+                var skill = actor.UnitData.GetSelectedActiveSkill();
+                if (skill == null || skill.ActivationMode != SkillActivationMode.Automatic ||
+                    GetCurrentSp(actor.ActorId) < actor.UnitData.SkillMaxSP) continue;
+                // Targetless/self skills need no tactical target. Targeted families use the actor's current opponent.
+                var targetObject = actor.CurrentTarget;
+                TryEnqueueSelectedSkill(actor, targetObject != null ? targetObject.GetComponent<UnitBrain>() : null, true);
+            }
+        }
+
         public bool TryEnqueueAbility(UnitBrain actor, AbilityDefinition definition, IReadOnlyList<Guid> targetIds)
         {
             if (!CanQueueAction(actor) || definition == null)
@@ -564,9 +600,9 @@ namespace CheckmateRPG.Core
             {
                 UnitRuntimeState baseline = unit.MutableRuntimeState;
                 int baselineHp = unit.Health != null ? Mathf.RoundToInt(unit.Health.CurrentHealth) : baseline.HP;
-                int baselineMaxSp = unit.UnitData != null ? Mathf.Max(0, Mathf.RoundToInt(unit.UnitData.MaxSP)) : baseline.MaxSP;
+                int baselineMaxSp = unit.UnitData != null ? Mathf.Max(0, Mathf.RoundToInt(unit.UnitData.SkillMaxSP)) : baseline.MaxSP;
                 int baselineCurrentSp = unit.UnitData != null
-                    ? Mathf.Clamp(Mathf.RoundToInt(unit.UnitData.InitSP), 0, baselineMaxSp)
+                    ? Mathf.Clamp(Mathf.RoundToInt(unit.UnitData.SkillInitSP), 0, baselineMaxSp)
                     : baseline.CurrentSP;
                 Vector2Int baselinePosition = unit.Movement != null ? unit.Movement.GridPosition : baseline.Position;
                 UnitStatusFlags baselineFlags = UnitStatusFlags.None;
@@ -607,6 +643,7 @@ namespace CheckmateRPG.Core
             _simulationRuntime.SetUnitDerivedState(unit.ActorId, flags);
             _simulationRuntime.SetUnitHP(unit.ActorId, hp, OwnershipOwners.DamageMutationProcessor);
             _simulationRuntime.SetUnitPosition(unit.ActorId, position, OwnershipOwners.MovementMutationProcessor);
+            unit.SPComponent?.SetCurrentSP(state.CurrentSP);
         }
 
         private bool CanQueueAction(UnitBrain actor)
@@ -643,6 +680,8 @@ namespace CheckmateRPG.Core
             int spGain = actor.UnitData != null && actor.UnitData.BasicAttackAbilityData != null
                 ? Mathf.Max(0, actor.UnitData.BasicAttackAbilityData.SPGain)
                 : DefaultAttackSPGain;
+            if (actor.UnitData != null && actor.UnitData.GetSelectedActiveSkill() != null)
+                spGain = actor.UnitData.SkillChargeType == SPChargeType.OnAttack ? 1 : 0;
             return new AttackActionCommand(
                 actor.ActorId,
                 targetId,
@@ -723,6 +762,7 @@ namespace CheckmateRPG.Core
             AppendEvents(stagedEvents, cleanupResult.StagedEvents);
             EnqueueResolvedEvents(stagedEvents);
             _eventBus.ProcessQueue();
+            QueueAutomaticSkills();
             RecordSimulationSnapshot();
             RecordReplaySnapshot();
         }
@@ -1357,10 +1397,21 @@ namespace CheckmateRPG.Core
                 if (unitState == null || (unitState.StatusFlags & UnitStatusFlags.Dead) != 0)
                     continue;
 
+                var unit = ResolveUnit(unitState.UnitId);
+                int amount = AutoRegenSPAmount;
+                if (unit != null && unit.UnitData != null && unit.UnitData.GetSelectedActiveSkill() != null)
+                {
+                    if (unit.UnitData.SkillChargeType != SPChargeType.Auto) continue;
+                    int ticksPerSecond = Mathf.Max(1, Mathf.RoundToInt(1f / TickScheduler.DefaultTickDurationSeconds));
+                    if (_scheduler.CurrentTick % ticksPerSecond != 0) continue;
+                    amount = 1;
+                }
+                if (unitState.CurrentSP >= unitState.MaxSP) continue;
+
                 queue.Enqueue(new SPMutation(
                     SeededRandomProvider.Shared.NextGuid(),
                     unitState.UnitId,
-                    AutoRegenSPAmount,
+                    amount,
                     new MutationContext(
                         _scheduler.CurrentTick,
                         Guid.Empty,

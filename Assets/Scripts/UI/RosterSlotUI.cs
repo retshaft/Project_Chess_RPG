@@ -38,7 +38,7 @@ namespace CheckmateRPG.UI
         {
             CurrentUnit = unit;
             var cost = TacticalLayout.Label(transform, "FormationUnitCost",
-                unit != null ? $"COST  {unit.DeploymentCost}" : "", 18,
+                unit != null ? $"COST  {unit.FormationCost}" : "", 18,
                 OutgameStyle.TextWhite, .08f, .89f, .84f, .09f);
             cost.alignment = TextAlignmentOptions.MidlineRight;
             cost.overflowMode = TextOverflowModes.Overflow;

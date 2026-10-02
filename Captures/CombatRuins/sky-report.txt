@@ -1,0 +1,6 @@
+project=C:/Users/VR13/Downloads/Graduation_Project_v01/Assets
+scene=Assets/Scenes/Test/BattleScene.unity
+play=False
+shaderErrors=False
+fog=ExponentialSquared density=0.0035
+sky=Assets/Environment/CombatRuins/Sky/RuinsSky.mat

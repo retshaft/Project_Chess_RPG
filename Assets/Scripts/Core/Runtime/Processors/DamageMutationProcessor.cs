@@ -99,10 +99,14 @@ namespace CheckmateRPG.Core.Runtime.Processors
                 $"Raw={amount}, Applied={actualDamage}, HP:{Mathf.RoundToInt(beforeHp)}->{actualRemainingHp}");
 
             var mutations = new List<IRuntimeMutation>();
+            int hitSP = target.UnitData != null && target.UnitData.GetSelectedActiveSkill() != null
+                ? (target.UnitData.SkillChargeType == CheckmateRPG.Data.SPChargeType.OnHit && actualDamage > 0 && !isDead ? 1 : 0)
+                : HitTakenSPBonus;
+            if (hitSP > 0)
             mutations.Add(new SPMutation(
                 SeededRandomProvider.Shared.NextGuid(),
                 mutation.TargetId,
-                HitTakenSPBonus,
+                hitSP,
                 new MutationContext(
                     mutation.Context.Tick,
                     mutation.Context.SourceAction,

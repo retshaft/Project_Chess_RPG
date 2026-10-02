@@ -186,12 +186,16 @@ namespace CheckmateRPG.UI
 
         private void BuildUI()
         {
+            if (_synchroButton != null) return;
             var canvasGO = new GameObject("KingSynchroCanvas");
             canvasGO.transform.SetParent(transform);
             var canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 50; // HUD 레이어
-            canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvas.sortingOrder = UILayers.Hud + 1; // HUD 레이어
+            var scaler = canvasGO.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = .5f;
             canvasGO.AddComponent<GraphicRaycaster>();
 
             var buttonGO = new GameObject("SynchroButton");

@@ -15,7 +15,7 @@ MonoBehaviour:
   AIProfile: {fileID: 0}
   UnitName: Slime
   Icon: {fileID: 0}
-  Prefab: {fileID: 6967321222787676170, guid: b14e84813556d6f42bddae2604750bc7, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 0
   MovePattern: 0
   BaseRole: "\uCC99\uD6C4\uB300"

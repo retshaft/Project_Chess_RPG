@@ -16,7 +16,7 @@ MonoBehaviour:
   UnitName: Black Bishop
   Rarity: 3
   Icon: {fileID: 0}
-  Prefab: {fileID: 1511322229767056736, guid: 432ebdf8507f65445aca812cb1e085d1, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 2
   MovePattern: 4
   BaseRole: "\uB300\uC8FC\uAD50"

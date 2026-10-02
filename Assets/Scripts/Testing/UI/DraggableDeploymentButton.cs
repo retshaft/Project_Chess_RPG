@@ -29,7 +29,7 @@ namespace CheckmateRPG.Testing.UI
 
             if (!_battleManager.CanAffordDeployment(_unitData))
             {
-                Debug.Log($"[Deployment] Cannot afford {_unitData.UnitName}. Need {_unitData.DeploymentCost}.");
+                Debug.Log($"[Deployment] {_unitData.UnitName} cannot be manually deployed.");
                 return;
             }
 
@@ -57,6 +57,7 @@ namespace CheckmateRPG.Testing.UI
                 textRect.offsetMax = Vector2.zero;
 
                 Text text = textObj.AddComponent<Text>();
+                text.raycastTarget = false;
                 text.text = _unitData.UnitName;
                 text.alignment = TextAnchor.MiddleCenter;
                 text.fontSize = 20;
@@ -121,4 +122,3 @@ namespace CheckmateRPG.Testing.UI
         }
     }
 }
-

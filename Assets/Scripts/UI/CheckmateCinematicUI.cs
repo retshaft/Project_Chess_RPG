@@ -17,7 +17,7 @@ namespace CheckmateRPG.UI
                 {
                     var go = new GameObject("CheckmateCinematicUI_Auto");
                     _instance = go.AddComponent<CheckmateCinematicUI>();
-                    _instance.BuildUI();
+                    _instance.BuildUI(); // Idempotent: Awake also covers scene-authored instances.
                 }
                 return _instance;
             }
@@ -28,6 +28,9 @@ namespace CheckmateRPG.UI
         private TextMeshProUGUI _checkmateText;
         private TextMeshProUGUI _subText;
         private Image _bgFader;
+        private bool _playing;
+        private float _savedTimeScale;
+        private Core.BattleCameraDirector _director;
 
         private void Awake()
         {
@@ -42,6 +45,11 @@ namespace CheckmateRPG.UI
 
         public void PlayCheckmate(Action onCompleted)
         {
+            if (_playing) return;
+            SkillCutInUI.Instance?.Cancel();
+            _savedTimeScale = Time.timeScale;
+            _playing = true;
+            _director = FindFirstObjectByType<Core.BattleCameraDirector>();
             StartCoroutine(SequenceRoutine(onCompleted));
         }
 
@@ -84,7 +92,8 @@ namespace CheckmateRPG.UI
                 if (_bgFader != null) 
                     _bgFader.color = new Color(0f, 0f, 0f, Mathf.Lerp(0f, 0.85f, t));
                 
-                if (mainCam != null && !mainCam.orthographic) 
+                if (_director != null) _director.SetVictoryZoom(easeOut);
+                else if (mainCam != null && !mainCam.orthographic)
                     mainCam.fieldOfView = Mathf.Lerp(origFOV, targetFOV, easeOut);
                 
                 if (_slashRect != null) 
@@ -152,10 +161,11 @@ namespace CheckmateRPG.UI
                 while (elapsed < 0.3f)
                 {
                     elapsed += Time.unscaledDeltaTime;
-                    mainCam.fieldOfView = Mathf.Lerp(targetFOV, origFOV, elapsed / 0.3f);
+                    if (_director != null) _director.SetVictoryZoom(1 - elapsed / .3f);
+                    else mainCam.fieldOfView = Mathf.Lerp(targetFOV, origFOV, elapsed / 0.3f);
                     yield return null;
                 }
-                mainCam.fieldOfView = origFOV;
+                if (_director == null) mainCam.fieldOfView = origFOV;
             }
 
             _rootPanel.SetActive(false);
@@ -163,6 +173,8 @@ namespace CheckmateRPG.UI
             if (_textRect != null) _textRect.gameObject.SetActive(false);
             if (_subText != null) _subText.gameObject.SetActive(false);
 
+            _director?.SetVictoryZoom(0);
+            _playing = false;
             onCompleted?.Invoke();
         }
 
@@ -170,12 +182,16 @@ namespace CheckmateRPG.UI
 
         private void BuildUI()
         {
+            if (_rootPanel != null) return;
             var canvasGO = new GameObject("CheckmateCanvas");
             canvasGO.transform.SetParent(transform);
             var canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 300; 
-            canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvas.sortingOrder = UILayers.Cinematic;
+            var scaler = canvasGO.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920,1080);
+            scaler.matchWidthOrHeight = .5f;
             canvasGO.AddComponent<GraphicRaycaster>();
 
             _rootPanel = new GameObject("CheckmatePanel");
@@ -231,6 +247,15 @@ namespace CheckmateRPG.UI
             _subText.gameObject.SetActive(false);
 
             _rootPanel.SetActive(false);
+        }
+
+        private void OnDisable()
+        {
+            StopAllCoroutines();
+            if (_playing) Time.timeScale = _savedTimeScale;
+            _playing = false;
+            _director?.SetVictoryZoom(0);
+            if (_rootPanel) _rootPanel.SetActive(false);
         }
     }
 }

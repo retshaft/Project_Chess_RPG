@@ -148,6 +148,7 @@ namespace CheckmateRPG.UI
         private void EnsureInventoryLayout()
         {
             if (!_inventoryPanel || !_inventoryContainer) return;
+            UILayers.SetOverlay(_inventoryPanel, UILayers.Modal);
             if (_inventoryPanel.TryGetComponent<UnityEngine.UI.Image>(out var background)) background.color = OutgameStyle.BackgroundBase;
             TacticalLayout.Place(_closeInventoryButton ? _closeInventoryButton.transform : null, .76f, .07f, .16f, .065f);
             if (_closeInventoryButton) _closeInventoryButton.GetComponentInChildren<TextMeshProUGUI>().text = "닫기";
@@ -181,6 +182,8 @@ namespace CheckmateRPG.UI
 
         private void OnStartBattleClicked()
         {
+            if (DeckManager.Instance == null || !DeckManager.Instance.IsWithinFormationBudget)
+            { EconomyDialog.Open(false, $"편성 코스트가 {DeckManager.MAX_FORMATION_COST}을 초과합니다. 편성에서 대원을 해제하거나 교체하세요."); return; }
             var save=SaveManager.EnsureInstance();
             var stage=StageManager.Instance?.CurrentStage;
             if (stage == null) { EconomyDialog.Open(false, "작전 지도에서 출격할 작전을 먼저 선택하세요."); return; }
@@ -258,11 +261,11 @@ namespace CheckmateRPG.UI
             foreach (var unit in currentDeck)
             {
                 if (unit == null) continue;
-                formationCost += unit.DeploymentCost;
+                formationCost += unit.FormationCost;
                 memberCount++;
             }
             TacticalLayout.Label(transform, "FormationCost",
-                $"편성 코스트  <b>{formationCost}</b>     /     편성 인원  {memberCount} / {DeckManager.MAX_DECK_SIZE}",
+                $"편성 코스트  <b>{formationCost} / {DeckManager.MAX_FORMATION_COST}</b>     ·     편성 인원  {memberCount} / {DeckManager.MAX_DECK_SIZE}",
                 22, OutgameStyle.TextWhite, .05f, .73f, .90f, .035f);
             
             for (int i = 0; i < _rosterSlots.Count; i++)
@@ -314,6 +317,7 @@ namespace CheckmateRPG.UI
             if (_inventoryPanel != null)
             {
                 _inventoryPanel.SetActive(true);
+                UILayers.SetOverlay(_inventoryPanel, UILayers.Modal);
                 OutgameUIManager.Instance?.RegisterModalCloseAction(CloseInventory);
                 TacticalLayout.Label(_inventoryPanel.transform, "SelectionContext",
                     slotIndex == 0 ? "지휘관 슬롯  /  킹은 편성에서 제외할 수 없습니다." : $"슬롯 {slotIndex + 1:00}  /  편성 중인 대원을 선택하면 이 슬롯으로 이동합니다.",
@@ -368,7 +372,8 @@ namespace CheckmateRPG.UI
         {
             if (_selectedSlotIndex != -1 && slot.CurrentUnit != null)
             {
-                DeckManager.Instance.SetDeckSlot(_selectedSlotIndex, slot.CurrentUnit);
+                if (!DeckManager.Instance.SetDeckSlot(_selectedSlotIndex, slot.CurrentUnit))
+                { EconomyDialog.Open(false, $"편성할 수 없습니다. 편성 코스트 {DeckManager.MAX_FORMATION_COST} 제한과 기물 슬롯을 확인하세요."); return; }
                 CloseInventory();
             }
         }

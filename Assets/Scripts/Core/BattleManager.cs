@@ -74,11 +74,14 @@ namespace CheckmateRPG.Core
         private int _pendingPushForce;
         private bool _battleEnded;
         private UnitBrain _selectedUnit;
+        private bool _hasActionChoice;
         private BattleSelectionOverlayController _selectionOverlay;
         private BattleDiagnosticsLogger _diagnosticsLogger;
         private UnitData _runtimeKingData;
         private Canvas _commandCanvas;
         private CheckmateRPG.UI.BattleHudView _hudView;
+        private BattleCameraDirector _cameraDirector;
+        public bool OwnsPointerInput => _enableMouseInputAdapter;
         private GameObject _commandPanel;
         private Button _moveModeButton;
         private Button _attackModeButton;
@@ -93,7 +96,7 @@ namespace CheckmateRPG.Core
         private GameObject _deploymentPanel;
         private UnitData _selectedDeployUnit;
         private Button _selectedDeployButtonRef;
-        private int _currentDeploymentCost;
+        private readonly Dictionary<UnitBrain, Button> _deployedButtons = new();
 
         private enum InputMode
         {
@@ -125,6 +128,8 @@ namespace CheckmateRPG.Core
                 return;
 
             BootstrapBattle();
+            _cameraDirector = gameObject.AddComponent<BattleCameraDirector>();
+            _cameraDirector.Initialise(_inputCamera != null ? _inputCamera : Camera.main, this);
         }
 
         private void Update()
@@ -146,17 +151,36 @@ namespace CheckmateRPG.Core
 
             if (_currentPhase == BattlePhase.Deployment)
             {
+                HandleDeploymentWithdrawal();
                 return;
             }
 
             HandleMouseInputAdapter();
+            if (_selectedUnit == null && _cameraDirector != null && _cameraDirector.IsInspecting) SetSelectedUnit(null);
             UpdateTargets();
             EvaluateBattleState();
         }
 
         private void OnDestroy()
         {
+            _cameraDirector?.EndInspection();
             DetachDebugRuntimeHooks();
+        }
+
+        private void OnDisable() => _cameraDirector?.EndInspection();
+
+        private void LateUpdate()
+        {
+            if (_commandPanel == null || !_commandPanel.activeSelf || _selectedUnit == null) return;
+            var camera = _inputCamera != null ? _inputCamera : Camera.main;
+            if (camera == null) return;
+            var canvasRect = (RectTransform)_commandCanvas.transform;
+            var screen = camera.WorldToScreenPoint(_selectedUnit.transform.position + Vector3.up);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out var local);
+            var rect = (RectTransform)_commandPanel.transform;
+            local.x = Mathf.Clamp(local.x, canvasRect.rect.xMin + 570, canvasRect.rect.xMax - 200);
+            local.y = Mathf.Clamp(local.y, canvasRect.rect.yMin + 150, canvasRect.rect.yMax - 180);
+            rect.anchoredPosition = local;
         }
 
         private AITeamCommander _redTeamCommander;
@@ -178,8 +202,10 @@ namespace CheckmateRPG.Core
             if (CheckmateRPG.Progression.DeckManager.Instance != null && CheckmateRPG.Progression.DeckManager.Instance.CurrentDeck.Length > 0)
             {
                 _currentPhase = BattlePhase.Deployment;
-                // No cost limit in M12 deployment
-                _currentDeploymentCost = 9999;
+                var king = CheckmateRPG.Progression.DeckManager.Instance.GetModifiedUnitData(0);
+                if (king != null && king.PieceType == ChessPieceType.King && GetUnitAtCell(new Vector2Int(4, 0)) == null)
+                    SpawnUnit("Blue King (Auto)", king, new Vector2Int(4, 0), Team.Blue);
+                _hudView?.Hint("킹은 e1에 자동 배치됩니다 · 대원 드래그 배치 / 우클릭 철회 · 빈 앞줄은 징집병으로 충원");
                 if (_deploymentPanel != null) _deploymentPanel.SetActive(true);
                 if (_commandPanel != null) _commandPanel.SetActive(false);
                 
@@ -245,7 +271,11 @@ namespace CheckmateRPG.Core
         {
             if (_currentPhase != BattlePhase.Deployment) return;
             if (!HasLivingKing(Team.Blue))
-            { _hudView?.Hint("킹을 먼저 배치하세요 · 킹은 아군 맨 뒤쪽 행에 배치합니다."); return; }
+            { _hudView?.Hint("킹 자동 배치를 확인할 수 없습니다 · 편성으로 돌아가 킹을 확인하세요."); return; }
+            if (CheckmateRPG.Progression.DeckManager.Instance != null && !CheckmateRPG.Progression.DeckManager.Instance.IsWithinFormationBudget)
+            { _hudView?.Hint($"편성 코스트가 {CheckmateRPG.Progression.DeckManager.MAX_FORMATION_COST}을 초과합니다 · 편성에서 대원을 조정하세요."); return; }
+            if (_conscriptData == null && _pawnData == null)
+            { _hudView?.Hint("징집병 데이터가 없어 전투를 시작할 수 없습니다."); return; }
             if (!HasLivingUnits(Team.Red))
             { _hudView?.Hint("적 병력이 없습니다 · 작전 배치를 확인해야 합니다."); return; }
             ClearDeploymentHighlights();
@@ -263,7 +293,7 @@ namespace CheckmateRPG.Core
             
             TickScheduler.EnsureExists().IsPaused = false; // Resume AI and Actions
 
-            if (_commandPanel != null) _commandPanel.SetActive(true);
+            SetSelectedUnit(null);
             if (APManager.Instance != null) 
             {
                 APManager.Instance.ResetToInitialAP();
@@ -288,9 +318,35 @@ namespace CheckmateRPG.Core
             }
 
             Debug.Log($"[BattleManager] Victory condition: {(_preferKingDefeatVictory ? "King Defeat" : "Team Elimination")}.");
+            _cameraDirector?.PlayIntro();
         }
 
-        public bool CanAffordDeployment(UnitData unit) => _currentDeploymentCost >= unit.DeploymentCost;
+        public bool CanAffordDeployment(UnitData unit) => unit != null && unit.PieceType != ChessPieceType.King;
+
+        private void HandleDeploymentWithdrawal()
+        {
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (mouse == null || !mouse.rightButton.wasPressedThisFrame || CheckmateRPG.UI.UILayers.PointerOverUI()) return;
+            var camera = _inputCamera != null ? _inputCamera : Camera.main;
+            if (camera == null || GridSystem.Instance == null) return;
+            if (Physics.Raycast(camera.ScreenPointToRay(mouse.position.ReadValue()), out var hit, float.MaxValue, _inputRaycastMask))
+                TryWithdrawDeployment(GetUnitAtCell(GridSystem.Instance.WorldToGrid(hit.point)));
+        }
+
+        public bool TryWithdrawDeployment(UnitBrain unit)
+        {
+            if (_currentPhase != BattlePhase.Deployment || unit == null || !_deployedButtons.TryGetValue(unit, out var button)) return false;
+            if (_selectedUnit == unit) SetSelectedUnit(null);
+            _deployedButtons.Remove(unit);
+            _allUnits.RemoveAll(record => record.Brain == unit);
+            foreach (var team in _teams.Values) team.RemoveAll(record => record.Brain == unit);
+            GridSystem.Instance?.ClearOccupant(unit.gameObject);
+            unit.gameObject.SetActive(false);
+            Destroy(unit.gameObject);
+            if (button != null) button.interactable = true;
+            _hudView?.Hint("배치 철회 완료 · 대원 카드를 다시 배치할 수 있습니다.");
+            return true;
+        }
 
         public RectTransform DeploymentPanelRect => _deploymentPanel?.GetComponent<RectTransform>();
 
@@ -299,6 +355,7 @@ namespace CheckmateRPG.Core
 
         public void OnDeployDragStart(UnitData unit)
         {
+            if (_currentPhase != BattlePhase.Deployment || (_cameraDirector != null && _cameraDirector.BlocksCommands)) return;
             ClearDeploymentHighlights();
             int targetRow = unit.PieceType == ChessPieceType.Pawn ? 1 : 0;
 
@@ -315,14 +372,14 @@ namespace CheckmateRPG.Core
             _3dGhostUnit = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             _3dGhostUnit.name = "GhostDeploymentUnit";
             Destroy(_3dGhostUnit.GetComponent<Collider>());
-            _3dGhostUnit.transform.localScale = new Vector3(0.65f, 0.5f, 0.65f);
+            _3dGhostUnit.transform.localScale = new Vector3(1.04f, 0.8f, 1.04f);
             
             var rend = _3dGhostUnit.GetComponent<Renderer>();
             if (rend != null)
             {
                 Shader shader = Shader.Find("Transparent/Diffuse") ?? Shader.Find("Standard");
                 Material ghostMat = new Material(shader);
-                Color ghostColor = new Color(0.20f, 0.45f, 0.90f, 0.5f); // Semi-transparent blue
+                Color ghostColor = new Color(0.95f, 0.95f, 0.95f, 0.5f); // Semi-transparent white (아군 백색에 맞춤)
                 ghostMat.color = ghostColor;
                 
                 // If using standard shader, force transparency
@@ -391,7 +448,7 @@ namespace CheckmateRPG.Core
 
             // Valid cell, show and snap Ghost Unit
             _3dGhostUnit.SetActive(true);
-            _3dGhostUnit.transform.position = GridSystem.Instance.GridToWorld(targetCell) + new Vector3(0f, 0.5f, 0f);
+            _3dGhostUnit.transform.position = GridSystem.Instance.GridToWorld(targetCell) + new Vector3(0f, 0.8f, 0f);
         }
 
         public void OnDeployDragEnd(UnitData unit, Vector2 screenPos, Button sourceBtn)
@@ -403,6 +460,8 @@ namespace CheckmateRPG.Core
                 Destroy(_3dGhostUnit);
                 _3dGhostUnit = null;
             }
+            if (_currentPhase != BattlePhase.Deployment || CheckmateRPG.UI.UILayers.PointerOverUI(screenPos)) return;
+            if (!CanAffordDeployment(unit) || sourceBtn == null || !sourceBtn.interactable) return;
 
             Camera cameraToUse = _inputCamera != null ? _inputCamera : Camera.main;
             if (cameraToUse == null) return;
@@ -423,10 +482,10 @@ namespace CheckmateRPG.Core
             if (unit.PieceType != ChessPieceType.Pawn && targetCell.y != 0)
             { _hudView?.Hint("킹과 오퍼레이터는 아군 맨 뒤쪽 행에 배치하세요."); return; }
 
-            SpawnUnit($"Blue {unit.PieceType} (Deployed)", unit, targetCell, Team.Blue);
-            _currentDeploymentCost -= unit.DeploymentCost;
+            var deployed = SpawnUnit($"Blue {unit.PieceType} (Deployed)", unit, targetCell, Team.Blue);
+            _deployedButtons[deployed] = sourceBtn;
             sourceBtn.interactable = false;
-            _hudView?.Hint(unit.PieceType == ChessPieceType.King ? "킹 배치 완료 · 나머지 대원을 배치한 뒤 전투를 시작하세요." : $"{unit.UnitName} 배치 완료 · 킹을 포함한 출전 대원을 확인하세요.");
+            _hudView?.Hint($"{unit.UnitName} 배치 완료 · 우클릭으로 철회 · 대원을 모두 배치하지 않아도 전투를 시작할 수 있습니다.");
         }
 
         private GameObject CreateTileHighlight(Vector2Int cell, Color color)
@@ -933,6 +992,7 @@ namespace CheckmateRPG.Core
 
         private void ShowGameOverPanel(string resultText)
         {
+            SetSelectedUnit(null);
             // One result surface only; the legacy panel overlapped the reward screen.
             _currentPhase = BattlePhase.Ended;
             FindFirstObjectByType<CheckmateRPG.UI.PlayerAPBar>()?.SetBattleVisible(false);
@@ -1084,7 +1144,7 @@ namespace CheckmateRPG.Core
             roster.Add(record);
             _allUnits.Add(record);
 
-            if (_selectedUnit == null && team == Team.Blue && !brain.IsDead)
+            if (_currentPhase == BattlePhase.Deployment && _selectedUnit == null && team == Team.Blue && !brain.IsDead)
                 SetSelectedUnit(brain);
         }
 
@@ -1092,6 +1152,7 @@ namespace CheckmateRPG.Core
         {
             if (brain == null)
                 return;
+            if (_selectedUnit == brain) SetSelectedUnit(null);
 
             if (GridSystem.Instance != null)
                 GridSystem.Instance.ClearOccupant(brain.gameObject);
@@ -1128,31 +1189,14 @@ namespace CheckmateRPG.Core
         {
             var go = new GameObject(unitName);
 
-            var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            visual.name = "Visual";
-            visual.transform.SetParent(go.transform, false);
-            visual.transform.localPosition = new Vector3(0f, 0.5f, 0f);
-            visual.transform.localScale = new Vector3(0.65f, 0.5f, 0.65f);
-
-            Destroy(visual.GetComponent<Collider>());
-
-            var rend = visual.GetComponent<Renderer>();
-            if (rend != null)
-            {
-                var mat = new Material(rend.sharedMaterial);
-                var color = team == Team.Red
-                    ? new Color(0.90f, 0.20f, 0.20f)
-                    : new Color(0.20f, 0.45f, 0.90f);
-                mat.color = color;
-                if (mat.HasProperty("_BaseColor"))
-                    mat.SetColor("_BaseColor", color);
-                rend.material = mat;
-            }
+            // Prefab이 없으면 Resources/Models/ChessUnits의 기본 체스 모델을 사용한다.
+            UnitVisualFactory.CreateVisual(data, go.transform, team == Team.Red);
 
             var health = go.AddComponent<HealthComponent>();
             go.AddComponent<MovementComponent>();
             go.AddComponent<CombatComponent>();
             go.AddComponent<StatusEffectComponent>();
+            go.AddComponent<SPComponent>();
             var teamComponent = go.AddComponent<TeamComponent>();
             teamComponent.SetIsEnemy(team == Team.Red);
             var collider = go.AddComponent<CapsuleCollider>();
@@ -1171,11 +1215,26 @@ namespace CheckmateRPG.Core
 
         private void HandleMouseInputAdapter()
         {
-            if (!_enableMouseInputAdapter || UnityEngine.InputSystem.Mouse.current == null || !UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
+            if ((_cameraDirector != null && _cameraDirector.BlocksCommands) ||
+                (CheckmateRPG.UI.SkillCutInUI.Instance != null && CheckmateRPG.UI.SkillCutInUI.Instance.IsAnimating)) return;
+            if (!_enableMouseInputAdapter) return;
+            var keys = UnityEngine.InputSystem.Keyboard.current;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            if ((keys != null && keys.escapeKey.wasPressedThisFrame) || (mouse != null && mouse.rightButton.wasPressedThisFrame))
+            {
+                SetSelectedUnit(null);
+                SetInputMode(InputMode.Move);
+                _hudView?.Hint("선택 취소 · 아군을 선택하세요");
                 return;
-
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                return;
+            }
+            if (CheckmateRPG.UI.UILayers.PointerOverUI()) return;
+            if (keys != null)
+            {
+                if (keys.digit1Key.wasPressedThisFrame) SetInputMode(InputMode.Move);
+                if (keys.digit2Key.wasPressedThisFrame) SetInputMode(InputMode.Attack);
+                if (keys.digit3Key.wasPressedThisFrame) SetInputMode(InputMode.Skill);
+            }
+            if (mouse == null || !mouse.leftButton.wasPressedThisFrame) return;
 
             if (GridSystem.Instance == null)
                 return;
@@ -1199,14 +1258,16 @@ namespace CheckmateRPG.Core
                     $"SelectedActor={_selectedUnit.ActorId:N}");
             }
 
-            if (!TryHandleSelectionAtCell(targetCell))
+            if (_hasActionChoice && _selectedUnit != null)
                 TryHandleActionAtCell(targetCell);
+            else if (!TryHandleSelectionAtCell(targetCell))
+                SetSelectedUnit(null);
         }
 
         private bool TryHandleSelectionAtCell(Vector2Int cell)
         {
             UnitBrain candidate = GetUnitAtCell(cell);
-            if (candidate == null || candidate.IsDead || !IsPlayerTeam(candidate))
+            if (candidate == null || candidate.IsDead)
                 return false;
 
             SetSelectedUnit(candidate);
@@ -1215,12 +1276,7 @@ namespace CheckmateRPG.Core
 
         private void TryHandleActionAtCell(Vector2Int cell)
         {
-            if (_selectedUnit == null || _selectedUnit.IsDead || _selectedUnit.Movement == null)
-            {
-                SetSelectedUnit(FindFirstLivingFriendlyUnit());
-                if (_selectedUnit == null)
-                    return;
-            }
+            if (!_hasActionChoice || _selectedUnit == null || _selectedUnit.IsDead || !IsPlayerTeam(_selectedUnit) || _selectedUnit.Movement == null) return;
 
             UnitBrain targetUnit = GetUnitAtCell(cell);
             bool hasEnemyTarget = targetUnit != null && !targetUnit.IsDead && !IsSameTeam(_selectedUnit, targetUnit);
@@ -1251,17 +1307,17 @@ namespace CheckmateRPG.Core
                     queued = _selectedUnit.QueueAttackAction(targetUnit.gameObject);
                     break;
                 case InputMode.Skill:
-                    if (!TryQueueSkillPlaceholder(_selectedUnit, targetUnit, cell))
+                    if (!TryQueueSelectedSkill(_selectedUnit, targetUnit, cell))
                     {
-                        _hudView?.Hint("스킬을 사용할 수 없습니다 · SP와 대상을 확인하세요");
                         Debug.Log(
                             $"[BattleManager][SkillMode] Queue failed. Actor={_selectedUnit.name}, Cell={cell}");
                         return;
                     }
                     Debug.Log(
-                        $"[BattleManager][SkillMode] Queued placeholder skill. Actor={_selectedUnit.name}, " +
+                        $"[BattleManager][SkillMode] Queued selected skill. Actor={_selectedUnit.name}, " +
                         $"Target={(targetUnit != null ? targetUnit.name : "Self")}, Cell={cell}");
                     queued = true;
+                    SetSelectedUnit(null);
                     return;
             }
 
@@ -1289,15 +1345,22 @@ namespace CheckmateRPG.Core
 
             if (_logQueuedInputCommands && command != null)
                 Debug.Log($"[BattleManager] Enqueued input command: {APDebugLogger.LastQueuedCommandSummary}");
+            SetSelectedUnit(null);
         }
 
         private void SetSelectedUnit(UnitBrain unit)
         {
             _selectedUnit = unit;
+            _hasActionChoice = false;
+            _currentInputMode = InputMode.Move;
+            _cameraDirector?.SetSelection(unit != null ? unit.transform : null);
+            if (unit != null && !unit.IsDead && _currentPhase == BattlePhase.Playing)
+                _cameraDirector?.BeginInspection(unit.transform);
+            else _cameraDirector?.EndInspection();
             _hudView?.Select(unit);
             APDebugLogger.SetCurrentTurnUnit(unit);
             if (_commandPanel != null)
-                _commandPanel.SetActive(unit != null && !unit.IsDead);
+                _commandPanel.SetActive(_currentPhase == BattlePhase.Playing && unit != null && !unit.IsDead && IsPlayerTeam(unit));
 
             if (unit == null)
                 _selectionOverlay.ClearSelection();
@@ -1305,6 +1368,9 @@ namespace CheckmateRPG.Core
                 _selectionOverlay.SetSelectedUnit(unit);
 
             SyncOverlayMode();
+            RefreshModeButtonVisuals();
+            if (_currentPhase == BattlePhase.Playing)
+                _hudView?.Hint(unit == null ? "기물을 클릭해 정보와 명령 확인" : IsPlayerTeam(unit) ? "전술 감속 · 기물 주변에서 행동 선택" : "적 정보 확인 · 우클릭 / ESC로 닫기");
         }
 
         private BattleSelectionOverlayController EnsureSelectionOverlay()
@@ -1328,6 +1394,7 @@ namespace CheckmateRPG.Core
             canvasObject.transform.SetParent(transform, false);
             _commandCanvas = canvasObject.AddComponent<Canvas>();
             _commandCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _commandCanvas.sortingOrder = CheckmateRPG.UI.UILayers.Hud;
 
             CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -1336,26 +1403,23 @@ namespace CheckmateRPG.Core
             var hudObject = new GameObject("BattleHudView");
             _hudView = hudObject.AddComponent<CheckmateRPG.UI.BattleHudView>();
             _hudView.Build(canvasObject.transform);
+            _hudView.CancelRequested += () => SetSelectedUnit(null);
+            _hudView.SkillStateChanged += RefreshSkillButton;
 
             _commandPanel = new GameObject("CommandPanel");
             _commandPanel.transform.SetParent(canvasObject.transform, false);
             RectTransform panelRect = _commandPanel.AddComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(1f, 0f);
-            panelRect.anchorMax = new Vector2(1f, 0f);
-            panelRect.pivot = new Vector2(1f, 0f);
-            panelRect.anchoredPosition = new Vector2(-24f, 24f);
-            panelRect.sizeDelta = new Vector2(440f, 104f);
-
-            HorizontalLayoutGroup layout = _commandPanel.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 12f;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.padding = new RectOffset(12, 12, 12, 12);
-
-            Image panelBackground = _commandPanel.AddComponent<Image>();
-            panelBackground.color = CheckmateRPG.UI.BattleHudView.Surface;
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(.5f, .5f);
+            panelRect.sizeDelta = new Vector2(370f, 260f);
+            var ring = CheckmateRPG.UI.BattleHudView.Rect(panelRect, "SelectionFrame", new Vector2(.5f,.5f), Vector2.zero, new Vector2(170,170));
+            ring.localRotation = Quaternion.Euler(0,0,45);
+            for (int edge = 0; edge < 4; edge++)
+            {
+                var line = CheckmateRPG.UI.BattleHudView.Rect(ring, "Edge" + edge, new Vector2(.5f,.5f),
+                    edge < 2 ? new Vector2(0, edge == 0 ? -85 : 85) : new Vector2(edge == 2 ? -85 : 85,0),
+                    edge < 2 ? new Vector2(170,1.5f) : new Vector2(1.5f,170));
+                CheckmateRPG.UI.BattleHudView.Panel(line, new Color(.91f,.94f,.92f,.7f));
+            }
 
             _moveModeButton = CreateModeButton(_commandPanel.transform, "이동 / MOVE", Color.white, () => SetInputMode(InputMode.Move));
             _attackModeButton = CreateModeButton(_commandPanel.transform, "공격 / ATK", Color.white, () => SetInputMode(InputMode.Attack));
@@ -1363,6 +1427,9 @@ namespace CheckmateRPG.Core
             _moveModeButton.GetComponentInChildren<Text>().text = "이동\n<size=12>MOVE</size>";
             _attackModeButton.GetComponentInChildren<Text>().text = "공격\n<size=12>ATTACK</size>";
             _skillModeButton.GetComponentInChildren<Text>().text = "스킬\n<size=12>SKILL</size>";
+            PlaceTacticalButton(_moveModeButton, new Vector2(-125, 0));
+            PlaceTacticalButton(_attackModeButton, new Vector2(0, 125));
+            PlaceTacticalButton(_skillModeButton, new Vector2(125, 0));
 
             _commandPanel.SetActive(false);
             RefreshModeButtonVisuals();
@@ -1466,7 +1533,7 @@ namespace CheckmateRPG.Core
             {
                 foreach (UnitData unit in CheckmateRPG.Progression.DeckManager.Instance.GetModifiedDeck())
                 {
-                    if (unit == null) continue;
+                    if (unit == null || unit.PieceType == ChessPieceType.King) continue;
                     Button btn = CreateModeButton(rosterGO.transform, $"{unit.UnitName}", CheckmateRPG.UI.OutgameStyle.Paper, null);
                     btn.GetComponentInChildren<Text>().color = CheckmateRPG.UI.OutgameStyle.Ink;
                     LayoutElement btnLE = btn.gameObject.AddComponent<LayoutElement>();
@@ -1532,17 +1599,67 @@ namespace CheckmateRPG.Core
 
         private void SetInputMode(InputMode mode)
         {
+            if (_currentPhase != BattlePhase.Playing || _selectedUnit == null || _selectedUnit.IsDead || !IsPlayerTeam(_selectedUnit)) return;
             _currentInputMode = mode;
+            _hasActionChoice = true;
+            _cameraDirector?.ShowTargetingBoard();
+            if (_commandPanel != null) _commandPanel.SetActive(false);
             _hudView?.Hint(mode == InputMode.Move ? "이동 · 강조된 칸을 선택하세요" : mode == InputMode.Attack ? "공격 · 사거리 안의 적을 선택하세요" : "스킬 · 사용할 대상을 선택하세요");
             RefreshModeButtonVisuals();
             SyncOverlayMode();
+            if (mode == InputMode.Skill)
+            {
+                var level = _selectedUnit.UnitData?.SelectedSkillLevel;
+                if (level != null && (level.TargetingRule == AbilityTargetingRule.Self || level.TargetingRule == AbilityTargetingRule.None))
+                {
+                    TryHandleActionAtCell(_selectedUnit.Movement.GridPosition);
+                    if (_selectedUnit != null)
+                    {
+                        _hasActionChoice = false;
+                        _commandPanel.SetActive(true);
+                        _cameraDirector?.BeginInspection(_selectedUnit.transform);
+                    }
+                }
+            }
+        }
+
+        private static void PlaceTacticalButton(Button button, Vector2 position)
+        {
+            var rect = (RectTransform)button.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f,.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(88,88);
+            rect.localRotation = Quaternion.Euler(0,0,45);
+            button.GetComponentInChildren<Text>().rectTransform.localRotation = Quaternion.Euler(0,0,-45);
+            button.GetComponentInChildren<Text>().fontSize = 19;
+            var outline = button.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(.85f,.9f,.88f,.65f);
+            outline.effectDistance = new Vector2(1,-1);
+            var colors = button.colors;
+            colors.highlightedColor = new Color(.75f,.91f,.94f);
+            colors.pressedColor = new Color(.4f,.67f,.72f);
+            colors.fadeDuration = .12f;
+            button.colors = colors;
         }
 
         private void RefreshModeButtonVisuals()
         {
-            SetButtonAlpha(_moveModeButton, _currentInputMode == InputMode.Move ? 1f : 0.55f);
-            SetButtonAlpha(_attackModeButton, _currentInputMode == InputMode.Attack ? 1f : 0.55f);
-            SetButtonAlpha(_skillModeButton, _currentInputMode == InputMode.Skill ? 1f : 0.55f);
+            SetButtonAlpha(_moveModeButton, _hasActionChoice && _currentInputMode == InputMode.Move ? 1f : 0.55f);
+            SetButtonAlpha(_attackModeButton, _hasActionChoice && _currentInputMode == InputMode.Attack ? 1f : 0.55f);
+            SetButtonAlpha(_skillModeButton, _hasActionChoice && _currentInputMode == InputMode.Skill ? 1f : 0.55f);
+            RefreshSkillButton();
+        }
+
+        private void RefreshSkillButton()
+        {
+            if (_skillModeButton == null) return;
+            var skill = _selectedUnit != null ? _selectedUnit.UnitData?.GetSelectedActiveSkill() : null;
+            bool automatic = skill != null && skill.ActivationMode == SkillActivationMode.Automatic;
+            bool ready = _selectedUnit != null && _selectedUnit.SPComponent != null && _selectedUnit.SPComponent.IsReady;
+            var effects = _selectedUnit != null ? _selectedUnit.UnitData?.SelectedSkillLevel?.Effects : null;
+            bool usable = effects != null && effects.Exists(effect => effect != null);
+            _skillModeButton.interactable = skill != null && !automatic && ready && usable;
+            _skillModeButton.GetComponentInChildren<Text>().text = skill == null ? "스킬 없음" : automatic ? "자동 스킬" : !usable ? "준비 중" : ready ? "스킬\n<size=12>READY</size>" : "충전 중\n<size=12>SP</size>";
         }
 
         private static void SetButtonAlpha(Button button, float alpha)
@@ -1696,37 +1813,13 @@ namespace CheckmateRPG.Core
                 apCost: apCost);
         }
 
-        private bool TryQueueSkillPlaceholder(UnitBrain actor, UnitBrain targetUnit, Vector2Int targetCell)
+        private bool TryQueueSelectedSkill(UnitBrain actor, UnitBrain targetUnit, Vector2Int targetCell)
         {
-            if (actor == null)
-                return false;
-            if (!TryGetRuntime(out ActionRuntimeController runtime))
-                return false;
-
-            AbilityDefinition definition = BuildDebugAbilityDefinition(
-                DebugSkillPlaceholderAbilityId,
-                AbilityTargetingRule.SingleTarget,
-                effects: null,
-                castSpeed: ActionSpeedTier.Normal);
-
-            IReadOnlyList<Guid> targetIds = targetUnit != null
-                ? new[] { targetUnit.ActorId }
-                : new[] { actor.ActorId };
-
-            bool queued = runtime.TryEnqueueAbility(actor, definition, targetIds);
-            if (!queued)
-                return false;
-
-            if (_logQueuedInputCommands)
-            {
-                Debug.Log(
-                    $"[BattleManager] Enqueued skill placeholder action. " +
-                    $"Actor={actor.ActorId:N}, TargetCell={targetCell}, TargetCount={targetIds.Count}");
-            }
-
-            return true;
+            if (actor == null || !TryGetRuntime(out ActionRuntimeController runtime)) return false;
+            bool queued = runtime.TryEnqueueSelectedSkill(actor, targetUnit);
+            _hudView?.Hint(queued ? "스킬 발동 요청 완료" : "발동 불가 · 수동 스킬 / SP 완충 / 대상 / 효과 데이터를 확인하세요.");
+            return queued;
         }
-
         private static int ManhattanDistance(Vector2Int a, Vector2Int b)
         {
             return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);

@@ -18,7 +18,7 @@ namespace CheckmateRPG.UI
             var rootRect=root.GetComponent<RectTransform>();
             rootRect.anchorMin=Vector2.zero; rootRect.anchorMax=Vector2.one;
             rootRect.offsetMin=Vector2.zero; rootRect.offsetMax=Vector2.zero;
-            var canvas=root.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=250;
+            var canvas=root.GetComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=UILayers.Dialog;
             var scaler=root.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);scaler.matchWidthOrHeight=.5f;
             var modal=root.AddComponent<EconomyDialog>();modal._cores=cores;modal.Build(message);
             OutgameUIManager.Instance?.RegisterModalCloseAction(modal.Close);

@@ -16,7 +16,7 @@ MonoBehaviour:
   UnitName: Black Knight
   Rarity: 3
   Icon: {fileID: 0}
-  Prefab: {fileID: 7084689673845775966, guid: 7a4d15eea0d0cac498cd3fc988c19347, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 1
   MovePattern: 1
   BaseRole: "\uB3CC\uACA9\uAE30\uC0AC"

@@ -16,7 +16,7 @@ MonoBehaviour:
   UnitName: Black Rook
   Rarity: 3
   Icon: {fileID: 0}
-  Prefab: {fileID: 6798481724360485254, guid: 8253210878d3fd446a9a90cca5221f04, type: 3}
+  Prefab: {fileID: 0}
   PieceType: 3
   MovePattern: 3
   BaseRole: "\uD3EC\uD2B8\uB9AC\uC2A4"

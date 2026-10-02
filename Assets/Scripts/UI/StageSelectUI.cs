@@ -246,6 +246,7 @@ namespace CheckmateRPG.UI
             if (_briefingModalPanel != null)
             {
                 _briefingModalPanel.SetActive(true);
+                UILayers.SetOverlay(_briefingModalPanel, UILayers.Modal);
                 UpdateBriefingContent(stage);
                 OutgameUIManager.Instance?.RegisterModalCloseAction(CloseBriefingModal);
             }
